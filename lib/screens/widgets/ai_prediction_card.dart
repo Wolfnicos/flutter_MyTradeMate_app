@@ -285,4 +285,24 @@ String _plainLanguageWhy(AIPrediction p) {
          'Confidence ${conf.toStringAsFixed(0)}%. Treat as guidance, not advice.';
 }
 
+class _WarnLine extends StatelessWidget {
+  final String text;
+  const _WarnLine({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, size: 16, color: Colors.amberAccent),
+          const SizedBox(width: 6),
+          Expanded(child: Text(text, style: const TextStyle(color: Colors.white70))),
+        ],
+      ),
+    );
+  }
+}
+
 
