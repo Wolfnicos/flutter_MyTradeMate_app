@@ -21,7 +21,7 @@ void main() {
 
     fakeAsync((fa) {
       for (var i = 0; i < 50; i++) {
-        src.emitNum(1000 + i);
+        src.emitNum(1000.0 + i.toDouble());
         fa.elapse(const Duration(milliseconds: 20));
       }
       fa.elapse(const Duration(milliseconds: 250));
