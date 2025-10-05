@@ -37,6 +37,40 @@ if [ "${COUNT:-0}" -lt "$MIN_EXPECTED" ]; then
   exit 1
 fi
 
+# Validate calibration.json schema (best-effort)
+if [ -f assets/models/calibration.json ]; then
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+      const fs = require("fs");
+      const p = "assets/models/calibration.json";
+      try {
+        const j = JSON.parse(fs.readFileSync(p, "utf8"));
+        const t = (j.type || j.calibrator || "").toLowerCase();
+        if (!["identity","platt","isotonic"].includes(t)) {
+          throw new Error("calibrator type must be identity|platt|isotonic");
+        }
+        if (t === "platt") {
+          const a = (j.params && (j.params.a ?? j.params.A));
+          const b = (j.params && (j.params.b ?? j.params.B));
+          if (typeof a !== "number" || typeof b !== "number") {
+            throw new Error("platt requires numeric params a/b (or A/B)");
+          }
+        }
+        if (t === "isotonic") {
+          const ok = Array.isArray(j.points) || (j.params && Array.isArray(j.params.x) && Array.isArray(j.params.y));
+          if (!ok) throw new Error("isotonic requires points[] or params.x/params.y");
+        }
+        console.log("calibration.json: OK");
+      } catch (e) {
+        console.error("calibration.json: FAIL:", e.message);
+        process.exit(1);
+      }
+    ' || exit 1
+  else
+    echo "WARN: Node not found; skipping calibration schema check"
+  fi
+fi
+
 RUN_FIRST_FAIL=${RUN_FIRST_FAIL:-1}
 if [ "${RUN_PER_FILE:-0}" = "1" ]; then
   echo "=== Per-file test mode (debug) ==="
