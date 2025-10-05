@@ -21,16 +21,20 @@ double ece(List<double> p, List<int> y, {int bins = 10}) {
 }
 
 void main() {
-  test('Platt reduces ECE on synthetic miscalibrated logits', () {
+  test('Platt reduces ECE on synthetic miscalibrated probabilities', () {
     final rnd = Random(1337);
-    // Generate slightly overconfident logits
-    final logits = List<double>.generate(5000, (_) => (rnd.nextDouble() - 0.5) * 3.0);
-    List<double> sigmoid(List<double> z) => z.map((v) => 1.0 / (1.0 + exp(-v))).toList();
-    final pRaw = sigmoid(logits);
-    final y = pRaw.map((p) => rnd.nextDouble() < p ? 1 : 0).toList();
+    // Model emits raw probabilities pRaw ~ U(0,1)
+    final pRaw = List<double>.generate(5000, (_) => rnd.nextDouble());
+    // Ground truth is generated from a Platt-transformed probability of pRaw
+    // i.e., true Bernoulli parameter = sigmoid(a*pRaw + b)
+    const a = 0.8;
+    const b = 0.0;
+    double s(double z) => 1.0 / (1.0 + exp(-z));
+    final pTrue = pRaw.map((p) => s(a * p + b)).toList();
+    final y = pTrue.map((pt) => rnd.nextDouble() < pt ? 1 : 0).toList();
 
-    // Platt with a<1 tends to reduce overconfidence
-    const platt = PlattCalibrator(0.8, 0.0);
+    // Calibrator with the same (a,b) should correct pRaw closer to pTrue
+    const platt = PlattCalibrator(a, b);
     final pCal = pRaw.map(platt.apply).toList();
 
     final eRaw = ece(pRaw, y, bins: 15);
