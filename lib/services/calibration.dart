@@ -21,13 +21,13 @@ abstract class Calibrator {
   }
 }
 
-class IdentityCalibrator implements Calibrator {
+class IdentityCalibrator extends Calibrator {
   const IdentityCalibrator();
   @override
   double calibrate(double p) => p.clamp(0.0, 1.0);
 }
 
-class PlattCalibrator implements Calibrator {
+class PlattCalibrator extends Calibrator {
   final double a;
   final double b;
   const PlattCalibrator(this.a, this.b);
@@ -39,7 +39,7 @@ class PlattCalibrator implements Calibrator {
   }
 }
 
-class IsotonicCalibrator implements Calibrator {
+class IsotonicCalibrator extends Calibrator {
   final List<double> xs; // monotonically increasing in [0,1]
   final List<double> ys; // corresponding calibrated values in [0,1]
   IsotonicCalibrator(this.xs, this.ys)
