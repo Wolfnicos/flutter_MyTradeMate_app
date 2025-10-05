@@ -30,7 +30,7 @@ void main() {
     final risk = RiskManager(const RiskConfig(maxPositionQuoteUsdt: 50.0)); // will block 100 quote
     final tc = TradeCoordinator(ai: ai, policy: pol, broker: broker, prefs: prefs, risk: risk, now: () => DateTime.fromMillisecondsSinceEpoch(0));
 
-    expect(() => tc.maybeTrade('BTCUSDT'), throwsA(isA<RiskViolation>()));
+    await expectLater(tc.maybeTrade('BTCUSDT'), throwsA(isA<RiskViolation>()));
     expect(broker.calls, 0);
   });
 }
