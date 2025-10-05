@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/semantics.dart';
 import '../../core/explain/explanation_builder.dart';
+import 'package:mytrademate/l10n/strings.dart';
 
 class AIPredictionCard extends StatefulWidget {
   final String symbol;
@@ -143,7 +144,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                   child: ExpansionTile(
                     tilePadding: EdgeInsets.zero,
                     leading: const Icon(Icons.help_outline, color: Colors.indigoAccent),
-                    title: const Text('Why this signal?', style: TextStyle(color: Colors.white)),
+                    title: Text(L10n.signalWhy, style: const TextStyle(color: Colors.white)),
                     children: [
                       Semantics(
                         label: 'Why this signal panel',
@@ -152,7 +153,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                           children: [
                             Row(
                               children: [
-                                const Text('Why this signal?', style: TextStyle(fontWeight: FontWeight.w600)),
+                                Text(L10n.signalWhy, style: const TextStyle(fontWeight: FontWeight.w600)),
                                 const SizedBox(width: 8),
                                 if (isPaperMode)
                                   Container(
@@ -161,15 +162,15 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                                       borderRadius: BorderRadius.circular(999),
                                       color: Theme.of(context).colorScheme.surfaceVariant,
                                     ),
-                                    child: const Text('PAPER / TESTNET', style: TextStyle(fontSize: 11)),
+                                    child: Text(L10n.paperBadge, style: const TextStyle(fontSize: 11)),
                                   ),
                                 const Spacer(),
                                 InkWell(
                                   onTap: _openModelCard,
                                   child: Semantics(
                                     button: true,
-                                    label: 'Open model card',
-                                    hint: 'Opens the model card in your browser',
+                                    label: L10n.modelCardOpenLabel,
+                                    hint: L10n.modelCardOpenHint,
                                     child: const Padding(
                                       padding: EdgeInsets.all(4.0),
                                       child: Text('Model card →', style: TextStyle(decoration: TextDecoration.underline)),
@@ -196,7 +197,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                                   child: SwitchListTile(
                                     value: _showUncertainty,
                                     onChanged: _setShowUncertainty,
-                                    title: const Text('Show uncertainty note'),
+                                    title: Text(L10n.showUncertaintyNote),
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 ),
@@ -204,7 +205,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                                   child: SwitchListTile(
                                     value: _showGaps,
                                     onChanged: _setShowDataGaps,
-                                    title: const Text('Show data gaps note'),
+                                    title: Text(L10n.showDataGapsNote),
                                     contentPadding: EdgeInsets.zero,
                                   ),
                                 ),

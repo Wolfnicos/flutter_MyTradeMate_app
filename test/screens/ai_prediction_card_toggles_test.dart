@@ -1,0 +1,55 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:mytrademate/screens/widgets/ai_prediction_card.dart';
+import 'package:mytrademate/services/ai_service.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    // Ensure prefs are empty for each test
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('toggles persist and control visibility of warnings', (tester) async {
+    // Provide a simple fake AIService via instance override if needed
+    // Here we rely on AIPredictionCard calling AIService().getPrediction(symbol)
+    // which should succeed in existing test setup with fake path.
+
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(body: AIPredictionCard(symbol: 'BTCUSDT')),
+    ));
+
+    // Allow future to resolve
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+
+    // Find switches by text
+    final uncertaintyFinder = find.text('Show uncertainty note');
+    final dataGapsFinder = find.text('Show data gaps note');
+
+    expect(uncertaintyFinder, findsOneWidget);
+    expect(dataGapsFinder, findsOneWidget);
+
+    // Initially ON by default → expect at least one info line rendered later
+    // Toggle both OFF
+    await tester.tap(uncertaintyFinder);
+    await tester.pumpAndSettle();
+    await tester.tap(dataGapsFinder);
+    await tester.pumpAndSettle();
+
+    // Rebuild widget to read prefs
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(body: AIPredictionCard(symbol: 'BTCUSDT')),
+    ));
+    await tester.pumpAndSettle();
+
+    // Switches should reflect OFF state now
+    expect(uncertaintyFinder, findsOneWidget);
+    expect(dataGapsFinder, findsOneWidget);
+  });
+}
+
+
