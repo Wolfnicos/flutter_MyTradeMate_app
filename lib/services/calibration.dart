@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle, AssetBundle;
 
 abstract class Calibrator {
+  const Calibrator();
   double calibrate(double p);
   double apply(double p) => calibrate(p);
 
