@@ -78,6 +78,8 @@ class AIService {
   final BinanceClientLike? client;
   final ModelsAdapter? models;
   final FeatureBuilder? fb;
+  static Calibrator? _cachedCalibrator; // cache to avoid I/O per inference
+  static DateTime? _lastLoad;
 
   AIService({this.enableFake = false, this.client, this.models, this.fb});
 
@@ -139,12 +141,20 @@ class AIService {
         out = await adapter.predictAll(feats);
       }
       double prob = (out.probUp ?? 0.5).toDouble();
-      // Optional post-training calibration with hot-reload guard and debug sampling log
+      // Optional post-training calibration with cache + hot-reload in debug
       try {
-        final cal = await CalibrationStore.tryLoadFromAssets();
+        Calibrator? cal = _cachedCalibrator;
+        final debugMode = () {
+          var inDebug = false; assert(() { inDebug = true; return true; }()); return inDebug;
+        }();
+        final shouldReload = debugMode && (_lastLoad == null || DateTime.now().difference(_lastLoad!) > const Duration(seconds: 5));
+        if (cal == null || shouldReload) {
+          cal = await CalibrationStore.tryLoadFromAssets();
+          _cachedCalibrator = cal; _lastLoad = DateTime.now();
+        }
         if (cal != null) {
           final raw = prob;
-          prob = cal.calibrate(prob);
+          prob = cal.calibrate(prob).clamp(1e-9, 1 - 1e-9);
           assert(() {
             // log 1/200 calls in debug for drift checks
             if (DateTime.now().millisecond % 200 == 0) {

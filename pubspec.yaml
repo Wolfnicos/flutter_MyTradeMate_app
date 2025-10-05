@@ -1,0 +1,38 @@
+name: mytrademate
+description: MyTradeMate AI signals demo
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  tflite_flutter: ^0.11.0
+  http: ^1.2.2
+  dio: ^5.5.0+1
+  web_socket_channel: ^2.4.5
+  shared_preferences: ^2.2.3
+  fl_chart: ^0.69.2
+  google_fonts: ^6.2.1
+  crypto: ^3.0.6
+  intl: ^0.19.0
+  url_launcher: ^6.3.0
+  local_auth: ^2.3.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/models/direction_fp16_builtin.tflite
+    - assets/models/return_fp16_builtin.tflite
+    - assets/models/volatility_fp16_builtin.tflite
+    - assets/models/calibration.json
+    - assets/models/direction_f32_builtin.tflite
+    - assets/models/return_f32_builtin.tflite
+    - assets/models/volatility_f32_builtin.tflite
+    - assets/models/feat_cols.json
