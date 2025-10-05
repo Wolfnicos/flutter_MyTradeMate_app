@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:mytrademate/services/paper_broker.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
 import 'package:mytrademate/services/exchange_rules.dart';
+import 'package:mytrademate/src/core/trading_prefs.dart' show TradeEnv;
 
 abstract class MarketExecution {
   Future<String> placeOrder(OrderParams p);
@@ -29,6 +30,7 @@ bool get _paperTradingEnv =>
 MarketExecution makeExecution({
   required ExchangeRules rules,
   DateTime Function()? now,
+  TradeEnv env = TradeEnv.testnet,
 }) {
   if (_paperTradingEnv) {
     return _PaperExecutionAdapter(
@@ -45,7 +47,7 @@ MarketExecution makeExecution({
       ),
     );
   }
-  return RealBroker(DioBinanceClient(), rules);
+  return RealBroker(DioBinanceClient(env: env), rules);
 }
 
 class _PaperExecutionAdapter implements MarketExecution {
