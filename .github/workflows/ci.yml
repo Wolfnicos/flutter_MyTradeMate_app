@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.x'
+
+      - name: Install lcov (for coverage filtering)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lcov
+
+      - name: Bootstrap
+        run: bash tool/bootstrap.sh
+
+      - name: Analyze
+        run: bash tool/analyze.sh
+
+      - name: Test (cleaned-core coverage)
+        env:
+          MIN_EXPECTED: 50
+          RUN_UI: "0"
+        run: bash tool/test.sh
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/lcov.cleaned.info
+
+      - name: Build release APK
+        run: bash tool/build.sh
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter via FVM
+        uses: kuhnroyal/flutter-fvm-config-action@v3
+
+      - name: Cache pub
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: Bootstrap
+        run: |
+          bash tool/bootstrap.sh
+          echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+
+      - name: Analyze
+        run: bash tool/analyze.sh | tee analyzer.log
+
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
+
+      - name: Tests with coverage
+        env:
+          MIN_EXPECTED: 50
+        run: bash tool/test.sh | tee test.log
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov-cleaned
+          path: coverage/lcov.cleaned.info
+
+      - name: Build APK
+        run: bash tool/build.sh | tee build.log
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Tail logs (last 50 lines)
+        run: |
+          echo '--- analyzer.log (tail -50) ---'
+          tail -50 analyzer.log || true
+          echo '--- test.log (tail -50) ---'
+          tail -50 test.log || true
+          echo '--- build.log (tail -50) ---'
+          tail -50 build.log || true
+
+  calibration-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter via FVM
+        uses: kuhnroyal/flutter-fvm-config-action@v3
+      - name: Pub get
+        run: flutter pub get
+      - name: Synthetic calibration tests
+        run: flutter test test/services/calibration_*.dart
+      - name: Validate calibration.json (if present)
+        shell: bash
+        run: |
+          set -e
+          FILE="assets/models/calibration.json"
+          if [ ! -f "$FILE" ]; then
+            echo "No calibration.json → skip"; exit 0; fi
+          node -e '
+            const fs=require("fs");
+            const m=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+            if(m.version!==1) throw new Error("version!=1");
+            const ok=["identity","platt","isotonic"]; if(!ok.includes(String(m.calibrator).toLowerCase())) throw new Error("bad calibrator");
+            if(String(m.calibrator).toLowerCase()==="platt" && (typeof m.params.A!=="number"|| typeof m.params.B!=="number")) throw new Error("platt params invalid");
+            if(String(m.calibrator).toLowerCase()==="isotonic" && (!Array.isArray(m.params.x)||!Array.isArray(m.params.y)||m.params.x.length!==m.params.y.length)) throw new Error("isotonic params invalid");
+          ' "$FILE"
+          if [ -f artifacts/calibration_report.json ]; then
+            ECE=$(node -e 'const m=require("./artifacts/calibration_report.json"); console.log(m.ece||0)')
+            MAX=0.05
+            awk -v ece="$ECE" -v max="$MAX" 'BEGIN{ if(ece>max){ exit 1 } }' || { echo "ECE $ECE > $MAX"; exit 1; }
+          fi
+

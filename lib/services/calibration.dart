@@ -106,5 +106,49 @@ double expectedCalibrationError(List<ReliabilityBin> bins, int total) {
   return s;
 }
 
+double brierScore(List<double> p, List<int> y) {
+  assert(p.length == y.length);
+  double s = 0.0; final n = p.length;
+  for (var i = 0; i < n; i++) {
+    final e = p[i] - y[i];
+    s += e * e;
+  }
+  return s / (n == 0 ? 1 : n);
+}
+
+double logLoss(List<double> p, List<int> y, {double eps = 1e-12}) {
+  assert(p.length == y.length);
+  double s = 0.0; final n = p.length;
+  for (var i = 0; i < n; i++) {
+    final pi = p[i].clamp(eps, 1.0 - eps);
+    s += -(y[i] == 1 ? math.log(pi) : math.log(1 - pi));
+  }
+  return s / (n == 0 ? 1 : n);
+}
+
+double rocAuc(List<double> p, List<int> y) {
+  // Mann–Whitney U statistic / rank-based AUC
+  assert(p.length == y.length);
+  final n = p.length;
+  final idx = List<int>.generate(n, (i) => i);
+  idx.sort((a, b) => p[a].compareTo(p[b]));
+  var rank = List<double>.filled(n, 0);
+  var i = 0;
+  while (i < n) {
+    var j = i + 1;
+    while (j < n && p[idx[j]] == p[idx[i]]) j++;
+    final r = (i + j + 1) / 2.0; // average rank for ties (1-based)
+    for (var k = i; k < j; k++) rank[idx[k]] = r;
+    i = j;
+  }
+  double sumPosRanks = 0.0; int nPos = 0, nNeg = 0;
+  for (var t = 0; t < n; t++) {
+    if (y[t] == 1) { sumPosRanks += rank[t]; nPos++; } else { nNeg++; }
+  }
+  if (nPos == 0 || nNeg == 0) return 0.5;
+  final u = sumPosRanks - nPos * (nPos + 1) / 2.0;
+  return u / (nPos * nNeg);
+}
+
 
 

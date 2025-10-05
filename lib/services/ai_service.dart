@@ -139,10 +139,21 @@ class AIService {
         out = await adapter.predictAll(feats);
       }
       double prob = (out.probUp ?? 0.5).toDouble();
-      // Optional post-training calibration
+      // Optional post-training calibration with hot-reload guard and debug sampling log
       try {
         final cal = await CalibrationStore.tryLoadFromAssets();
-        if (cal != null) prob = cal.calibrate(prob);
+        if (cal != null) {
+          final raw = prob;
+          prob = cal.calibrate(prob);
+          assert(() {
+            // log 1/200 calls in debug for drift checks
+            if (DateTime.now().millisecond % 200 == 0) {
+              // ignore: avoid_print
+              print('[AI] prob_raw=${raw.toStringAsFixed(4)} → prob_cal=${prob.toStringAsFixed(4)}');
+            }
+            return true;
+          }());
+        }
       } catch (_) {}
       final double nextR = (out.nextReturn ?? 0.0).toDouble();
       final double vol = (out.volatility ?? 0.0).toDouble();
