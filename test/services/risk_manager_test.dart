@@ -9,7 +9,7 @@ void main() {
       maxConcurrentPositions: 3,
       cooldownAfterLoss: Duration(minutes: 30),
     ));
-    final v = rm.check(const RiskInput(
+    final v = rm.check(RiskInput(
       symbol: 'BTCUSDT',
       desiredQuoteUsdt: 100.0,
       openPositionsCount: 1,
@@ -22,7 +22,7 @@ void main() {
 
   test('blocks when max position exceeded', () {
     final rm = RiskManager(const RiskConfig(maxPositionQuoteUsdt: 100.0));
-    final v = rm.check(const RiskInput(
+    final v = rm.check(RiskInput(
       symbol: 'BTCUSDT',
       desiredQuoteUsdt: 150.0,
       openPositionsCount: 0,
@@ -35,7 +35,7 @@ void main() {
 
   test('blocks when daily loss cap reached', () {
     final rm = RiskManager(const RiskConfig(dailyLossCapUsdt: 100.0));
-    final v = rm.check(const RiskInput(
+    final v = rm.check(RiskInput(
       symbol: 'BTCUSDT',
       desiredQuoteUsdt: 10.0,
       openPositionsCount: 0,
@@ -48,7 +48,7 @@ void main() {
 
   test('blocks when max concurrency reached', () {
     final rm = RiskManager(const RiskConfig(maxConcurrentPositions: 2));
-    final v = rm.check(const RiskInput(
+    final v = rm.check(RiskInput(
       symbol: 'ETHUSDT',
       desiredQuoteUsdt: 10.0,
       openPositionsCount: 2,
@@ -76,7 +76,7 @@ void main() {
 
   test('blocks when circuit breaker triggered', () {
     final rm = RiskManager(const RiskConfig(circuitBreakerOnUnhealthy: true));
-    final v = rm.check(const RiskInput(
+    final v = rm.check(RiskInput(
       symbol: 'BTCUSDT',
       desiredQuoteUsdt: 10.0,
       openPositionsCount: 0,
