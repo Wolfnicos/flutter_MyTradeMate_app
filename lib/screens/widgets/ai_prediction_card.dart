@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../services/ai_service.dart';
 import 'package:mytrademate/ui/explain_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/semantics.dart';
+import '../../core/explain/explanation_builder.dart';
 
 class AIPredictionCard extends StatefulWidget {
   final String symbol;
@@ -12,13 +15,51 @@ class AIPredictionCard extends StatefulWidget {
 }
 
 class _AIPredictionCardState extends State<AIPredictionCard> {
+  // persistență toggles
+  static const _kShowUncertainty = 'ai.show_uncertainty_note';
+  static const _kShowDataGaps = 'ai.show_data_gaps_note';
+
   bool _showUncertainty = true;
   bool _showGaps = true;
+  bool _prefsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final p = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _showUncertainty = p.getBool(_kShowUncertainty) ?? true;
+      _showGaps = p.getBool(_kShowDataGaps) ?? true;
+      _prefsLoaded = true;
+    });
+  }
+
+  Future<void> _setShowUncertainty(bool v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kShowUncertainty, v);
+    if (!mounted) return;
+    setState(() => _showUncertainty = v);
+  }
+
+  Future<void> _setShowDataGaps(bool v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kShowDataGaps, v);
+    if (!mounted) return;
+    setState(() => _showGaps = v);
+  }
 
   Future<void> _openModelCard() async {
     final uri = Uri.parse('https://github.com/lupudragos/mytrademate/blob/main/ModelCard.md');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open model card')),
+      );
     }
   }
 
@@ -45,6 +86,24 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
         final p = snapshot.data!;
         final actionColor = p.action == 'BUY' ? Colors.green : p.action == 'SELL' ? Colors.red : Colors.amber;
         final actionIcon = p.action == 'BUY' ? Icons.trending_up : (p.action == 'SELL' ? Icons.trending_down : Icons.pause_circle_outline);
+
+        // Build safe explanation input (fallbacks where data not available)
+        Direction dir = Direction.flat;
+        if (p.action == 'BUY') dir = Direction.up; else if (p.action == 'SELL') dir = Direction.down;
+        VolLevel vol = VolLevel.moderate;
+        final vLbl = p.volatility.toUpperCase();
+        if (vLbl == 'LOW') vol = VolLevel.low; else if (vLbl == 'HIGH') vol = VolLevel.high;
+        final bool isPaperMode = const bool.fromEnvironment('PAPER_TRADING', defaultValue: false);
+        final expIn = ExplanationInput(
+          direction: dir,
+          volLevel: vol,
+          confidence: p.probUp, // 0..1
+          topFactors: const <String>[],
+          dataGaps: false,
+          lastTickAge: Duration.zero,
+          isPaperMode: isPaperMode,
+        );
+        final expOut = ExplanationBuilder.build(expIn);
         return Card(
           elevation: 6,
           color: Theme.of(context).cardColor.withOpacity(0.9),
@@ -86,45 +145,72 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                     leading: const Icon(Icons.help_outline, color: Colors.indigoAccent),
                     title: const Text('Why this signal?', style: TextStyle(color: Colors.white)),
                     children: [
-                      const SizedBox(height: 8),
-                      Text(_plainLanguageWhy(p), style: const TextStyle(color: Colors.white70)),
-                      const SizedBox(height: 8),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: Colors.indigoAccent,
-                        title: const Text('Show uncertainty note', style: TextStyle(color: Colors.white70)),
-                        value: _showUncertainty,
-                        onChanged: (v) => setState(() => _showUncertainty = v),
-                      ),
-                      if (_showUncertainty)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 16.0, bottom: 8),
-                          child: Text(
-                            'This is probabilistic and may be wrong. Confidence < 60% means higher uncertainty.',
-                            style: TextStyle(color: Colors.orangeAccent),
-                          ),
-                        ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: Colors.indigoAccent,
-                        title: const Text('Show data gaps note', style: TextStyle(color: Colors.white70)),
-                        value: _showGaps,
-                        onChanged: (v) => setState(() => _showGaps = v),
-                      ),
-                      if (_showGaps)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 16.0, bottom: 8),
-                          child: Text(
-                            'If recent candles are missing, the model uses a fallback; treat the signal with extra care.',
-                            style: TextStyle(color: Colors.white60),
-                          ),
-                        ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: _openModelCard,
-                          icon: const Icon(Icons.description, color: Colors.indigoAccent),
-                          label: const Text('Read Model Card', style: TextStyle(color: Colors.indigoAccent)),
+                      Semantics(
+                        label: 'Why this signal panel',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text('Why this signal?', style: TextStyle(fontWeight: FontWeight.w600)),
+                                const SizedBox(width: 8),
+                                if (isPaperMode)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(999),
+                                      color: Theme.of(context).colorScheme.surfaceVariant,
+                                    ),
+                                    child: const Text('PAPER / TESTNET', style: TextStyle(fontSize: 11)),
+                                  ),
+                                const Spacer(),
+                                InkWell(
+                                  onTap: _openModelCard,
+                                  child: Semantics(
+                                    button: true,
+                                    label: 'Open model card',
+                                    hint: 'Opens the model card in your browser',
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4.0),
+                                      child: Text('Model card →', style: TextStyle(decoration: TextDecoration.underline)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(expOut.headline, style: const TextStyle(color: Colors.white70)),
+                            const SizedBox(height: 4),
+                            Text(expOut.details, style: const TextStyle(color: Colors.white70)),
+                            const SizedBox(height: 8),
+                            if (_prefsLoaded && _showUncertainty && (expOut.uncertainty?.isNotEmpty ?? false))
+                              _WarnLine(text: expOut.uncertainty!),
+                            if (_prefsLoaded && _showGaps && (expOut.dataGap?.isNotEmpty ?? false))
+                              _WarnLine(text: expOut.dataGap!),
+                            const SizedBox(height: 8),
+                            Text(expOut.advisory, style: Theme.of(context).textTheme.bodySmall),
+                            const Divider(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SwitchListTile(
+                                    value: _showUncertainty,
+                                    onChanged: _setShowUncertainty,
+                                    title: const Text('Show uncertainty note'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: SwitchListTile(
+                                    value: _showGaps,
+                                    onChanged: _setShowDataGaps,
+                                    title: const Text('Show data gaps note'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ],
