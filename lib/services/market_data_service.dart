@@ -41,13 +41,15 @@ class MarketDataServiceImpl implements MarketDataService {
     required TradeEnv env,
     PriceStreamManager? pm,
     PriceRestClient? rest,
-    this.throttleInterval = const Duration(milliseconds: 50),
+    int uiHzCap = 10,
+    Duration? throttleInterval,
     this.gapThreshold = const Duration(seconds: 3),
     this.gapPollInterval = const Duration(seconds: 1),
     this.eventSource,
     this.sleep,
   })  : _pm = pm ?? PriceStreamManager(),
-        _rest = rest ?? DefaultPriceRestClient(env: env);
+        _rest = rest ?? DefaultPriceRestClient(env: env),
+        throttleInterval = throttleInterval ?? Duration(milliseconds: (1000 ~/ (uiHzCap <= 0 ? 10 : uiHzCap)));
 
   @visibleForTesting
   MarketDataServiceImpl.test({
