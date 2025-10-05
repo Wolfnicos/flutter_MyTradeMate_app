@@ -72,18 +72,120 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(height: 140, child: Center(child: CircularProgressIndicator()));
         }
-        if (snapshot.hasError || !snapshot.hasData) {
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(children: [
-                const Icon(Icons.info_outline, color: Colors.orange),
-                const SizedBox(width: 8),
-                Expanded(child: Text('AI unavailable (model load failed). Trading & price still work.' + (snapshot.error != null ? ' ${snapshot.error}' : ''))),
-              ]),
-            ),
-          );
-        }
+                    if (snapshot.hasError || !snapshot.hasData) {
+                      // Build a safe, generic explanation for the error case
+                      final bool isPaperMode = const bool.fromEnvironment('PAPER_TRADING', defaultValue: false);
+                      final expIn = ExplanationInput(
+                        direction: Direction.flat,
+                        volLevel: VolLevel.moderate,
+                        confidence: null,
+                        topFactors: const <String>[],
+                        dataGaps: false,
+                        lastTickAge: Duration.zero,
+                        isPaperMode: isPaperMode,
+                      );
+                      final expOut = ExplanationBuilder.build(expIn);
+                      return Card(
+                        elevation: 6,
+                        color: Theme.of(context).cardColor.withOpacity(0.9),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          side: BorderSide(color: Colors.orange.withOpacity(0.5), width: 2),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                const Icon(Icons.info_outline, color: Colors.orange),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text('AI unavailable (model load failed). Trading & price still work.' + (snapshot.error != null ? ' ${snapshot.error}' : ''))),
+                              ]),
+                              const SizedBox(height: 12),
+                              Theme(
+                                data: Theme.of(context).copyWith(dividerColor: Colors.white10),
+                                child: ExpansionTile(
+                                  tilePadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.help_outline, color: Colors.indigoAccent),
+                                  title: Text(L10n.signalWhy, style: const TextStyle(color: Colors.white)),
+                                  children: [
+                                    Semantics(
+                                      label: 'Why this signal panel',
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(L10n.signalWhy, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                              const SizedBox(width: 8),
+                                              if (isPaperMode)
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(999),
+                                                    color: Theme.of(context).colorScheme.surfaceVariant,
+                                                  ),
+                                                  child: Text(L10n.paperBadge, style: const TextStyle(fontSize: 11)),
+                                                ),
+                                              const Spacer(),
+                                              InkWell(
+                                                onTap: _openModelCard,
+                                                child: Semantics(
+                                                  button: true,
+                                                  label: L10n.modelCardOpenLabel,
+                                                  hint: L10n.modelCardOpenHint,
+                                                  child: const Padding(
+                                                    padding: EdgeInsets.all(4.0),
+                                                    child: Text('Model card →', style: TextStyle(decoration: TextDecoration.underline)),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(expOut.headline, style: const TextStyle(color: Colors.white70)),
+                                          const SizedBox(height: 4),
+                                          Text(expOut.details, style: const TextStyle(color: Colors.white70)),
+                                          const SizedBox(height: 8),
+                                          if (_prefsLoaded && _showUncertainty && (expOut.uncertainty?.isNotEmpty ?? false))
+                                            _WarnLine(text: expOut.uncertainty!),
+                                          if (_prefsLoaded && _showGaps && (expOut.dataGap?.isNotEmpty ?? false))
+                                            _WarnLine(text: expOut.dataGap!),
+                                          const SizedBox(height: 8),
+                                          Text(expOut.advisory, style: Theme.of(context).textTheme.bodySmall),
+                                          const Divider(height: 24),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: SwitchListTile(
+                                                  value: _showUncertainty,
+                                                  onChanged: _setShowUncertainty,
+                                                  title: Text(L10n.showUncertaintyNote),
+                                                  contentPadding: EdgeInsets.zero,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: SwitchListTile(
+                                                  value: _showGaps,
+                                                  onChanged: _setShowDataGaps,
+                                                  title: Text(L10n.showDataGapsNote),
+                                                  contentPadding: EdgeInsets.zero,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
         final p = snapshot.data!;
         final actionColor = p.action == 'BUY' ? Colors.green : p.action == 'SELL' ? Colors.red : Colors.amber;
         final actionIcon = p.action == 'BUY' ? Icons.trending_up : (p.action == 'SELL' ? Icons.trending_down : Icons.pause_circle_outline);
