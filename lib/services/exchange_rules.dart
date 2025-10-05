@@ -121,6 +121,22 @@ double clampMinNotionalForTest({
   return double.parse(needed.toStringAsFixed(8));
 }
 
+extension ExchangeRulesForTest on ExchangeRules {
+  static ExchangeRules forTest({
+    required double minNotional,
+    required double qtyStep,
+    required double priceTick,
+  }) {
+    return ExchangeRules(
+      priceScale: ExchangeRules._scaleFromStep(priceTick),
+      qtyScale: ExchangeRules._scaleFromStep(qtyStep),
+      tickSize: priceTick,
+      stepSize: qtyStep,
+      minNotional: minNotional,
+    );
+  }
+}
+
 
 
 
