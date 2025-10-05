@@ -2,6 +2,8 @@ import 'package:mytrademate/services/ai_service.dart';
 import 'package:mytrademate/services/signal_policy.dart';
 import 'package:mytrademate/services/brokers.dart';
 import 'package:mytrademate/src/core/trading_prefs.dart';
+import 'package:mytrademate/services/risk_manager.dart';
+import 'package:mytrademate/services/portfolio_pnl.dart';
 
 class TradeCoordinator {
   final AIService ai;
@@ -9,12 +11,14 @@ class TradeCoordinator {
   final MarketExecution broker;
   final TradingPrefs prefs;
   final DateTime Function() now;
+  final RiskManager? risk;
 
   TradeCoordinator({
     required this.ai,
     required this.policy,
     required this.broker,
     required this.prefs,
+    this.risk,
     DateTime Function()? now,
   }) : now = now ?? DateTime.now;
 
@@ -49,6 +53,28 @@ class TradeCoordinator {
     // place as MARKET using quote sizing by converting to quantity by last target price approximation
     // In a real system, fetch real-time price for symbol here.
     final qty = (intent.quoteAmount / (pred.targetPrice > 0 ? pred.targetPrice : 1.0)).abs();
+
+    // Pre-trade risk checks
+    if (risk != null) {
+      // Derive daily delta from baseline store; in app this would be computed from portfolio
+      final (delta, _) = await PnlBaselineStore.computeAndPersist(todaysTotal: 0.0, now: now());
+      // TODO: wire real open positions count; for now use 0 as default safe value
+      final input = RiskInput(
+        symbol: symbol,
+        desiredQuoteUsdt: intent.quoteAmount.abs(),
+        openPositionsCount: 0,
+        currentDailyDeltaUsdt: delta,
+        lastLossAt: await prefs.getLastTradeAt(symbol),
+        now: now(),
+        systemHealthy: true,
+        modelHealthy: true,
+      );
+      final violation = risk!.check(input);
+      if (violation != null) {
+        // In UI layer, surface violation.message to user; here, throw to be caught upstream
+        throw violation;
+      }
+    }
     await broker.placeOrder(OrderParams(symbol: symbol, side: intent.side, type: 'MARKET', quantity: qty));
 
     await prefs.setLastTradeAt(symbol, now());
