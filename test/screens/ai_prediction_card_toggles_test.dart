@@ -22,13 +22,12 @@ void main() {
       home: Scaffold(body: AIPredictionCard(symbol: 'BTCUSDT')),
     ));
 
-    // Allow future to resolve
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    // Allow future to resolve similarly to other tests
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
     // Expand the explanation panel to reveal toggles
     await tester.tap(find.text('Why this signal?'));
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
     // Find switches by text
     final uncertaintyFinder = find.text('Show uncertainty note');
@@ -48,11 +47,11 @@ void main() {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(body: AIPredictionCard(symbol: 'BTCUSDT')),
     ));
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
     // Expand again after rebuild
     await tester.tap(find.text('Why this signal?'));
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
     // Switches should reflect OFF state now
     expect(uncertaintyFinder, findsOneWidget);
