@@ -1,9 +1,24 @@
 import 'dart:math' as math;
 import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, AssetBundle;
 
 abstract class Calibrator {
   double calibrate(double p);
+  double apply(double p) => calibrate(p);
+
+  static Future<Calibrator> loadFromAssets(
+    AssetBundle bundle, {
+    String path = 'assets/models/calibration.json',
+    Calibrator fallback = const IdentityCalibrator(),
+  }) async {
+    try {
+      final s = await bundle.loadString(path);
+      final c = CalibrationStore.parseJson(s);
+      return c ?? fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
 }
 
 class IdentityCalibrator implements Calibrator {
@@ -50,27 +65,47 @@ class CalibrationStore {
   static Future<Calibrator?> tryLoadFromAssets({String path = 'assets/models/calibration.json'}) async {
     try {
       final s = await rootBundle.loadString(path);
-      final m = json.decode(s) as Map<String, dynamic>;
-      final type = (m['type'] ?? '').toString().toLowerCase();
-      switch (type) {
-        case 'platt':
-          final a = (m['a'] as num).toDouble();
-          final b = (m['b'] as num).toDouble();
-          return PlattCalibrator(a, b);
-        case 'isotonic':
-          final pts = (m['points'] as List).cast<List>();
-          final xs = <double>[];
-          final ys = <double>[];
-          for (final p in pts) {
-            xs.add((p[0] as num).toDouble());
-            ys.add((p[1] as num).toDouble());
-          }
-          return IsotonicCalibrator(xs, ys);
-      }
-      return null;
+      return parseJson(s);
     } catch (_) {
       return null;
     }
+  }
+
+  static Calibrator? parseJson(String jsonString) {
+    final m = json.decode(jsonString) as Map<String, dynamic>;
+    final kind = (m['calibrator'] ?? m['type'] ?? '').toString().toLowerCase();
+    if (kind == 'identity' || kind.isEmpty) return const IdentityCalibrator();
+    if (kind == 'platt') {
+      // accept either top-level a/b or nested params.A/B or params.a/b
+      final params = (m['params'] as Map?) ?? const {};
+      final aRaw = m['a'] ?? params['A'] ?? params['a'];
+      final bRaw = m['b'] ?? params['B'] ?? params['b'];
+      if (aRaw == null || bRaw == null) return null;
+      final a = (aRaw as num).toDouble();
+      final b = (bRaw as num).toDouble();
+      return PlattCalibrator(a, b);
+    }
+    if (kind == 'isotonic') {
+      // accept either points: [[x,y],...] or params.x / params.y arrays
+      final params = (m['params'] as Map?) ?? const {};
+      List<dynamic>? pts = m['points'] as List<dynamic>?;
+      if (pts != null) {
+        final xs = <double>[];
+        final ys = <double>[];
+        for (final p in pts) {
+          xs.add(((p as List)[0] as num).toDouble());
+          ys.add(((p as List)[1] as num).toDouble());
+        }
+        return IsotonicCalibrator(xs, ys);
+      }
+      final xsRaw = params['x'] as List?;
+      final ysRaw = params['y'] as List?;
+      if (xsRaw == null || ysRaw == null) return null;
+      final xs = xsRaw.map((e) => (e as num).toDouble()).toList();
+      final ys = ysRaw.map((e) => (e as num).toDouble()).toList();
+      return IsotonicCalibrator(xs, ys);
+    }
+    return null;
   }
 }
 
