@@ -1,0 +1,13 @@
+{
+  "symbol": "BTCUSDT",
+  "orderId": 49280,
+  "transactTime": 1710000000100,
+  "status": "FILLED",
+  "side": "BUY",
+  "type": "MARKET",
+  "fills": [{"price":"67306.98","qty":"0.0007"}]
+}
+
+
+
+
