@@ -55,8 +55,6 @@ void main() {
     await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
     // Switches should still be present after rebuild
-    await tester.tap(find.text('Why this signal?'));
-    await tester.pumpAndSettle(const Duration(milliseconds: 200));
     expect(find.byType(SwitchListTile), findsWidgets);
   });
 }
