@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/semantics.dart';
 import '../../core/explain/explanation_builder.dart';
 import 'package:mytrademate/l10n/strings.dart';
+import 'package:mytrademate/core/errors.dart';
+import 'package:mytrademate/ui/error_ui.dart';
 
 class AIPredictionCard extends StatefulWidget {
   final String symbol;
@@ -73,6 +75,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
           return const SizedBox(height: 140, child: Center(child: CircularProgressIndicator()));
         }
                     if (snapshot.hasError || !snapshot.hasData) {
+                      final mapped = ErrorMapper.map(snapshot.error);
                       // Build a safe, generic explanation for the error case
                       final bool isPaperMode = const bool.fromEnvironment('PAPER_TRADING', defaultValue: false);
                       final expIn = ExplanationInput(
@@ -85,6 +88,10 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                         isPaperMode: isPaperMode,
                       );
                       final expOut = ExplanationBuilder.build(expIn);
+                      final inline = InlineErrorBox(
+                        err: mapped,
+                        onRetry: () => setState(() {}),
+                      );
                       return Card(
                         elevation: 6,
                         color: Theme.of(context).cardColor.withOpacity(0.9),
@@ -97,11 +104,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(children: [
-                                const Icon(Icons.info_outline, color: Colors.orange),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text('AI unavailable (model load failed). Trading & price still work.' + (snapshot.error != null ? ' ${snapshot.error}' : ''))),
-                              ]),
+                              inline,
                               const SizedBox(height: 12),
                               Theme(
                                 data: Theme.of(context).copyWith(dividerColor: Colors.white10),
