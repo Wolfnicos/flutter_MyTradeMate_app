@@ -26,6 +26,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pumpAndSettle(const Duration(milliseconds: 50));
 
+    // Expand the explanation panel to reveal toggles
+    await tester.tap(find.text('Why this signal?'));
+    await tester.pumpAndSettle();
+
     // Find switches by text
     final uncertaintyFinder = find.text('Show uncertainty note');
     final dataGapsFinder = find.text('Show data gaps note');
@@ -44,6 +48,10 @@ void main() {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(body: AIPredictionCard(symbol: 'BTCUSDT')),
     ));
+    await tester.pumpAndSettle();
+
+    // Expand again after rebuild
+    await tester.tap(find.text('Why this signal?'));
     await tester.pumpAndSettle();
 
     // Switches should reflect OFF state now
