@@ -29,6 +29,7 @@ void main() {
     final prefs = await _makePrefs();
     await prefs.setUserConsentTrading(true);
     await prefs.setQuotePerTrade(100.0);
+    await prefs.setMaxTradesPerDay(5);
     final risk = RiskManager(const RiskConfig(maxPositionQuoteUsdt: 50.0)); // will block 100 quote
     final tc = TradeCoordinator(ai: ai, policy: pol, broker: broker, prefs: prefs, risk: risk, now: () => DateTime.fromMillisecondsSinceEpoch(0));
 
