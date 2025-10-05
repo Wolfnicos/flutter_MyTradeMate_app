@@ -2,6 +2,7 @@ import 'package:mytrademate/services/dio_binance_client.dart' as api;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:mytrademate/services/mtm_models.dart';
 import 'package:mytrademate/services/feature_builder.dart';
+import 'package:mytrademate/services/calibration.dart';
 
 class AIPrediction {
   final String action; // 'BUY', 'SELL', 'HOLD'
@@ -137,7 +138,12 @@ class AIService {
         final feats = builder.fromTicker(last: last, prev: prev);
         out = await adapter.predictAll(feats);
       }
-      final double prob = (out.probUp ?? 0.5).toDouble();
+      double prob = (out.probUp ?? 0.5).toDouble();
+      // Optional post-training calibration
+      try {
+        final cal = await CalibrationStore.tryLoadFromAssets();
+        if (cal != null) prob = cal.calibrate(prob);
+      } catch (_) {}
       final double nextR = (out.nextReturn ?? 0.0).toDouble();
       final double vol = (out.volatility ?? 0.0).toDouble();
       final action = prob >= 0.55 ? 'BUY' : (prob <= 0.45 ? 'SELL' : 'HOLD');
