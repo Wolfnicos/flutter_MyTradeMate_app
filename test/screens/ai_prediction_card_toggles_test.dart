@@ -25,8 +25,8 @@ void main() {
     // Allow future to resolve similarly to other tests
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
-    // Expand the explanation panel to reveal toggles
-    await tester.tap(find.text('Why this signal?'));
+    // Expand the explanation panel to reveal toggles by tapping the help icon
+    await tester.tap(find.byIcon(Icons.help_outline).first);
     await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
     // Find switches by type to avoid brittle text matching
@@ -51,7 +51,7 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
     // Expand again after rebuild
-    await tester.tap(find.text('Why this signal?'));
+    await tester.tap(find.byIcon(Icons.help_outline).first);
     await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
     // Switches should still be present after rebuild
