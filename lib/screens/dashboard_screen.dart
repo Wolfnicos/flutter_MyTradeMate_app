@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'portfolio_screen.dart';
 import 'order_history_screen.dart';
 import 'settings_screen.dart';
@@ -12,6 +11,8 @@ import 'widgets/asset_tile.dart';
 // removed unused: price_stream import
 import '../services/price_stream_manager.dart';
 import '../services/mtm_models.dart';
+import '../src/core/trading_prefs.dart';
+import '../ui/disclaimer_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   final bool forTest;
@@ -35,12 +36,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final PriceStreamManager _pm;
   final Map<String, double> _lastPrices = {};
   double? _lastPrice; // BTCUSDT display
-
+  bool _showDisclaimer = false;
 
   @override
   void initState() {
     super.initState();
     _pm = PriceStreamManager();
+    // Check first-run disclaimer flag
+    TradingPrefs.load().then((p) => p.hasSeenDisclaimer()).then((seen) {
+      if (!mounted) return;
+      setState(() => _showDisclaimer = !seen);
+    });
     if (!widget.forTest) {
       _pm.attach('BTCUSDT').then((s) {
         _sub = s.listen((price) {
@@ -49,6 +55,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _lastPrices['BTCUSDT'] = price;
             _lastPrice = price;
           });
+        }, onError: (err) {
+          // Prevent unhandled exceptions from bubbling if WS emits errors.
+          // Optionally surface a toast/snackbar here.
         });
       });
 
@@ -67,6 +76,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _ackDisclaimer() async {
+    final p = await TradingPrefs.load();
+    await p.markDisclaimerSeen();
+    if (!mounted) return;
+    setState(() => _showDisclaimer = false);
+  }
+
   @override
   void dispose() {
     _sub?.cancel();
@@ -79,7 +95,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (widget.forTest) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('MyTradeMate', style: TextStyle(fontWeight: FontWeight.w600)),
+          title: const Text('MyTradeMate',
+              style: TextStyle(fontWeight: FontWeight.w600)),
           backgroundColor: Colors.transparent,
         ),
         body: SingleChildScrollView(
@@ -87,7 +104,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Your Assets', style: Theme.of(context).textTheme.titleLarge),
+              if (_showDisclaimer)
+                FirstRunDisclaimerBanner(onAcknowledge: _ackDisclaimer),
+              Text('Your Assets',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 10),
               AssetTile(
                 key: dashboardOrdersKey,
@@ -98,7 +118,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 isUp: true,
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const OrderHistoryScreen()),
                   );
                 },
               ),
@@ -123,7 +144,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MyTradeMate', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text('MyTradeMate',
+            style: TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
@@ -140,18 +162,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_showDisclaimer)
+              FirstRunDisclaimerBanner(onAcknowledge: _ackDisclaimer),
             // --- 1. Header Portofoliu ---
-            const Text('Portfolio Total', style: TextStyle(color: Colors.white70, fontSize: 16)),
+            const Text('Portfolio Total',
+                style: TextStyle(color: Colors.white70, fontSize: 16)),
             Row(
-              crossAxisAlignment: TextBaseline.alphabetic == null ? CrossAxisAlignment.start : CrossAxisAlignment.baseline,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
                 Flexible(
                   child: Text(
-                    _lastPrice == null ? '—' : '\$${_lastPrice!.toStringAsFixed(2)}',
+                    _lastPrice == null
+                        ? '—'
+                        : '\$${_lastPrice!.toStringAsFixed(2)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -159,10 +189,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   future: _ticker('BTCUSDT'),
                   builder: (context, s) {
                     if (!s.hasData) return const SizedBox();
-                    final ch = (s.data!['priceChangePercent'] ?? '0').toString();
+                    final ch =
+                        (s.data!['priceChangePercent'] ?? '0').toString();
                     final isUp = !ch.startsWith('-');
                     final color = isUp ? Colors.green : Colors.red;
-                    return Text('${ch}%', style: TextStyle(color: color));
+                    return Text('$ch%', style: TextStyle(color: color));
                   },
                 ),
               ],
@@ -176,7 +207,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 30),
 
             // --- 3. Portfolio Performance (BTCUSDT klines) ---
-            Text('Portfolio Performance', style: Theme.of(context).textTheme.titleLarge),
+            Text('Portfolio Performance',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),
             SizedBox(
               height: 200,
@@ -186,16 +218,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: FutureBuilder<List<List<num>>>(
                     future: _klines('BTCUSDT'),
                     builder: (context, snap) {
-                      if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                      if (!snap.hasData)
+                        return const Center(child: CircularProgressIndicator());
                       final data = snap.data!;
                       final spots = <FlSpot>[];
                       for (var i = 0; i < data.length; i++) {
                         final v = data[i][4];
-                        final close = v is num ? v.toDouble() : double.parse(v.toString());
+                        final close = v.toDouble();
                         spots.add(FlSpot(i.toDouble(), close));
                       }
-                      final minY = spots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
-                      final maxY = spots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+                      final minY =
+                          spots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
+                      final maxY =
+                          spots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
                       return LineChart(LineChartData(
                         minY: minY,
                         maxY: maxY,
@@ -203,7 +238,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         titlesData: const FlTitlesData(show: false),
                         borderData: FlBorderData(show: false),
                         lineBarsData: [
-                          LineChartBarData(spots: spots, isCurved: true, color: Colors.cyanAccent, barWidth: 2, dotData: const FlDotData(show: false)),
+                          LineChartBarData(
+                              spots: spots,
+                              isCurved: true,
+                              color: Colors.cyanAccent,
+                              barWidth: 2,
+                              dotData: const FlDotData(show: false)),
                         ],
                       ));
                     },
@@ -220,9 +260,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             FutureBuilder<Map<String, dynamic>>(
               future: _ticker('BTCUSDT'),
               builder: (context, s) {
-                final price = s.hasData ? (double.tryParse((s.data!['lastPrice'] ?? s.data!['price']).toString()) ?? 0).toStringAsFixed(2) : '—';
-                final ch = s.hasData ? ((s.data!['priceChangePercent'] ?? '0').toString()) : '—';
-                final isUp = ch != '—' ? (!ch.startsWith('-') && (double.tryParse(ch) ?? 0) >= 0) : true;
+                final price = s.hasData
+                    ? (double.tryParse(
+                                (s.data!['lastPrice'] ?? s.data!['price'])
+                                    .toString()) ??
+                            0)
+                        .toStringAsFixed(2)
+                    : '—';
+                final ch = s.hasData
+                    ? ((s.data!['priceChangePercent'] ?? '0').toString())
+                    : '—';
+                final isUp = ch != '—'
+                    ? (!ch.startsWith('-') && (double.tryParse(ch) ?? 0) >= 0)
+                    : true;
                 return AssetTile(
                   key: dashboardPortfolioKey,
                   symbol: 'BTC/USD',
@@ -232,7 +282,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   isUp: isUp,
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const PortfolioScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const MarketDetailsScreen(symbol: 'BTC/USDT')),
                     );
                   },
                 );
@@ -242,9 +293,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             FutureBuilder<Map<String, dynamic>>(
               future: _ticker('ETHUSDT'),
               builder: (context, s) {
-                final price = s.hasData ? (double.tryParse((s.data!['lastPrice'] ?? s.data!['price']).toString()) ?? 0).toStringAsFixed(2) : '—';
-                final ch = s.hasData ? ((s.data!['priceChangePercent'] ?? '0').toString()) : '—';
-                final isUp = ch != '—' ? (!ch.startsWith('-') && (double.tryParse(ch) ?? 0) >= 0) : true;
+                final price = s.hasData
+                    ? (double.tryParse(
+                                (s.data!['lastPrice'] ?? s.data!['price'])
+                                    .toString()) ??
+                            0)
+                        .toStringAsFixed(2)
+                    : '—';
+                final ch = s.hasData
+                    ? ((s.data!['priceChangePercent'] ?? '0').toString())
+                    : '—';
+                final isUp = ch != '—'
+                    ? (!ch.startsWith('-') && (double.tryParse(ch) ?? 0) >= 0)
+                    : true;
                 return AssetTile(
                   key: dashboardOrdersKey,
                   symbol: 'ETH/USD',
@@ -254,7 +315,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   isUp: isUp,
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const MarketDetailsScreen(symbol: 'ETH/USDT')),
                     );
                   },
                 );
@@ -264,9 +326,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             FutureBuilder<Map<String, dynamic>>(
               future: _ticker('BNBUSDT'),
               builder: (context, s) {
-                final price = s.hasData ? (double.tryParse((s.data!['lastPrice'] ?? s.data!['price']).toString()) ?? 0).toStringAsFixed(2) : '—';
-                final ch = s.hasData ? ((s.data!['priceChangePercent'] ?? '0').toString()) : '—';
-                final isUp = ch != '—' ? (!ch.startsWith('-') && (double.tryParse(ch) ?? 0) >= 0) : true;
+                final price = s.hasData
+                    ? (double.tryParse(
+                                (s.data!['lastPrice'] ?? s.data!['price'])
+                                    .toString()) ??
+                            0)
+                        .toStringAsFixed(2)
+                    : '—';
+                final ch = s.hasData
+                    ? ((s.data!['priceChangePercent'] ?? '0').toString())
+                    : '—';
+                final isUp = ch != '—'
+                    ? (!ch.startsWith('-') && (double.tryParse(ch) ?? 0) >= 0)
+                    : true;
                 return AssetTile(
                   key: dashboardExplainKey,
                   symbol: 'BNB/USD',
@@ -275,8 +347,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   change: ch == '—' ? ch : '$ch%',
                   isUp: isUp,
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Explain is available from AI cards')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const MarketDetailsScreen(symbol: 'BNB/USDT')),
                     );
                   },
                 );
@@ -284,73 +357,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 10),
             FutureBuilder<bool>(
-  future: _supports('TRUMPUSDT'),
-  builder: (context, s) {
-    if (s.data != true) return const SizedBox();
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _ticker('TRUMPUSDT'),
-      builder: (context, t) {
-        final price = t.hasData ? (double.tryParse((t.data!['lastPrice'] ?? t.data!['price']).toString()) ?? 0).toStringAsFixed(2) : '—';
-        final ch = t.hasData ? ((t.data!['priceChangePercent'] ?? '0').toString()) : '—';
-        final isUp = ch != '—' ? (!ch.startsWith('-') && (double.tryParse(ch) ?? 0) >= 0) : true;
-        return AssetTile(
-          symbol: 'TRUMP/USD',
-          name: 'TRUMP',
-          price: price,
-          change: ch == '—' ? ch : '$ch%',
-          isUp: isUp,
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => MarketDetailsScreen(symbol: 'TRUMP/USDT')),
-            );
-          },
-        );
-      },
-    );
-  },
-),
+              future: _supports('TRUMPUSDT'),
+              builder: (context, s) {
+                if (s.data != true) return const SizedBox();
+                return FutureBuilder<Map<String, dynamic>>(
+                  future: _ticker('TRUMPUSDT'),
+                  builder: (context, t) {
+                    final price = t.hasData
+                        ? (double.tryParse(
+                                    (t.data!['lastPrice'] ?? t.data!['price'])
+                                        .toString()) ??
+                                0)
+                            .toStringAsFixed(2)
+                        : '—';
+                    final ch = t.hasData
+                        ? ((t.data!['priceChangePercent'] ?? '0').toString())
+                        : '—';
+                    final isUp = ch != '—'
+                        ? (!ch.startsWith('-') &&
+                            (double.tryParse(ch) ?? 0) >= 0)
+                        : true;
+                    return AssetTile(
+                      symbol: 'TRUMP/USD',
+                      name: 'TRUMP',
+                      price: price,
+                      change: ch == '—' ? ch : '$ch%',
+                      isUp: isUp,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const MarketDetailsScreen(
+                                  symbol: 'TRUMP/USDT')),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
             const SizedBox(height: 10),
             FutureBuilder<bool>(
-  future: _supports('WIFUSDT'),
-  builder: (context, s) {
-    if (s.data != true) return const SizedBox();
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _ticker('WIFUSDT'),
-      builder: (context, t) {
-        final price = t.hasData ? (double.tryParse((t.data!['lastPrice'] ?? t.data!['price']).toString()) ?? 0).toStringAsFixed(2) : '—';
-        final ch = t.hasData ? ((t.data!['priceChangePercent'] ?? '0').toString()) : '—';
-        final isUp = ch != '—' ? (!ch.startsWith('-') && (double.tryParse(ch) ?? 0) >= 0) : true;
-        return AssetTile(
-          symbol: 'WIF/USD',
-          name: 'WIF',
-          price: price,
-          change: ch == '—' ? ch : '$ch%',
-          isUp: isUp,
-          key: dashboardSettingsKey,
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            );
-          },
-        );
-      },
-    );
-  },
-),
+              future: _supports('WIFUSDT'),
+              builder: (context, s) {
+                if (s.data != true) return const SizedBox();
+                return FutureBuilder<Map<String, dynamic>>(
+                  future: _ticker('WIFUSDT'),
+                  builder: (context, t) {
+                    final price = t.hasData
+                        ? (double.tryParse(
+                                    (t.data!['lastPrice'] ?? t.data!['price'])
+                                        .toString()) ??
+                                0)
+                            .toStringAsFixed(2)
+                        : '—';
+                    final ch = t.hasData
+                        ? ((t.data!['priceChangePercent'] ?? '0').toString())
+                        : '—';
+                    final isUp = ch != '—'
+                        ? (!ch.startsWith('-') &&
+                            (double.tryParse(ch) ?? 0) >= 0)
+                        : true;
+                    return AssetTile(
+                      symbol: 'WIF/USD',
+                      name: 'WIF',
+                      price: price,
+                      change: ch == '—' ? ch : '$ch%',
+                      isUp: isUp,
+                      key: dashboardSettingsKey,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const MarketDetailsScreen(symbol: 'WIF/USDT')),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
             const SizedBox(height: 20),
             Center(
               child: ElevatedButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Coming soon: full asset list')),
+                    const SnackBar(
+                        content: Text('Coming soon: full asset list')),
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.indigo,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
                 ),
-                child: const Text('View All Assets', style: TextStyle(color: Colors.white, fontSize: 16)),
+                child: const Text('View All Assets',
+                    style: TextStyle(color: Colors.white, fontSize: 16)),
               ),
             ),
           ],
@@ -359,32 +461,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-Future<bool> _supports(String symbol) async {
-  try {
-    final c = await api.DioBinanceClient.createFromPrefs();
-    return c.supportsSymbol(symbol);
-  } catch (_) {
-    return false;
+  Future<bool> _supports(String symbol) async {
+    try {
+      final c = await api.DioBinanceClient.createFromPrefs();
+      return c.supportsSymbol(symbol);
+    } catch (_) {
+      return false;
+    }
   }
-}
 
-Future<List<List<num>>> _klines(String symbol) async {
-  final c = await api.DioBinanceClient.createFromPrefs();
-  return c.klines(symbol, '1h', limit: 50);
-}
+  Future<List<List<num>>> _klines(String symbol) async {
+    final c = await api.DioBinanceClient.createFromPrefs();
+    return c.klines(symbol, '1h', limit: 50);
+  }
 
-Future<Map<String, dynamic>> _ticker(String symbol) async {
-  final c = await api.DioBinanceClient.createFromPrefs();
-  try { return await c.ticker24h(symbol); } catch (_) { final p = await c.tickerPrice(symbol); return {'price': p}; }
-}
+  Future<Map<String, dynamic>> _ticker(String symbol) async {
+    final c = await api.DioBinanceClient.createFromPrefs();
+    try {
+      return await c.ticker24h(symbol);
+    } catch (_) {
+      final p = await c.tickerPrice(symbol);
+      return {'price': p};
+    }
+  }
 
-  
-
-  Widget _buildAssetTile(BuildContext context, String symbol, String name, String price, String change, Color iconColor) {
+  Widget _buildAssetTile(BuildContext context, String symbol, String name,
+      String price, String change, Color iconColor) {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: iconColor.withOpacity(0.2),
-        child: Text(symbol[0], style: TextStyle(color: iconColor, fontWeight: FontWeight.bold)),
+        child: Text(symbol[0],
+            style: TextStyle(color: iconColor, fontWeight: FontWeight.bold)),
       ),
       title: Text(symbol, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(name, style: const TextStyle(color: Colors.white70)),
@@ -392,10 +499,14 @@ Future<Map<String, dynamic>> _ticker(String symbol) async {
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('\$$price', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('\$$price',
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Text(
             change,
-            style: TextStyle(color: change.contains('+') ? Colors.green : Colors.red, fontSize: 14),
+            style: TextStyle(
+                color: change.contains('+') ? Colors.green : Colors.red,
+                fontSize: 14),
           ),
         ],
       ),

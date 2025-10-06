@@ -6,7 +6,9 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:dio/dio.dart';
-import 'package:mytrademate/src/core/trading_prefs.dart' show TradeEnv, TradingPrefs;
+import 'package:mytrademate/src/core/trading_prefs.dart'
+    show TradeEnv, TradingPrefs;
+import 'package:mytrademate/core/errors.dart';
 import 'package:mytrademate/services/price_cache.dart';
 
 class DioBinanceClient {
@@ -44,7 +46,8 @@ class DioBinanceClient {
 
   /// Creates a client from saved trading preferences.
   /// For now defaults to TESTNET if prefs are unavailable.
-  static Future<DioBinanceClient> createFromPrefs({PriceCache? priceCache}) async {
+  static Future<DioBinanceClient> createFromPrefs(
+      {PriceCache? priceCache}) async {
     try {
       // If TradingPrefs has a real loader, use it; otherwise this falls back to testnet.
       // final prefs = await TradingPrefs.load();
@@ -61,10 +64,8 @@ class DioBinanceClient {
 
   // ────────────────────────────────────────────────────────────────────────────
   // Basic utilities
-  String _normSymbol(String s) => s
-      .replaceAll('/', '')
-      .replaceAll(RegExp(r'\s+'), '')
-      .toUpperCase();
+  String _normSymbol(String s) =>
+      s.replaceAll('/', '').replaceAll(RegExp(r'\s+'), '').toUpperCase();
 
   @visibleForTesting
   String normSymbolForTest(String s) => _normSymbol(s);
@@ -72,13 +73,15 @@ class DioBinanceClient {
   @visibleForTesting
   bool supportsSymbolForTest(List<String> listed, String symbol) {
     final s = _normSymbol(symbol);
-    return listed.map((e) => _normSymbol('$e')).contains(s);
+    return listed.map((e) => _normSymbol(e)).contains(s);
   }
 
   String _toQuery(Map<String, dynamic> params) {
     final entries = params.entries.where((e) => e.value != null);
-    return entries.map((e) => '${Uri.encodeQueryComponent(e.key)}='
-        '${Uri.encodeQueryComponent('${e.value}')}').join('&');
+    return entries
+        .map((e) => '${Uri.encodeQueryComponent(e.key)}='
+            '${Uri.encodeQueryComponent('${e.value}')}')
+        .join('&');
   }
 
   Map<String, String> toQueryForTest(Map<String, dynamic> q) {
@@ -138,7 +141,11 @@ class DioBinanceClient {
 
   String _sign(String message) {
     if (secretKey == null || secretKey!.isEmpty) {
-      throw StateError('Signed endpoint requested without secretKey');
+      throw UserError(
+        AppErrorType.missingCredentials,
+        'Exchange keys lipsă. Deschide Settings → Binance API & Testnet Setup.',
+        'Signed endpoint requested without secretKey',
+      );
     }
     final key = utf8.encode(secretKey!);
     final bytes = utf8.encode(message);
@@ -151,7 +158,8 @@ class DioBinanceClient {
       final code = error.response?.statusCode;
       final data = error.response?.data;
       final msg = data is Map && data['msg'] != null ? ' ${data['msg']}' : '';
-      throw Exception('Binance HTTP${code != null ? ' $code' : ''}: ${error.type}$msg');
+      throw Exception(
+          'Binance HTTP${code != null ? ' $code' : ''}: ${error.type}$msg');
     }
     throw Exception(error.toString());
   }
@@ -164,6 +172,13 @@ class DioBinanceClient {
     try {
       final qp = <String, dynamic>{...?query};
       if (signed) {
+        if (secretKey == null || secretKey!.isEmpty) {
+          throw UserError(
+            AppErrorType.missingCredentials,
+            'Exchange keys lipsă. Deschide Settings → Binance API & Testnet Setup.',
+            'GET $path requires signed request but no secretKey configured',
+          );
+        }
         qp['timestamp'] = DateTime.now().millisecondsSinceEpoch;
         qp['recvWindow'] = 5000;
         final qs = _toQuery(qp);
@@ -172,6 +187,7 @@ class DioBinanceClient {
       final res = await _dio.get(path, queryParameters: qp);
       return res.data;
     } catch (e) {
+      if (e is UserError) rethrow;
       _rethrowDio(e);
     }
   }
@@ -184,6 +200,13 @@ class DioBinanceClient {
     try {
       final qp = <String, dynamic>{...?query};
       if (signed) {
+        if (secretKey == null || secretKey!.isEmpty) {
+          throw UserError(
+            AppErrorType.missingCredentials,
+            'Exchange keys lipsă. Deschide Settings → Binance API & Testnet Setup.',
+            'POST $path requires signed request but no secretKey configured',
+          );
+        }
         qp['timestamp'] = DateTime.now().millisecondsSinceEpoch;
         qp['recvWindow'] = 5000;
         final qs = _toQuery(qp);
@@ -193,6 +216,35 @@ class DioBinanceClient {
       final res = await _dio.post(path, queryParameters: qp);
       return res.data;
     } catch (e) {
+      if (e is UserError) rethrow;
+      _rethrowDio(e);
+    }
+  }
+
+  Future<dynamic> _delete(
+    String path, {
+    Map<String, dynamic>? query,
+    bool signed = false,
+  }) async {
+    try {
+      final qp = <String, dynamic>{...?query};
+      if (signed) {
+        if (secretKey == null || secretKey!.isEmpty) {
+          throw UserError(
+            AppErrorType.missingCredentials,
+            'Exchange keys lipsă. Deschide Settings → Binance API & Testnet Setup.',
+            'DELETE $path requires signed request but no secretKey configured',
+          );
+        }
+        qp['timestamp'] = DateTime.now().millisecondsSinceEpoch;
+        qp['recvWindow'] = 5000;
+        final qs = _toQuery(qp);
+        qp['signature'] = _sign(qs);
+      }
+      final res = await _dio.delete(path, queryParameters: qp);
+      return res.data;
+    } catch (e) {
+      if (e is UserError) rethrow;
       _rethrowDio(e);
     }
   }
@@ -248,7 +300,7 @@ class DioBinanceClient {
     // Coerce to numeric where possible for runtime callers
     return raw.map<List<num>>((row) {
       final r = List.from(row);
-      List<num> out = [];
+      final List<num> out = [];
       for (final v in r) {
         if (v is num) {
           out.add(v);
@@ -292,7 +344,8 @@ class DioBinanceClient {
   /// Parses account balances to a lightweight list of maps {asset, free, locked}
   /// Keeps only positive totals (free + locked > 0)
   @visibleForTesting
-  List<Map<String, dynamic>> parseBalancesForTest(Map<String, dynamic> accountJson) {
+  List<Map<String, dynamic>> parseBalancesForTest(
+      Map<String, dynamic> accountJson) {
     final balances = (accountJson['balances'] as List?) ?? const [];
     final out = <Map<String, dynamic>>[];
     for (final b in balances) {
@@ -362,7 +415,8 @@ class DioBinanceClient {
     required String side,
     required double quoteQty,
   }) async {
-    return newMarketOrderQuote(symbol: symbol, side: side, quoteOrderQty: quoteQty);
+    return newMarketOrderQuote(
+        symbol: symbol, side: side, quoteOrderQty: quoteQty);
   }
 
   /// Signed: POST /api/v3/order (LIMIT GTC)
@@ -383,6 +437,180 @@ class DioBinanceClient {
       'newOrderRespType': 'RESULT',
     });
     return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Signed: POST /api/v3/order (STOP_LOSS)
+  Future<Map<String, dynamic>> newStopLossOrder({
+    required String symbol,
+    required String side,
+    required num quantity,
+    required num stopPrice,
+  }) async {
+    final data = await _post('/api/v3/order', signed: true, query: {
+      'symbol': _normSymbol(symbol),
+      'side': side.toUpperCase(),
+      'type': 'STOP_LOSS',
+      'quantity': quantity,
+      'stopPrice': stopPrice,
+      'newOrderRespType': 'RESULT',
+    });
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Signed: POST /api/v3/order (STOP_LOSS_LIMIT)
+  Future<Map<String, dynamic>> newStopLossLimitOrder({
+    required String symbol,
+    required String side,
+    required num quantity,
+    required num price,
+    required num stopPrice,
+    String timeInForce = 'GTC',
+  }) async {
+    final data = await _post('/api/v3/order', signed: true, query: {
+      'symbol': _normSymbol(symbol),
+      'side': side.toUpperCase(),
+      'type': 'STOP_LOSS_LIMIT',
+      'timeInForce': timeInForce,
+      'quantity': quantity,
+      'price': price,
+      'stopPrice': stopPrice,
+      'newOrderRespType': 'RESULT',
+    });
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Signed: POST /api/v3/order (TAKE_PROFIT)
+  Future<Map<String, dynamic>> newTakeProfitOrder({
+    required String symbol,
+    required String side,
+    required num quantity,
+    required num stopPrice,
+  }) async {
+    final data = await _post('/api/v3/order', signed: true, query: {
+      'symbol': _normSymbol(symbol),
+      'side': side.toUpperCase(),
+      'type': 'TAKE_PROFIT',
+      'quantity': quantity,
+      'stopPrice': stopPrice,
+      'newOrderRespType': 'RESULT',
+    });
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Signed: POST /api/v3/order (TAKE_PROFIT_LIMIT)
+  Future<Map<String, dynamic>> newTakeProfitLimitOrder({
+    required String symbol,
+    required String side,
+    required num quantity,
+    required num price,
+    required num stopPrice,
+    String timeInForce = 'GTC',
+  }) async {
+    final data = await _post('/api/v3/order', signed: true, query: {
+      'symbol': _normSymbol(symbol),
+      'side': side.toUpperCase(),
+      'type': 'TAKE_PROFIT_LIMIT',
+      'timeInForce': timeInForce,
+      'quantity': quantity,
+      'price': price,
+      'stopPrice': stopPrice,
+      'newOrderRespType': 'RESULT',
+    });
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Signed: POST /api/v3/order/oco (OCO - One Cancels Other)
+  /// Places a LIMIT buy/sell with a STOP_LOSS order. When one triggers, the other cancels.
+  Future<Map<String, dynamic>> newOCOOrder({
+    required String symbol,
+    required String side,
+    required num quantity,
+    required num price, // limit price
+    required num stopPrice, // stop loss trigger
+    required num stopLimitPrice, // stop loss limit price
+    String listClientOrderId = '',
+    String limitClientOrderId = '',
+    String stopClientOrderId = '',
+    String stopLimitTimeInForce = 'GTC',
+  }) async {
+    final data = await _post('/api/v3/order/oco', signed: true, query: {
+      'symbol': _normSymbol(symbol),
+      'side': side.toUpperCase(),
+      'quantity': quantity,
+      'price': price,
+      'stopPrice': stopPrice,
+      'stopLimitPrice': stopLimitPrice,
+      'stopLimitTimeInForce': stopLimitTimeInForce,
+      if (listClientOrderId.isNotEmpty) 'listClientOrderId': listClientOrderId,
+      if (limitClientOrderId.isNotEmpty)
+        'limitClientOrderId': limitClientOrderId,
+      if (stopClientOrderId.isNotEmpty) 'stopClientOrderId': stopClientOrderId,
+      'newOrderRespType': 'RESULT',
+    });
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Signed: POST /api/v3/order (TRAILING_STOP_MARKET)
+  /// Trailing stop follows the market price at a specified callback rate
+  Future<Map<String, dynamic>> newTrailingStopOrder({
+    required String symbol,
+    required String side,
+    required num quantity,
+    required num callbackRate, // 0.1 to 5.0 (percentage)
+  }) async {
+    final data = await _post('/api/v3/order', signed: true, query: {
+      'symbol': _normSymbol(symbol),
+      'side': side.toUpperCase(),
+      'type': 'TRAILING_STOP_MARKET',
+      'quantity': quantity,
+      'callbackRate': callbackRate,
+      'newOrderRespType': 'RESULT',
+    });
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Signed: DELETE /api/v3/order (Cancel order)
+  Future<Map<String, dynamic>> cancelOrder({
+    required String symbol,
+    int? orderId,
+    String? origClientOrderId,
+  }) async {
+    if (orderId == null && origClientOrderId == null) {
+      throw ArgumentError(
+          'Either orderId or origClientOrderId must be provided');
+    }
+    final data = await _delete('/api/v3/order', signed: true, query: {
+      'symbol': _normSymbol(symbol),
+      if (orderId != null) 'orderId': orderId,
+      if (origClientOrderId != null) 'origClientOrderId': origClientOrderId,
+    });
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  /// Signed: GET /api/v3/openOrders
+  Future<List<Map<String, dynamic>>> openOrders({String? symbol}) async {
+    final data = await _get('/api/v3/openOrders', signed: true, query: {
+      if (symbol != null) 'symbol': _normSymbol(symbol),
+    });
+    return (data as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Signed: GET /api/v3/allOrders (get all orders for a symbol)
+  Future<List<Map<String, dynamic>>> allOrders({
+    required String symbol,
+    int? orderId,
+    int? startTime,
+    int? endTime,
+    int limit = 500,
+  }) async {
+    final data = await _get('/api/v3/allOrders', signed: true, query: {
+      'symbol': _normSymbol(symbol),
+      if (orderId != null) 'orderId': orderId,
+      if (startTime != null) 'startTime': startTime,
+      if (endTime != null) 'endTime': endTime,
+      'limit': limit,
+    });
+    return (data as List).cast<Map<String, dynamic>>();
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -414,7 +642,8 @@ class DioBinanceClient {
   }
 
   @visibleForTesting
-  static num clampToMinNotionalForTest({required num quote, required num minNotional}) {
+  static num clampToMinNotionalForTest(
+      {required num quote, required num minNotional}) {
     if (quote >= minNotional) return quote;
     return minNotional;
   }
@@ -432,7 +661,8 @@ class DioBinanceClient {
   List<List<dynamic>> parseKlinesForTest(dynamic data) {
     if (data is! List) return <List<dynamic>>[];
     return data
-        .map<List<dynamic>>((row) => row is List ? row.cast<dynamic>() : <dynamic>[])
+        .map<List<dynamic>>(
+            (row) => row is List ? row.cast<dynamic>() : <dynamic>[])
         .toList();
   }
 

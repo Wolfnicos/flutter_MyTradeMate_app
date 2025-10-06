@@ -12,17 +12,26 @@ class AppTheme {
     return base.copyWith(
       scaffoldBackgroundColor: _bg,
       colorScheme: base.colorScheme.copyWith(
-        primary: _accent, secondary: _accent, surface: _card,
+        primary: _accent,
+        secondary: _accent,
+        surface: _card,
       ),
-      cardTheme: const CardTheme(
-        color: _card, elevation: 0, margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+      cardTheme: const CardThemeData(
+        color: _card,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(20))),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: _bg, foregroundColor: Colors.white, elevation: 0, centerTitle: true,
+        backgroundColor: _bg,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       snackBarTheme: const SnackBarThemeData(
-        behavior: SnackBarBehavior.floating, backgroundColor: _card,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: _card,
       ),
     );
   }
@@ -35,5 +44,3 @@ class AppTheme {
   static Color err([double o = 1]) => _err.withOpacity(o);
   static Color accent([double o = 1]) => _accent.withOpacity(o);
 }
-
-

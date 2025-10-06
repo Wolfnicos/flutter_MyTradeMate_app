@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/ai_service.dart';
 import 'widgets/ai_status_card.dart';
+import 'backtest_screen.dart';
 
 class AIStrategiesScreen extends StatefulWidget {
   const AIStrategiesScreen({super.key});
@@ -15,7 +16,11 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
 
   // Symbols we try to predict for. Unsupported pairs will be skipped gracefully.
   static const List<String> _symbols = [
-    'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'TRUMPUSD', 'WIFUSD'
+    'BTCUSDT',
+    'ETHUSDT',
+    'BNBUSDT',
+    'TRUMPUSD',
+    'WIFUSD'
   ];
 
   final Map<String, AIPrediction?> _preds = {};
@@ -28,7 +33,8 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     super.initState();
     _fetchAll();
     // light auto-refresh every 30s while on this screen
-    _autoTimer = Timer.periodic(const Duration(seconds: 30), (_) => _fetchAll(silent: true));
+    _autoTimer = Timer.periodic(
+        const Duration(seconds: 30), (_) => _fetchAll(silent: true));
   }
 
   @override
@@ -38,7 +44,11 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
   }
 
   Future<void> _fetchAll({bool silent = false}) async {
-    if (!silent) setState(() { _loading = true; _error = null; });
+    if (!silent)
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
     final Map<String, AIPrediction?> next = {};
     String? lastErr;
     for (final sym in _symbols) {
@@ -65,14 +75,18 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Strategies', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text('AI Strategies',
+            style: TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: 'Refresh',
             onPressed: _loading ? null : () => _fetchAll(),
             icon: _loading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.refresh),
           )
         ],
@@ -85,10 +99,10 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Your AI Module Status', style: Theme.of(context).textTheme.titleLarge),
+              Text('Your AI Module Status',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               const AIStatusCard(),
-
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 _buildAIAlert(
@@ -99,19 +113,20 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                   Icons.info_outline,
                 ),
               ],
-
               const SizedBox(height: 24),
-              Text('Predicții curente', style: Theme.of(context).textTheme.titleLarge),
+              Text('Predicții curente',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              ..._symbols.map((s) => _buildPredictionTile(context, s, _preds[s])),
-
+              ..._symbols
+                  .map((s) => _buildPredictionTile(context, s, _preds[s])),
               const SizedBox(height: 24),
-              Text('Insights & Alerts', style: Theme.of(context).textTheme.titleLarge),
+              Text('Insights & Alerts',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               ..._buildInsights(context),
-
               const SizedBox(height: 24),
-              Text('Advanced Tools', style: Theme.of(context).textTheme.titleLarge),
+              Text('Advanced Tools',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               _buildBacktestingCard(context),
             ],
@@ -121,20 +136,24 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     );
   }
 
-  Widget _buildPredictionTile(BuildContext context, String symbol, AIPrediction? p) {
+  Widget _buildPredictionTile(
+      BuildContext context, String symbol, AIPrediction? p) {
     if (p == null) {
       return Card(
         child: ListTile(
           leading: const Icon(Icons.query_stats),
           title: Text(symbol),
-          subtitle: const Text('Nicio predicție (AI indisponibil sau pair neacceptat).'),
+          subtitle: const Text(
+              'Nicio predicție (AI indisponibil sau pair neacceptat).'),
         ),
       );
     }
 
     final actionColor = p.action.toLowerCase() == 'buy'
         ? Colors.greenAccent
-        : (p.action.toLowerCase() == 'sell' ? Colors.redAccent : Colors.amberAccent);
+        : (p.action.toLowerCase() == 'sell'
+            ? Colors.redAccent
+            : Colors.amberAccent);
 
     return Card(
       child: ListTile(
@@ -194,7 +213,8 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     return items;
   }
 
-  Widget _buildAIAlert(BuildContext context, String title, String subtitle, Color color, IconData icon) {
+  Widget _buildAIAlert(BuildContext context, String title, String subtitle,
+      Color color, IconData icon) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -212,7 +232,9 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+                Text(title,
+                    style:
+                        TextStyle(color: color, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(subtitle, style: const TextStyle(color: Colors.white70)),
               ],
@@ -223,7 +245,9 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
               onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Order ticket coming soon…')),
               ),
-              child: const Text('ACT NOW', style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+              child: const Text('ACT NOW',
+                  style: TextStyle(
+                      color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
             ),
         ],
       ),
@@ -239,7 +263,8 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Backtesting & Simulation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Backtesting & Simulation',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             const Text(
               'Testați performanța strategiilor pe date istorice pentru a estima profitabilitatea viitoare.',
@@ -247,14 +272,18 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Backtester UI coming soon.')),
-              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BacktestScreen()),
+                );
+              },
               icon: const Icon(Icons.history, color: Colors.white),
-              label: const Text('Run Backtest', style: TextStyle(color: Colors.white, fontSize: 16)),
+              label: const Text('Run Backtest',
+                  style: TextStyle(color: Colors.white, fontSize: 16)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],

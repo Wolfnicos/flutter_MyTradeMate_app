@@ -4,11 +4,14 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 enum TradeEnv { testnet, live }
 
 class TradingPrefs {
+  static const _kHasSeenDisclaimer = 'has_seen_disclaimer_v1';
   static const _kApiKey = 'api_key';
   static const _kSecret = 'api_secret';
   static const _kEnv = 'trade_env';
   static const _kFixedQuote = 'fixed_quote'; // USDT per ordin (double)
-  static const _kDefaultQuoteCcy = 'default_quote_ccy'; // e.g., 'USDT' (testing convenience)
+  static const _kDefaultQuoteCcy =
+      'default_quote_ccy'; // e.g., 'USDT' (testing convenience)
+  static const _kTelemetryOptIn = 'telemetry_opt_in_v1';
   // SignalPolicy-related keys
   static const _kUserConsentTrading = 'user_consent_trading';
   static const _kMinConfidence = 'policy_min_confidence'; // 0..100
@@ -16,9 +19,13 @@ class TradingPrefs {
   static const _kMaxTradesPerDay = 'policy_max_trades_per_day';
   static const _kBuyThreshold = 'policy_buy_threshold'; // 0..1
   static const _kSellThreshold = 'policy_sell_threshold'; // 0..1
-  static const _kHystUp = 'policy_hysteresis_up'; // 0..1 (added to buy threshold)
-  static const _kHystDown = 'policy_hysteresis_down'; // 0..1 (subtracted from sell threshold)
-  static const _kQuotePerTrade = 'policy_quote_per_trade'; // in quote ccy (e.g. USDT)
+  static const _kHystUp =
+      'policy_hysteresis_up'; // 0..1 (added to buy threshold)
+  static const _kHystDown =
+      'policy_hysteresis_down'; // 0..1 (subtracted from sell threshold)
+  static const _kQuotePerTrade =
+      'policy_quote_per_trade'; // in quote ccy (e.g. USDT)
+  static const _kPaperTrading = 'paper_trading_mode'; // bool
 
   final SharedPreferences _sp;
   TradingPrefs._(this._sp);
@@ -27,10 +34,14 @@ class TradingPrefs {
       TradingPrefs._(await SharedPreferences.getInstance());
 
   // Optional CI/runtime overrides via --dart-define
-  static const String _envApiKey = String.fromEnvironment('BINANCE_API_KEY', defaultValue: '');
-  static const String _envApiSecret = String.fromEnvironment('BINANCE_API_SECRET', defaultValue: '');
-  static const String _envEnv = String.fromEnvironment('BINANCE_ENV', defaultValue: 'testnet');
-  static const String _envDefaultQuote = String.fromEnvironment('DEFAULT_QUOTE', defaultValue: '');
+  static const String _envApiKey =
+      String.fromEnvironment('BINANCE_API_KEY', defaultValue: '');
+  static const String _envApiSecret =
+      String.fromEnvironment('BINANCE_API_SECRET', defaultValue: '');
+  static const String _envEnv =
+      String.fromEnvironment('BINANCE_ENV', defaultValue: 'testnet');
+  static const String _envDefaultQuote =
+      String.fromEnvironment('DEFAULT_QUOTE', defaultValue: '');
 
   String? get apiKey {
     final v = _sp.getString(_kApiKey);
@@ -58,19 +69,30 @@ class TradingPrefs {
     return parsed ?? 50.0;
   }
 
+  Future<bool> isPaperTrading() async {
+    return _sp.getBool(_kPaperTrading) ?? false;
+  }
+
+  Future<void> setPaperTrading(bool enabled) async {
+    await _sp.setBool(_kPaperTrading, enabled);
+  }
+
   Future<void> save({
     String? apiKey,
     String? apiSecret,
     TradeEnv? env,
     double? fixedQuote,
+    bool? paperTrading,
   }) async {
     if (apiKey != null) await _sp.setString(_kApiKey, apiKey);
     if (apiSecret != null) await _sp.setString(_kSecret, apiSecret);
     if (env != null) await _sp.setInt(_kEnv, env.index);
     if (fixedQuote != null) await _sp.setDouble(_kFixedQuote, fixedQuote);
+    if (paperTrading != null) await _sp.setBool(_kPaperTrading, paperTrading);
   }
 
-  bool get hasCreds => (apiKey?.isNotEmpty ?? false) && (apiSecret?.isNotEmpty ?? false);
+  bool get hasCreds =>
+      (apiKey?.isNotEmpty ?? false) && (apiSecret?.isNotEmpty ?? false);
 
   // ────────────────────────────────────────────────────────────────────────────
   // SignalPolicy persisted settings with sensible defaults
@@ -108,14 +130,19 @@ class TradingPrefs {
     return _sp.getInt(_kMaxTradesPerDay) ?? 0;
   }
 
-  Future<void> setThresholds({required double buy, required double sell, double hystUp = 0.0, double hystDown = 0.0}) async {
+  Future<void> setThresholds(
+      {required double buy,
+      required double sell,
+      double hystUp = 0.0,
+      double hystDown = 0.0}) async {
     await _sp.setDouble(_kBuyThreshold, buy);
     await _sp.setDouble(_kSellThreshold, sell);
     await _sp.setDouble(_kHystUp, hystUp);
     await _sp.setDouble(_kHystDown, hystDown);
   }
 
-  Future<(double buy, double sell, double hystUp, double hystDown)> getThresholds() async {
+  Future<(double buy, double sell, double hystUp, double hystDown)>
+      getThresholds() async {
     final buy = _sp.getDouble(_kBuyThreshold) ?? 0.55;
     final sell = _sp.getDouble(_kSellThreshold) ?? 0.45;
     final up = _sp.getDouble(_kHystUp) ?? 0.0;
@@ -135,8 +162,20 @@ class TradingPrefs {
     return fq ?? 25.0;
   }
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // Disclaimer (paper-trading) acknowledgement
+
+  Future<bool> hasSeenDisclaimer() async {
+    return _sp.getBool(_kHasSeenDisclaimer) ?? false;
+  }
+
+  Future<void> markDisclaimerSeen() async {
+    await _sp.setBool(_kHasSeenDisclaimer, true);
+  }
+
   // Per-symbol last trade timestamp
-  String _kLastTradeAtKey(String symbol) => 'lastTradeAt:${symbol.toUpperCase()}';
+  String _kLastTradeAtKey(String symbol) =>
+      'lastTradeAt:${symbol.toUpperCase()}';
   String _kTradeCountDayKey(DateTime day) {
     final y = day.year.toString().padLeft(4, '0');
     final m = day.month.toString().padLeft(2, '0');
@@ -173,6 +212,12 @@ class TradingPrefs {
     return TradingPrefs._(await SharedPreferences.getInstance());
   }
 
+  // Feature flags (test-only helpers)
+  @visibleForTesting
+  Future<void> setUndoTradeEnabledForTest(bool v) async {
+    await _sp.setBool('feature.undo_trade', v);
+  }
+
   @visibleForTesting
   Future<void> setApiKey(String v) async => _sp.setString(_kApiKey, v);
 
@@ -207,13 +252,25 @@ class TradingPrefs {
 
   @visibleForTesting
   Future<String?> getDefaultQuote() async => _sp.getString(_kDefaultQuoteCcy);
+
+  @visibleForTesting
+  Future<void> setDisclaimerSeenForTest(bool v) async {
+    await _sp.setBool(_kHasSeenDisclaimer, v);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Telemetry opt-in
+
+  Future<void> setTelemetryOptIn(bool v) async {
+    await _sp.setBool(_kTelemetryOptIn, v);
+  }
+
+  Future<bool> getTelemetryOptIn() async {
+    return _sp.getBool(_kTelemetryOptIn) ?? false;
+  }
 }
 
 @visibleForTesting
 Future<TradingPrefs> inMemoryTradingPrefsForTest() async {
   return TradingPrefs._(await SharedPreferences.getInstance());
 }
-
-
-
-

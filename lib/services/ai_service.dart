@@ -35,15 +35,19 @@ class _DioClientAdapter implements BinanceClientLike {
   final api.DioBinanceClient inner;
   _DioClientAdapter(this.inner);
 
+  api.DioBinanceClient get client => inner;
+
   @override
-  Future<List<List<num>>> klines(String symbol, String interval, {int limit = 200}) =>
+  Future<List<List<num>>> klines(String symbol, String interval,
+          {int limit = 200}) =>
       inner.klines(symbol, interval, limit: limit);
 
   @override
   Future<double> tickerPrice(String symbol) => inner.tickerPrice(symbol);
 
   @override
-  Future<Map<String, dynamic>> ticker24h(String symbol) => inner.ticker24h(symbol);
+  Future<Map<String, dynamic>> ticker24h(String symbol) =>
+      inner.ticker24h(symbol);
 }
 
 /// Models adapter for testability
@@ -51,8 +55,8 @@ abstract class ModelsAdapter {
   List<String> get featCols;
   Future<({double? probUp, double? nextReturn, double? volatility})> predictAll(
       Map<String, double> features);
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAllFromSequence(
-      List<List<double>> seq);
+  Future<({double? probUp, double? nextReturn, double? volatility})>
+      predictAllFromSequence(List<List<double>> seq);
 }
 
 class _RealModelsAdapter implements ModelsAdapter {
@@ -65,12 +69,15 @@ class _RealModelsAdapter implements ModelsAdapter {
   @override
   Future<({double? probUp, double? nextReturn, double? volatility})> predictAll(
     Map<String, double> features,
-  ) => _m.predictAll(features);
+  ) =>
+      _m.predictAll(features);
 
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAllFromSequence(
+  Future<({double? probUp, double? nextReturn, double? volatility})>
+      predictAllFromSequence(
     List<List<double>> seq,
-  ) => _m.predictAllFromSequence(seq);
+  ) =>
+          _m.predictAllFromSequence(seq);
 }
 
 class AIService {
@@ -103,7 +110,27 @@ class AIService {
     final sym = _toBinanceSymbol(symbol);
     try {
       // 1) fetch live prices (use injected client if provided)
-      final cli = client ?? _DioClientAdapter(await api.DioBinanceClient.createFromPrefs());
+      final cli = client ??
+          _DioClientAdapter(await api.DioBinanceClient.createFromPrefs());
+      
+      // Check if symbol is supported on current environment (testnet/mainnet)
+      bool isSupported = true;
+      try {
+        if (cli is _DioClientAdapter) {
+          final dioClient = cli.client;
+          isSupported = await dioClient.supportsSymbol(sym);
+        }
+      } catch (_) {
+        isSupported = false;
+      }
+      
+      if (!isSupported) {
+        // Symbol not available on current environment (e.g. TRUMP/WIF on testnet)
+        throw Exception(
+          'Pair $sym nu este disponibil pe acest environment. '
+          'Comută la Live pentru a accesa toate pair-urile.'
+        );
+      }
       Map<String, dynamic> t;
       try {
         t = await cli.ticker24h(sym);
@@ -112,11 +139,15 @@ class AIService {
         t = {'lastPrice': p, 'prevClosePrice': p};
       }
       final rawLast = t['lastPrice'];
-      final double last = rawLast is num ? rawLast.toDouble() : double.parse(rawLast.toString());
+      final double last = rawLast is num
+          ? rawLast.toDouble()
+          : double.parse(rawLast.toString());
       final rawPrev = t['prevClosePrice'];
       final double prev = rawPrev == null
           ? last
-          : (rawPrev is num ? rawPrev.toDouble() : double.parse(rawPrev.toString()));
+          : (rawPrev is num
+              ? rawPrev.toDouble()
+              : double.parse(rawPrev.toString()));
 
       // 2) Build features. Prefer full 64-step sequence from klines for the models.
       final ModelsAdapter adapter;
@@ -132,7 +163,7 @@ class AIService {
         final kl = await cli.klines(sym, '5m', limit: 128);
         final closes = kl.map<double>((row) {
           final v = row[4];
-          return (v as num).toDouble();
+          return (v).toDouble();
         }).toList();
         final seq = builder.sequenceFromCloses(closes, length: 64);
         out = await adapter.predictAllFromSequence(seq);
@@ -145,12 +176,21 @@ class AIService {
       try {
         Calibrator? cal = _cachedCalibrator;
         final debugMode = () {
-          var inDebug = false; assert(() { inDebug = true; return true; }()); return inDebug;
+          var inDebug = false;
+          assert(() {
+            inDebug = true;
+            return true;
+          }());
+          return inDebug;
         }();
-        final shouldReload = debugMode && (_lastLoad == null || DateTime.now().difference(_lastLoad!) > const Duration(seconds: 5));
+        final shouldReload = debugMode &&
+            (_lastLoad == null ||
+                DateTime.now().difference(_lastLoad!) >
+                    const Duration(seconds: 5));
         if (cal == null || shouldReload) {
           cal = await CalibrationStore.tryLoadFromAssets();
-          _cachedCalibrator = cal; _lastLoad = DateTime.now();
+          _cachedCalibrator = cal;
+          _lastLoad = DateTime.now();
         }
         if (cal != null) {
           final raw = prob;
@@ -159,7 +199,8 @@ class AIService {
             // log 1/200 calls in debug for drift checks
             if (DateTime.now().millisecond % 200 == 0) {
               // ignore: avoid_print
-              print('[AI] prob_raw=${raw.toStringAsFixed(4)} → prob_cal=${prob.toStringAsFixed(4)}');
+              print(
+                  '[AI] prob_raw=${raw.toStringAsFixed(4)} → prob_cal=${prob.toStringAsFixed(4)}');
             }
             return true;
           }());
@@ -191,7 +232,7 @@ class AIService {
 String _toBinanceSymbol(String s) {
   var up = s.toUpperCase().replaceAll('/', '').replaceAll(RegExp(r'\s+'), '');
   if (up.endsWith('USD')) {
-    up = up.substring(0, up.length - 3) + 'USDT';
+    up = '${up.substring(0, up.length - 3)}USDT';
   }
   return up;
 }
@@ -213,7 +254,7 @@ String toBinanceSymbolForTest(String s) => _toBinanceSymbol(s);
 List<List<double>> featuresFromTickerForTest(double last) {
   // Build a minimal 64-step sequence from a single last price, mirroring
   // the internal fallback behavior used when klines are unavailable.
-  final builder = FeatureBuilder();
+  const builder = FeatureBuilder();
   return builder.sequenceFromCloses([last], length: 64);
 }
 
@@ -235,7 +276,8 @@ class ExplainData {
 }
 
 @visibleForTesting
-ExplainData mapToExplain(String symbol, List<List<double>> seq, AIPrediction r) {
+ExplainData mapToExplain(
+    String symbol, List<List<double>> seq, AIPrediction r) {
   return ExplainData(
     symbol: symbol,
     probUp: r.probUp,
@@ -281,5 +323,3 @@ Future<AiInference> inferAndExplainForTest({
   final exp = mapToExplain(symbol, seq, res);
   return AiInference(res, exp);
 }
-
-

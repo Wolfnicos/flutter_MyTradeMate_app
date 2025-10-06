@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/settings_tile.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'change_password_screen.dart';
+import 'settings_screen.dart';
 import 'package:local_auth/local_auth.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -17,7 +18,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _twoFA = false;
   bool _biometric = false;
 
-  bool _darkMode = false; // persisted preference only (theme applied on next app init)
+  bool _darkMode =
+      false; // persisted preference only (theme applied on next app init)
   String? _name;
   String? _email;
 
@@ -29,9 +31,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadPrefs() async {
     final sp = await SharedPreferences.getInstance();
-    final env = sp.getString('binance.env') ?? 'testnet';
+    // Use the unified paper trading key
+    final paperMode = sp.getBool('paper_trading_mode') ?? true;
     setState(() {
-      _paperTrading = env == 'testnet';
+      _paperTrading = paperMode;
       _twoFA = sp.getBool('auth.2fa') ?? false;
       _biometric = sp.getBool('security.biometric') ?? false;
       _darkMode = sp.getBool('app.dark') ?? false;
@@ -45,10 +48,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _setPaperTrading(bool v) async {
     setState(() => _paperTrading = v);
     final sp = await SharedPreferences.getInstance();
+    // Save to unified key
+    await sp.setBool('paper_trading_mode', v);
+    // Also update binance.env for compatibility
     await sp.setString('binance.env', v ? 'testnet' : 'live');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(v ? 'Paper Trading (Testnet) enabled' : 'Live trading mode selected')),
+        SnackBar(
+            content: Text(v
+                ? 'Paper Trading (Testnet) enabled ✅'
+                : 'Live trading mode selected ⚠️')),
       );
     }
   }
@@ -57,7 +66,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile & Settings', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text('Profile & Settings',
+            style: TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
@@ -67,20 +77,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             _buildProfileHeader(context),
             const SizedBox(height: 30),
-
-            Text('Security & Privacy', style: Theme.of(context).textTheme.titleLarge),
+            Text('Security & Privacy',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),
-            SettingsTile(icon: Icons.lock_outline, title: 'Change Password', onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
-            }),
-            SettingsSwitchTile(icon: Icons.security, title: '2FA Authentication', value: _twoFA, onChanged: _toggle2FA),
-            SettingsSwitchTile(icon: Icons.fingerprint, title: 'Biometric Lock (Face ID)', value: _biometric, onChanged: _toggleBiometric),
+            SettingsTile(
+                icon: Icons.lock_outline,
+                title: 'Change Password',
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ChangePasswordScreen()));
+                }),
+            SettingsSwitchTile(
+                icon: Icons.security,
+                title: '2FA Authentication',
+                value: _twoFA,
+                onChanged: _toggle2FA),
+            SettingsSwitchTile(
+                icon: Icons.fingerprint,
+                title: 'Biometric Lock (Face ID)',
+                value: _biometric,
+                onChanged: _toggleBiometric),
             const SizedBox(height: 30),
-
             Text('App Settings', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),
-            SettingsTile(icon: Icons.notifications_none, title: 'Notification Preferences', onTap: () {}),
-            SettingsTile(icon: Icons.language, title: 'Language (${_langLabel()})', onTap: _pickLanguage),
+            SettingsTile(
+                icon: Icons.notifications_none,
+                title: 'Notification Preferences',
+                onTap: () {}),
+            SettingsTile(
+                icon: Icons.language,
+                title: 'Language (${_langLabel()})',
+                onTap: _pickLanguage),
             SettingsSwitchTile(
               icon: Icons.dark_mode,
               title: 'Dark Mode',
@@ -91,26 +120,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (!mounted) return;
                 setState(() => _darkMode = val);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Theme updated. Will fully apply on next app start.')),
+                  const SnackBar(
+                      content: Text(
+                          'Theme updated. Will fully apply on next app start.')),
                 );
               },
             ),
             const SizedBox(height: 30),
-
-            Text('Trading Backend', style: Theme.of(context).textTheme.titleLarge),
+            Text('Trading Backend',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),
-            SettingsTile(icon: Icons.api, title: 'Binance API & Testnet Setup', onTap: () {
-              _showBinanceApiSetupModal(context);
-            }),
-            SettingsSwitchTile(icon: Icons.paid, title: 'Paper Trading Mode (Testnet)', value: _paperTrading, onChanged: (val) {
-              _setPaperTrading(val);
-            }),
+            SettingsTile(
+                icon: Icons.key,
+                title: 'Binance API Keys',
+                onTap: _openBinanceSettings),
+            SettingsSwitchTile(
+                icon: Icons.paid,
+                title: 'Paper Trading Mode (Testnet)',
+                value: _paperTrading,
+                onChanged: (val) {
+                  _setPaperTrading(val);
+                }),
             const SizedBox(height: 30),
-
-            Text('Support & Legal', style: Theme.of(context).textTheme.titleLarge),
+            Text('Support & Legal',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),
-            SettingsTile(icon: Icons.help_outline, title: 'Help Center', onTap: _openHelp),
-            SettingsTile(icon: Icons.gavel, title: 'Terms & Conditions', onTap: _openTerms),
+            SettingsTile(
+                icon: Icons.help_outline,
+                title: 'Help Center',
+                onTap: _openHelp),
+            SettingsTile(
+                icon: Icons.gavel,
+                title: 'Terms & Conditions',
+                onTap: _openTerms),
             const SizedBox(height: 40),
             Center(
               child: TextButton.icon(
@@ -118,11 +160,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   final sp = await SharedPreferences.getInstance();
                   await sp.remove('session.jwt');
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Logged out')));
                   // TODO: Navigator.pushReplacement to Login when available
                 },
                 icon: const Icon(Icons.exit_to_app, color: Colors.redAccent),
-                label: const Text('Log Out', style: TextStyle(color: Colors.redAccent, fontSize: 16)),
+                label: const Text('Log Out',
+                    style: TextStyle(color: Colors.redAccent, fontSize: 16)),
               ),
             ),
           ],
@@ -140,99 +184,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Icon(Icons.person, size: 40, color: Colors.white),
         ),
         const SizedBox(height: 10),
-        Text(_name ?? 'Trader', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        Text(_email ?? 'you@mytrademate.app', style: const TextStyle(color: Colors.white70)),
+        Text(_name ?? 'Trader',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        Text(_email ?? 'you@mytrademate.app',
+            style: const TextStyle(color: Colors.white70)),
         const SizedBox(height: 5),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.verified, color: Theme.of(context).colorScheme.secondary, size: 18),
+            Icon(Icons.verified,
+                color: Theme.of(context).colorScheme.secondary, size: 18),
             const SizedBox(width: 5),
-            Text('Verified Account', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
+            Text('Verified Account',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.secondary)),
           ],
         ),
       ],
     );
   }
 
-  
-
-  Future<void> _showBinanceApiSetupModal(BuildContext context) async {
-    final sp = await SharedPreferences.getInstance();
-    final keyCtrl = TextEditingController(text: sp.getString('binance.apiKey') ?? '');
-    final secCtrl = TextEditingController(text: sp.getString('binance.secret') ?? '');
-    String env = sp.getString('binance.env') ?? 'testnet';
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) {
-        String envState = env; // local editable copy
-        return StatefulBuilder(
-          builder: (bottomCtx, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Binance API Setup', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 12),
-                  TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API Key', border: OutlineInputBorder())),
-                  const SizedBox(height: 10),
-                  TextField(controller: secCtrl, decoration: const InputDecoration(labelText: 'Secret', border: OutlineInputBorder()), obscureText: true),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    FilterChip(
-                      label: const Text('Testnet'),
-                      selected: envState == 'testnet',
-                      onSelected: (_) => setModalState(() { envState = 'testnet'; }),
-                    ),
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Live'),
-                      selected: envState == 'live',
-                      onSelected: (_) => setModalState(() { envState = 'live'; }),
-                    ),
-                  ]),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () async {
-                        // Basic validation: if live is chosen, require keys
-                        if (envState == 'live' && (keyCtrl.text.trim().isEmpty || secCtrl.text.trim().isEmpty)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('API Key and Secret are required for Live mode.')),
-                          );
-                          return;
-                        }
-                        await sp.setString('binance.apiKey', keyCtrl.text.trim());
-                        await sp.setString('binance.secret', secCtrl.text.trim());
-                        await sp.setString('binance.env', envState);
-                        if (mounted) {
-                          setState(() => _paperTrading = envState == 'testnet');
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Saved. Using ${envState == 'testnet' ? 'Testnet' : 'Live'} backend.')),
-                          );
-                        }
-                      },
-                      child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+  void _openBinanceSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
   }
 
@@ -244,7 +218,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open link.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Could not open link.')));
     }
   }
 
@@ -253,7 +228,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await sp.setBool('auth.2fa', enable);
     if (!mounted) return;
     setState(() => _twoFA = enable);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(enable ? '2FA enabled' : '2FA disabled')));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(enable ? '2FA enabled' : '2FA disabled')));
   }
 
   Future<void> _toggleBiometric(bool enable) async {
@@ -265,7 +241,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final canCheck = await auth.canCheckBiometrics;
         if (!supported || !canCheck) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometrics not available on this device.')));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Biometrics not available on this device.')));
           }
           return;
         }
@@ -278,10 +255,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await sp.setBool('security.biometric', enable);
       if (!mounted) return;
       setState(() => _biometric = enable);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(enable ? 'Biometric lock enabled' : 'Biometric lock disabled')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              enable ? 'Biometric lock enabled' : 'Biometric lock disabled')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Biometric error: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Biometric error: $e')));
     }
   }
 
@@ -301,14 +281,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Choose language', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              const Text('Choose language',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               const SizedBox(height: 12),
               RadioListTile<String>(
                 value: 'en',
@@ -329,10 +311,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () async {
                     await sp.setString('app.lang', selected);
                     if (mounted) {
-                      setState(() => _lang = selected == 'ro' ? 'Română' : 'English');
+                      setState(() =>
+                          _lang = selected == 'ro' ? 'Română' : 'English');
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Language set to ${selected == 'ro' ? 'Română' : 'English'}')),
+                        SnackBar(
+                            content: Text(
+                                'Language set to ${selected == 'ro' ? 'Română' : 'English'}')),
                       );
                     }
                   },
