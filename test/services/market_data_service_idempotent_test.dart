@@ -13,11 +13,13 @@ class _FakeSrc implements PriceEventSource {
     controllers.add(c);
     return c.stream;
   }
+
   void emit(String json) {
     if (controllers.isNotEmpty && !controllers.last.isClosed) {
       controllers.last.add(json);
     }
   }
+
   @override
   Future<void> close() async {
     if (controllers.isNotEmpty && !controllers.last.isClosed) {
@@ -40,23 +42,28 @@ void main() {
   test('idempotent start/stop without duplicate closures', () async {
     final src = _FakeSrc();
     final rest = _FakeRest();
-    final svc = MarketDataServiceImpl(env: TradeEnv.testnet, eventSource: src, rest: rest, sleep: _noDelay);
+    final svc = MarketDataServiceImpl(
+        env: TradeEnv.testnet, eventSource: src, rest: rest, sleep: _noDelay);
 
     await svc.start('BTCUSDT');
     await svc.start('BTCUSDT');
 
     // simulate a price event
     src.emit('{"c":"100.0"}');
-    final a = await svc.prices('BTCUSDT').first.timeout(const Duration(milliseconds: 50), onTimeout: () => 0.0);
+    final a = await svc
+        .prices('BTCUSDT')
+        .first
+        .timeout(const Duration(milliseconds: 50), onTimeout: () => 0.0);
     expect(a, isA<num>());
 
     await svc.stopIfOrphan('BTCUSDT'); // should not close if still referenced
 
     // still able to receive values
     src.emit('{"c":"101.0"}');
-    final b = await svc.prices('BTCUSDT').first.timeout(const Duration(milliseconds: 50), onTimeout: () => 0.0);
+    final b = await svc
+        .prices('BTCUSDT')
+        .first
+        .timeout(const Duration(milliseconds: 50), onTimeout: () => 0.0);
     expect(b, isA<num>());
   });
 }
-
-

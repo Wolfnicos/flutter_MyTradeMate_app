@@ -26,15 +26,18 @@ Future<void> _noDelay(Duration _) async {}
 void main() {
   test('refreshNow uses REST and pushes value', () async {
     final rest = _StubRest(123.45);
-    final svc = MarketDataServiceImpl(env: TradeEnv.testnet, eventSource: _SilentSrc(), rest: rest, sleep: _noDelay);
+    final svc = MarketDataServiceImpl(
+        env: TradeEnv.testnet,
+        eventSource: _SilentSrc(),
+        rest: rest,
+        sleep: _noDelay);
     await svc.start('BTCUSDT');
     // Subscribe before triggering refresh to avoid race on broadcast
-    final next = svc.prices('BTCUSDT').first.timeout(const Duration(milliseconds: 500));
+    final next =
+        svc.prices('BTCUSDT').first.timeout(const Duration(milliseconds: 500));
     final v = await svc.refreshNow('BTCUSDT');
     expect(v, 123.45);
     final got = await next;
     expect(got, closeTo(123.45, 1e-9));
   }, timeout: const Timeout(Duration(seconds: 5)));
 }
-
-

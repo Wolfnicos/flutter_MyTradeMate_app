@@ -4,7 +4,8 @@ import 'package:mytrademate/services/feature_builder.dart';
 
 class _FakeClient implements BinanceClientLike {
   @override
-  Future<List<List<num>>> klines(String sym, String interval, {int limit = 128}) async {
+  Future<List<List<num>>> klines(String sym, String interval,
+      {int limit = 128}) async {
     return List.generate(limit, (i) => [0, 0, 0, 0, 1000 + i, 0]);
   }
 
@@ -27,14 +28,15 @@ class _FakeModels implements ModelsAdapter {
   }
 
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAllFromSequence(
-      List<List<double>> seq) async {
+  Future<({double? probUp, double? nextReturn, double? volatility})>
+      predictAllFromSequence(List<List<double>> seq) async {
     return (probUp: 0.62, nextReturn: 0.01, volatility: 0.12);
   }
 }
 
 void main() {
-  test('AIService produces deterministic BUY with confidence & target', () async {
+  test('AIService produces deterministic BUY with confidence & target',
+      () async {
     final svc = AIService(
       client: _FakeClient(),
       models: _FakeModels(),
@@ -46,5 +48,4 @@ void main() {
     expect(res.targetPrice, greaterThan(0));
   });
 }
-
 

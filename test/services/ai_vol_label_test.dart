@@ -10,5 +10,3 @@ void main() {
     expect(volLabelForTest(0.10), 'HIGH');
   });
 }
-
-

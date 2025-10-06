@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
+import 'package:mytrademate/screens/market_details_screen.dart';
+import 'package:mytrademate/services/paper_broker.dart';
 import 'package:mytrademate/services/market_data_service.dart';
 import 'package:mytrademate/services/price_stream.dart';
 import 'package:mytrademate/services/price_rest_client.dart';
 
 class FakeMarketDataService implements MarketDataService {
-  final Map<String, StreamController<double>> _controllers = <String, StreamController<double>>{};
+  final Map<String, StreamController<double>> _controllers =
+      <String, StreamController<double>>{};
   double _last = 1000.0;
   bool _paused = false;
 
-  StreamController<double> _ensure(String symbol) =>
-      _controllers.putIfAbsent(symbol, () => StreamController<double>.broadcast());
+  StreamController<double> _ensure(String symbol) => _controllers.putIfAbsent(
+      symbol, () => StreamController<double>.broadcast());
 
   @override
   Stream<double> streamFor(String symbol) {
@@ -47,10 +50,14 @@ class FakeMarketDataService implements MarketDataService {
   }
 
   @override
-  Future<void> pause() async { _paused = true; }
+  Future<void> pause() async {
+    _paused = true;
+  }
 
   @override
-  Future<void> resume() async { _paused = false; }
+  Future<void> resume() async {
+    _paused = false;
+  }
 
   @override
   Future<double> refreshNow(String symbol) async {
@@ -67,11 +74,25 @@ class FakeMarketDataService implements MarketDataService {
   Future<void> stopIfOrphan(String symbol) => stopSymbol(symbol);
 }
 
-Widget wrapWithMarketData(Widget child, {MarketDataService? svc}) {
+Widget wrapWithMarketData(Widget child, {MarketDataService? svc, PaperBroker? broker}) {
   final service = svc ?? FakeMarketDataService();
   return InheritedMarketData(
     service: service,
-    child: Directionality(textDirection: TextDirection.ltr, child: child),
+    child: Directionality(
+      textDirection: TextDirection.ltr,
+      child: Builder(
+        builder: (_) => child is MarketDetailsScreen
+            ? MarketDetailsScreen(
+                symbol: child.symbol,
+                forTest: true,
+                loadDataFn: child.loadDataFn,
+                reloadFn: child.reloadFn,
+                showAICard: child.showAICard,
+                broker: broker,
+              )
+            : child,
+      ),
+    ),
   );
 }
 
@@ -82,9 +103,24 @@ Future<void> drainMicrotasks([int times = 5]) async {
   }
 }
 
+// Pump event queue helper for pure Dart tests or as an extra flush after dispose
+Future<void> pumpEventQueue({int times = 5}) async {
+  for (var i = 0; i < times; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+}
+
+// Leak sentry: drain event loop (timers/streams) after disposing resources
+Future<void> drainLeakSentry([int times = 5]) async {
+  for (var i = 0; i < times; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+}
+
 // Deterministic fakes for services tests
 class TestFakeEventSource implements PriceEventSource {
-  final List<StreamController<dynamic>> _controllers = <StreamController<dynamic>>[];
+  final List<StreamController<dynamic>> _controllers =
+      <StreamController<dynamic>>[];
   int connects = 0;
   @override
   Stream connect(Uri _) {
@@ -93,11 +129,13 @@ class TestFakeEventSource implements PriceEventSource {
     _controllers.add(c);
     return c.stream;
   }
+
   void emitNum(double v) {
     if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
       _controllers.last.add('{"c":$v}');
     }
   }
+
   @override
   Future<void> close() async {
     if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
@@ -114,5 +152,3 @@ class TestFakeRest implements PriceRestClient {
   @override
   Future<double> tickerPrice(String symbol) async => next;
 }
-
-

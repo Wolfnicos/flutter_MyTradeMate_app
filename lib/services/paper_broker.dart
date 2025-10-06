@@ -25,8 +25,8 @@ Precision and min notional:
 - Price/qty rounding and MIN_NOTIONAL validation come from ExchangeRules in cfg.rulesBySymbol
 - MIN_NOTIONAL is enforced at placement (throws PaperOrderReject); no auto-clamp on fill
 */
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:mytrademate/models/candle.dart' as models show Candle;
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:mytrademate/services/exchange_rules.dart';
 
 enum OrderSide { buy, sell }
@@ -126,7 +126,8 @@ class PaperOrderReq {
     required double quantity,
     bool allowPartial = false,
     String? clientId,
-  }) => PaperOrderReq._(
+  }) =>
+      PaperOrderReq._(
         symbol: symbol,
         side: side,
         type: OrderType.market,
@@ -142,7 +143,8 @@ class PaperOrderReq {
     required double quantity,
     bool allowPartial = false,
     String? clientId,
-  }) => PaperOrderReq._(
+  }) =>
+      PaperOrderReq._(
         symbol: symbol,
         side: side,
         type: OrderType.limit,
@@ -158,7 +160,8 @@ class PaperOrderReq {
     required double stopPrice,
     required double quantity,
     String? clientId,
-  }) => PaperOrderReq._(
+  }) =>
+      PaperOrderReq._(
         symbol: symbol,
         side: side,
         type: OrderType.stop,
@@ -174,7 +177,8 @@ class PaperOrderReq {
     required double stopPrice,
     bool stopIsMarket = true,
     String? clientId,
-  }) => PaperOrderReq._(
+  }) =>
+      PaperOrderReq._(
         symbol: symbol,
         side: OrderSide.sell,
         type: OrderType.oco,
@@ -190,12 +194,31 @@ class PaperOrderReq {
     required double trailAmount,
     double? initialRef,
     String? clientId,
-  }) => PaperOrderReq._(
+  }) =>
+      PaperOrderReq._(
         symbol: symbol,
         side: OrderSide.sell,
         type: OrderType.trailingStop,
         price: initialRef, // used as initial peak reference if provided
         stopPrice: trailAmount, // reuse stopPrice field as trailing distance
+        quantity: quantity,
+        clientId: clientId,
+      );
+  
+  factory PaperOrderReq.stopLimit({
+    required String symbol,
+    required OrderSide side,
+    required double stopPrice,
+    required double price,
+    required double quantity,
+    String? clientId,
+  }) =>
+      PaperOrderReq._(
+        symbol: symbol,
+        side: side,
+        type: OrderType.stopLimit,
+        price: price,
+        stopPrice: stopPrice,
         quantity: quantity,
         clientId: clientId,
       );
@@ -206,7 +229,8 @@ class PaperBrokerConfig {
   final double takerFeeBps; // e.g. 4 = 0.04%
   final double slippageBps; // applied to market orders
   final Map<String, ExchangeRules> rulesBySymbol; // precision & minNotional
-  final double partialFillFraction; // deterministic fraction for partial fills (0..1]
+  final double
+      partialFillFraction; // deterministic fraction for partial fills (0..1]
 
   const PaperBrokerConfig({
     this.makerFeeBps = 1.0,
@@ -222,14 +246,18 @@ class PaperBroker {
   final PaperBrokerConfig cfg;
   final Map<String, Position> _positions = <String, Position>{};
   final Map<String, PaperOrder> _orders = <String, PaperOrder>{};
-  final Map<String, String?> _ocoLink = <String, String?>{}; // orderId -> other leg
+  final Map<String, String?> _ocoLink =
+      <String, String?>{}; // orderId -> other leg
   final List<FillEvent> _ledger = <FillEvent>[];
   final Map<String, double> balances = <String, double>{};
   int _seq = 1;
   final DateTime Function() _now;
   final Map<String, double> _lastPrices = <String, double>{};
+  double? _partialOverride; // test-only override for partial fill fraction
 
-  PaperBroker(Object? rulesOrCfg, {DateTime Function()? now, PaperBrokerConfig cfg = const PaperBrokerConfig()})
+  PaperBroker(Object? rulesOrCfg,
+      {DateTime Function()? now,
+      PaperBrokerConfig cfg = const PaperBrokerConfig()})
       : _now = now ?? DateTime.now,
         cfg = (rulesOrCfg is PaperBrokerConfig)
             ? rulesOrCfg
@@ -247,8 +275,10 @@ class PaperBroker {
                 : cfg;
 
   UnmodifiableListView<FillEvent> get ledger => UnmodifiableListView(_ledger);
-  UnmodifiableMapView<String, PaperOrder> get orders => UnmodifiableMapView(_orders);
-  Position position(String symbol) => _positions.putIfAbsent(symbol, () => Position(symbol));
+  UnmodifiableMapView<String, PaperOrder> get orders =>
+      UnmodifiableMapView(_orders);
+  Position position(String symbol) =>
+      _positions.putIfAbsent(symbol, () => Position(symbol));
 
   /// Convenience: simple tick wrapper using last/optional wick
   void tick(String symbol, double last, {double? high, double? low}) {
@@ -266,7 +296,8 @@ class PaperBroker {
 
   void submit(PaperOrder o, {String? ocoPeerId}) {
     final rules = _rulesFor(o.symbol);
-    final clampedQty = (rules == null) ? o.qty : roundQtyToStepForTest(o.qty, rules.stepSize);
+    final clampedQty =
+        (rules == null) ? o.qty : roundQtyToStepForTest(o.qty, rules.stepSize);
     final clampedPrice = (rules == null || o.price == null)
         ? o.price
         : roundPriceToTickForTest(o.price!, rules.tickSize);
@@ -294,7 +325,8 @@ class PaperBroker {
     final o = _orders[orderId];
     if (o == null) return;
     o.active = false;
-    o.status = o.filledQty > 0 ? OrderStatus.partiallyFilled : OrderStatus.canceled;
+    o.status =
+        o.filledQty > 0 ? OrderStatus.partiallyFilled : OrderStatus.canceled;
     _orders.remove(orderId);
     final peer = _ocoLink.remove(orderId);
     if (peer != null) _ocoLink.remove(peer);
@@ -326,7 +358,9 @@ class PaperBroker {
       }
       // Create stop leg (market or stop)
       final stopId = 'o${_seq++}';
-      final stopType = (req.stopPrice != null && req.price == null) ? OrderType.stop : OrderType.stop;
+      final stopType = (req.stopPrice != null && req.price == null)
+          ? OrderType.stop
+          : OrderType.stop;
       final stop = PaperOrder(
         id: stopId,
         symbol: req.symbol,
@@ -352,7 +386,9 @@ class PaperBroker {
       );
       // Validate min notional for limit/stopLimit at placement time
       final r = _rulesFor(order.symbol);
-      if (r != null && (order.type == OrderType.limit || order.type == OrderType.stopLimit)) {
+      if (r != null &&
+          (order.type == OrderType.limit ||
+              order.type == OrderType.stopLimit)) {
         final px = order.price ?? 0.0;
         final err = r.validateNotional(price: px, qty: order.qty);
         if (err != null) {
@@ -390,56 +426,24 @@ class PaperBroker {
   }
 
   void _tryFill(PaperOrder o, models.Candle c) {
+    if (!o.active) return;
+    if (o.status == OrderStatus.filled || o.status == OrderStatus.canceled) return;
+
     switch (o.type) {
       case OrderType.market:
-        _fill(o, _applySlippage(c.close), o.qty - o.filledQty, taker: true);
+        _handleMarket(o, c);
         break;
       case OrderType.limit:
-        if (_crossed(o.side, o.price!, c.low, c.high)) {
-          final px = o.price!; // maker
-          final remaining = o.qty - o.filledQty;
-          final qty = (o.allowPartial && cfg.partialFillFraction > 0 && cfg.partialFillFraction < 1.0)
-              ? remaining * cfg.partialFillFraction
-              : remaining;
-          _fill(o, px, qty, taker: false);
-        }
+        _handleLimit(o, c);
         break;
       case OrderType.stop:
-        if (!o.triggered) {
-          if (_stopTriggered(o.side, o.stopPrice!, c.low, c.high)) {
-            o.triggered = true; // convert to market on next tick
-          }
-        } else {
-          final px = _applySlippage(c.close);
-          _fill(o, px, o.qty - o.filledQty, taker: true);
-        }
+        _handleStop(o, c);
         break;
       case OrderType.stopLimit:
-        if (!o.triggered) {
-          if (_stopTriggered(o.side, o.stopPrice!, c.low, c.high)) {
-            o.triggered = true; // arm limit
-          }
-        } else if (_crossed(o.side, o.price!, c.low, c.high)) {
-          _fill(o, o.price!, o.qty - o.filledQty, taker: false);
-        }
+        _handleStopLimit(o, c);
         break;
       case OrderType.oco:
-        // Interpret price as limit, stopPrice as stop
-        bool done = false;
-        if (_stopTriggered(o.side, o.stopPrice!, c.low, c.high)) {
-          _fill(o, _applySlippage(c.close), o.qty - o.filledQty, taker: true);
-          done = true;
-        } else if (_crossed(o.side, o.price!, c.low, c.high)) {
-          _fill(o, o.price!, o.qty - o.filledQty, taker: false);
-          done = true;
-        }
-        if (done) {
-          final peer = _ocoLink.remove(o.id);
-          if (peer != null) {
-            _orders.remove(peer);
-            _ocoLink.remove(peer);
-          }
-        }
+        _handleOco(o, c);
         break;
       case OrderType.takeProfit:
         if (_tpTriggered(o.side, o.price!, c.low, c.high)) {
@@ -452,35 +456,99 @@ class PaperBroker {
         }
         break;
       case OrderType.trailingStop:
-        // Trailing distance stored in stopPrice, initial reference in price (optional)
-        final dist = o.stopPrice ?? 0.0;
-        // SELL trailing (protect long): trail the peak (max) and trigger when last falls <= peak - dist
-        if (o.side == OrderSide.sell) {
-          o.trailPeak = (o.trailPeak ?? o.price ?? c.close);
-          // Update peak using candle high
-          if (c.high > o.trailPeak!) o.trailPeak = c.high;
-          final triggerLevel = o.trailPeak! - dist;
-          if (!o.triggered) {
-            if (c.low <= triggerLevel || c.close <= triggerLevel) {
-              o.triggered = true; // will execute next tick at market
-            }
-          } else {
-            _fill(o, _applySlippage(c.close), o.qty - o.filledQty, taker: true);
-          }
-        } else {
-          // BUY trailing (protect short): mirror logic on lows
-          o.trailPeak = (o.trailPeak ?? o.price ?? c.close);
-          if (c.low < o.trailPeak!) o.trailPeak = c.low;
-          final triggerLevel = o.trailPeak! + dist;
-          if (!o.triggered) {
-            if (c.high >= triggerLevel || c.close >= triggerLevel) {
-              o.triggered = true;
-            }
-          } else {
-            _fill(o, _applySlippage(c.close), o.qty - o.filledQty, taker: true);
-          }
-        }
+        _handleTrailingStop(o, c);
         break;
+    }
+  }
+
+  void _handleMarket(PaperOrder o, models.Candle c) {
+    final qty = o.qty - o.filledQty;
+    if (qty <= 0) return;
+    _fill(o, _applySlippage(c.close), qty, taker: true);
+  }
+
+  void _handleLimit(PaperOrder o, models.Candle c) {
+    if (!_crossed(o.side, o.price!, c.low, c.high)) return;
+    final remaining = o.qty - o.filledQty;
+    if (remaining <= 0) return;
+    final pf = _partialOverride ?? cfg.partialFillFraction;
+    final allowPartial = o.allowPartial && pf > 0 && pf < 1.0;
+    final qty = allowPartial ? remaining * pf : remaining;
+    _fill(o, o.price!, qty, taker: false);
+  }
+
+  void _handleStop(PaperOrder o, models.Candle c) {
+    if (!o.triggered) {
+      if (_stopTriggered(o.side, o.stopPrice!, c.low, c.high)) {
+        o.triggered = true; // convert to market on next tick
+      }
+      return;
+    }
+    final qty = o.qty - o.filledQty;
+    if (qty <= 0) return;
+    _fill(o, _applySlippage(c.close), qty, taker: true);
+  }
+
+  void _handleStopLimit(PaperOrder o, models.Candle c) {
+    if (!o.triggered) {
+      if (_stopTriggered(o.side, o.stopPrice!, c.low, c.high)) {
+        o.triggered = true; // arm limit
+      }
+      return;
+    }
+    if (_crossed(o.side, o.price!, c.low, c.high)) {
+      final qty = o.qty - o.filledQty;
+      if (qty <= 0) return;
+      _fill(o, o.price!, qty, taker: false);
+    }
+  }
+
+  void _handleOco(PaperOrder o, models.Candle c) {
+    bool done = false;
+    if (_stopTriggered(o.side, o.stopPrice!, c.low, c.high)) {
+      _fill(o, _applySlippage(c.close), o.qty - o.filledQty, taker: true);
+      done = true;
+    } else if (_crossed(o.side, o.price!, c.low, c.high)) {
+      _fill(o, o.price!, o.qty - o.filledQty, taker: false);
+      done = true;
+    }
+    if (done) {
+      final peer = _ocoLink.remove(o.id);
+      if (peer != null) {
+        _orders.remove(peer);
+        _ocoLink.remove(peer);
+      }
+    }
+  }
+
+  void _handleTrailingStop(PaperOrder o, models.Candle c) {
+    final dist = o.stopPrice ?? 0.0;
+    if (o.side == OrderSide.sell) {
+      o.trailPeak = (o.trailPeak ?? o.price ?? c.close);
+      if (c.high > o.trailPeak!) o.trailPeak = c.high;
+      final triggerLevel = o.trailPeak! - dist;
+      if (!o.triggered) {
+        if (c.low <= triggerLevel || c.close <= triggerLevel) {
+          o.triggered = true;
+        }
+      } else {
+        final qty = o.qty - o.filledQty;
+        if (qty <= 0) return;
+        _fill(o, _applySlippage(c.close), qty, taker: true);
+      }
+    } else {
+      o.trailPeak = (o.trailPeak ?? o.price ?? c.close);
+      if (c.low < o.trailPeak!) o.trailPeak = c.low;
+      final triggerLevel = o.trailPeak! + dist;
+      if (!o.triggered) {
+        if (c.high >= triggerLevel || c.close >= triggerLevel) {
+          o.triggered = true;
+        }
+      } else {
+        final qty = o.qty - o.filledQty;
+        if (qty <= 0) return;
+        _fill(o, _applySlippage(c.close), qty, taker: true);
+      }
     }
   }
 
@@ -496,22 +564,26 @@ class PaperBroker {
     return side == OrderSide.buy ? (high >= tpPx) : (low <= tpPx);
   }
 
-  double _applySlippage(double px) => px * (1.0 + (cfg.slippageBps / 10000.0) * 1.0);
+  double _applySlippage(double px) =>
+      px * (1.0 + (cfg.slippageBps / 10000.0) * 1.0);
 
   void _fill(PaperOrder o, double px, double qty, {required bool taker}) {
     if (qty <= 0) return;
     final rules = _rulesFor(o.symbol);
     // Do not auto-clamp minNotional; enforce via placement validation instead.
     // Apply deterministic partial fraction when configured (< 1.0)
-    if (cfg.partialFillFraction > 0 && cfg.partialFillFraction < 1.0) {
+    final pf = _partialOverride ?? cfg.partialFillFraction;
+    if (pf > 0 && pf < 1.0) {
       final remaining = (o.qty - o.filledQty);
-      final desired = remaining * cfg.partialFillFraction;
+      final desired = remaining * pf;
       qty = desired;
     }
     final feeRate = (taker ? cfg.takerFeeBps : cfg.makerFeeBps) / 10000.0;
     final fee = (qty * px).abs() * feeRate;
     o.filledQty += qty;
-    o.status = (o.filledQty >= o.qty - 1e-12) ? OrderStatus.filled : OrderStatus.partiallyFilled;
+    o.status = (o.filledQty >= o.qty - 1e-12)
+        ? OrderStatus.filled
+        : OrderStatus.partiallyFilled;
     final pos = position(o.symbol);
     final (base, quote) = _splitSymbol(o.symbol);
     balances.putIfAbsent(base, () => 0.0);
@@ -543,7 +615,8 @@ class PaperBroker {
   void _closeOrder(PaperOrder o) {
     o.active = false;
     // Preserve filled/partial status; only mark canceled if not filled
-    if (o.status != OrderStatus.filled && o.status != OrderStatus.partiallyFilled) {
+    if (o.status != OrderStatus.filled &&
+        o.status != OrderStatus.partiallyFilled) {
       o.status = OrderStatus.canceled;
     }
     _orders.remove(o.id);
@@ -588,7 +661,43 @@ class PaperBroker {
   ExchangeRules? _rulesFor(String symbol) {
     return cfg.rulesBySymbol[symbol] ?? cfg.rulesBySymbol['DEFAULT'];
   }
+
+  // Convenience async-style helpers for UI/tests
+  Future<String> placeOrder(PaperOrderReq req) async {
+    final res = place(req);
+    if (res is PaperOrder) return res.id;
+    if (res is PlacedOco) return res.limitId;
+    if (res is String) return res;
+    return res.toString();
+  }
+
+  Future<void> cancelOrder(String orderId) async {
+    cancel(orderId);
+  }
+
+  // Test-only helpers
+  @visibleForTesting
+  void setPartialFillFractionForTest(double fraction) {
+    _partialOverride = fraction;
+  }
+
+  @visibleForTesting
+  void setLastPriceForTest(double price, {String symbol = 'BTCUSDT'}) {
+    _lastPrices[symbol] = price;
+  }
+
+  @visibleForTesting
+  Future<void> onTickForTest({
+    required String symbol,
+    required double last,
+    double? high,
+    double? low,
+  }) async {
+    tick(symbol, last, high: high, low: low);
+    await Future<void>.value();
+  }
 }
+
 class PlacedOco {
   final String limitId;
   final String stopId;
@@ -619,5 +728,3 @@ extension PaperBrokerSnapshot on PaperBroker {
     return PaperSnapshot(m);
   }
 }
-
-

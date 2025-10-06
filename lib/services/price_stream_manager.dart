@@ -23,7 +23,8 @@ class PriceStreamManager {
       existing.ref += 1;
       return existing.stream;
     }
-    final ps = PriceStream(symbol: key, testnet: testnet, source: source, sleep: sleep);
+    final ps = PriceStream(
+        symbol: key, testnet: testnet, source: source, sleep: sleep);
     await ps.start();
     final entry = _Entry(ps);
     _map[key] = entry;
@@ -77,5 +78,3 @@ class _Entry {
   Future<void> pause() => ps.pause();
   Future<void> resume() => ps.resume();
 }
-
-

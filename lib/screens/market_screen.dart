@@ -17,7 +17,7 @@ class _CoinDef {
   });
 
   final String symbol; // e.g., BTCUSDT
-  final String label;  // e.g., BTC
+  final String label; // e.g., BTC
   final bool supportedOnTestnet;
 }
 
@@ -40,7 +40,8 @@ class _MarketScreenState extends State<MarketScreen> {
     super.initState();
     _pm = PriceStreamManager();
     for (final c in _coins) {
-      if (!c.supportedOnTestnet) continue; // don't try to connect if not supported
+      if (!c.supportedOnTestnet)
+        continue; // don't try to connect if not supported
       _pm.attach(c.symbol).then((stream) {
         if (!mounted) return;
         _subs[c.symbol] = stream.listen((p) {
@@ -53,8 +54,14 @@ class _MarketScreenState extends State<MarketScreen> {
 
   @override
   void dispose() {
-    for (final sub in _subs.values) { sub.cancel(); }
-    for (final c in _coins) { if (c.supportedOnTestnet) { _pm.detach(c.symbol); } }
+    for (final sub in _subs.values) {
+      sub.cancel();
+    }
+    for (final c in _coins) {
+      if (c.supportedOnTestnet) {
+        _pm.detach(c.symbol);
+      }
+    }
     _subs.clear();
     super.dispose();
   }
@@ -76,7 +83,8 @@ class _MarketScreenState extends State<MarketScreen> {
             leading: CircleAvatar(child: Text(c.label.substring(0, 1))),
             title: Row(
               children: [
-                Text(c.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(c.label,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(width: 8),
                 if (notOnTestnet)
                   Container(
@@ -85,7 +93,8 @@ class _MarketScreenState extends State<MarketScreen> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.orangeAccent),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     child: const Text(
                       'Not on testnet',
                       style: TextStyle(fontSize: 11, color: Colors.orange),
@@ -95,7 +104,9 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
             subtitle: Text(notOnTestnet
                 ? 'Live stream disabled'
-                : (price == null ? 'Loading…' : 'Last: ${price.toStringAsFixed(2)}')),
+                : (price == null
+                    ? 'Loading…'
+                    : 'Last: ${price.toStringAsFixed(2)}')),
             trailing: const Icon(Icons.chevron_right),
             onTap: notOnTestnet
                 ? null

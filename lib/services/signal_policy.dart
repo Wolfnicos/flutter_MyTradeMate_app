@@ -26,7 +26,8 @@ class OrderIntent {
   final String symbol;
   final String side; // 'BUY' | 'SELL'
   final double quoteAmount; // USDT to spend/receive target
-  const OrderIntent({required this.symbol, required this.side, required this.quoteAmount});
+  const OrderIntent(
+      {required this.symbol, required this.side, required this.quoteAmount});
 }
 
 class _PerSymbolState {
@@ -39,10 +40,12 @@ class _PerSymbolState {
 class SignalPolicy {
   final SignalPolicyConfig cfg;
   final NowFn now;
-  final double Function(String symbol) quoteSizer; // returns quote amount to use
+  final double Function(String symbol)
+      quoteSizer; // returns quote amount to use
   final bool Function() userConsent; // true if auto-trade is allowed
 
-  final Map<String, _PerSymbolState> _state = HashMap<String, _PerSymbolState>();
+  final Map<String, _PerSymbolState> _state =
+      HashMap<String, _PerSymbolState>();
 
   SignalPolicy({
     SignalPolicyConfig cfg = const SignalPolicyConfig(),
@@ -54,7 +57,8 @@ class SignalPolicy {
         quoteSizer = quoteSizer ?? ((_) => 50.0),
         userConsent = userConsent ?? (() => false);
 
-  _PerSymbolState _for(String s) => _state.putIfAbsent(s, () => _PerSymbolState());
+  _PerSymbolState _for(String s) =>
+      _state.putIfAbsent(s, () => _PerSymbolState());
 
   OrderIntent? evaluate({
     required String symbol,
@@ -73,7 +77,8 @@ class SignalPolicy {
       st.tradesToday = 0;
     }
     if (st.tradesToday >= cfg.maxTradesPerDay) return null;
-    if (st.lastTradeAt != null && tNow.difference(st.lastTradeAt!) < cfg.cooldown) return null;
+    if (st.lastTradeAt != null &&
+        tNow.difference(st.lastTradeAt!) < cfg.cooldown) return null;
 
     // Hysteresis logic
     final wantBuy = probUp >= cfg.buyThreshold;
@@ -106,9 +111,9 @@ class SignalPolicy {
     return null;
   }
 
-  bool _dayChanged(DateTime a, DateTime b) => a.year != b.year || a.month != b.month || a.day != b.day;
+  bool _dayChanged(DateTime a, DateTime b) =>
+      a.year != b.year || a.month != b.month || a.day != b.day;
 
   void resetForTest() => _state.clear();
 }
-
 

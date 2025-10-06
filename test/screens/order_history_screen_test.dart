@@ -11,11 +11,21 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final repo = OrderHistoryRepository.instance;
     await repo.addOrder(Order(
-      id: '1', symbol: 'BTCUSDT', side: 'BUY', quoteQty: 100.0, status: 'FILLED', env: TradeEnv.testnet,
+      id: '1',
+      symbol: 'BTCUSDT',
+      side: 'BUY',
+      quoteQty: 100.0,
+      status: 'FILLED',
+      env: TradeEnv.testnet,
       ts: DateTime.fromMillisecondsSinceEpoch(100),
     ));
     await repo.addOrder(Order(
-      id: '2', symbol: 'ETHUSDT', side: 'SELL', quoteQty: 50.0, status: 'FILLED', env: TradeEnv.testnet,
+      id: '2',
+      symbol: 'ETHUSDT',
+      side: 'SELL',
+      quoteQty: 50.0,
+      status: 'FILLED',
+      env: TradeEnv.testnet,
       ts: DateTime.fromMillisecondsSinceEpoch(200),
     ));
 
@@ -26,5 +36,4 @@ void main() {
     expect(find.textContaining('ETHUSDT'), findsOneWidget);
   });
 }
-
 

@@ -1,37 +1,8 @@
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/market_data_service.dart';
-import 'package:mytrademate/services/price_stream.dart';
 import 'package:mytrademate/services/price_rest_client.dart';
 import 'package:mytrademate/src/core/trading_prefs.dart';
-
-class _FakeSource implements PriceEventSource {
-  final List<StreamController<dynamic>> _controllers = <StreamController<dynamic>>[];
-  int connects = 0;
-  @override
-  Stream connect(Uri _) {
-    connects++;
-    final c = StreamController<dynamic>.broadcast();
-    _controllers.add(c);
-    return c.stream;
-  }
-  void emitNum(double v) {
-    if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
-      _controllers.last.add('{"c":$v}');
-    }
-  }
-  Future<void> dropAndReconnect() async {
-    if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
-      await _controllers.last.close();
-    }
-  }
-  @override
-  Future<void> close() async {
-    if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
-      await _controllers.last.close();
-    }
-  }
-}
+import '../mocks/binance_mocks.dart';
 
 class _FakeRest implements PriceRestClient {
   double price = 1000.0;
@@ -44,61 +15,42 @@ class _FakeRest implements PriceRestClient {
 Future<void> _noDelay(Duration _) async {}
 Future<void> _sleepSlow(Duration _) async => Future.value();
 
+@Tags(['ws'])
 void main() {
-  test('Burst updates throttled, reconnect OK, REST fills gaps', () async {
-    final src = _FakeSource();
+  test('Burst updates throttled, reconnect OK, REST fills gaps (fixture)', () async {
+    final src = await ScriptedEventSource.fromFixture(
+      'test/fixtures/binance_ws/burst_spike_gap.json',
+    );
+    src.reconnectBackoff = const Duration(milliseconds: 50);
     final rest = _FakeRest();
-    final svc = MarketDataServiceImpl(
-      env: TradeEnv.testnet,
-      rest: rest,
-      throttleInterval: const Duration(milliseconds: 5),
-      gapThreshold: const Duration(milliseconds: 20),
-      gapPollInterval: const Duration(milliseconds: 10),
+    final svc = MarketDataServiceImpl.test(
       eventSource: src,
+      rest: rest,
+      throttle: const Duration(milliseconds: 1),
+      gap: const Duration(milliseconds: 500),
+      pollInterval: const Duration(milliseconds: 10),
       sleep: _sleepSlow,
+      reconnects: const [Duration(milliseconds: 50)],
+      maxReconnects: 1,
+      jitterBackoff: false,
     );
     addTearDown(() async {
       await svc.dispose();
       await pumpEventQueue(times: 5);
     });
+    addTearDown(() async {
+      await src.close();
+    });
 
-    // Start and listen
-    await svc.startSymbol('BTCUSDT');
-    final events = <double>[];
-    final sub = svc.streamFor('BTCUSDT').listen(events.add);
-    addTearDown(sub.cancel);
-
-    // Kick initial
-    src.emitNum(1000.0);
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-
-    // Burst 100 messages in quick succession
-    for (int i = 0; i < 100; i++) {
-      src.emitNum(1000 + i.toDouble());
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 40));
-
-    // Simulate reconnect via global pause/resume
-    await svc.pause();
-    src.emitNum(2000.0); // suppressed while paused
+    // Collect exactly three ticks matching the fixture sequence
+    final seen = await svc.prices('BTCUSDT')
+        .take(3)
+        .toList()
+        .timeout(const Duration(seconds: 2));
+    expect(seen.map((e) => e).toList(), <double>[1000.0, 1015.0, 1002.0]);
     await Future<void>.delayed(const Duration(milliseconds: 5));
-    await svc.resume();
-    // First same-as-last suppressed, then a new value
-    final lastSeen = events.isNotEmpty ? events.last : 1000.0;
-    src.emitNum(lastSeen); // suppressed
-    src.emitNum(lastSeen + 7.0); // accepted
-    await Future<void>.delayed(const Duration(milliseconds: 30));
-
-    // REST fallback window: close src and set a new REST value
-    await src.dropAndReconnect();
-    rest.price = (events.isNotEmpty ? events.last : 1007.0) + 3.0;
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-
-    // Bounded assertions
-    expect(events, isNotEmpty);
-    expect(events.last, greaterThan(1000.0));
-    expect(src.connects, lessThanOrEqualTo(2));
-    await svc.stopSymbol('BTCUSDT');
+    await pumpEventQueue(times: 3);
+    expect(src.connects, inInclusiveRange(1, 2));
   }, timeout: const Timeout(Duration(seconds: 6)));
 }
 

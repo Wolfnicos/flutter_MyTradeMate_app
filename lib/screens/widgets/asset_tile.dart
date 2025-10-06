@@ -84,25 +84,31 @@ class _AssetTileState extends State<AssetTile> {
     final priceStr =
         _livePrice != null ? _livePrice!.toStringAsFixed(2) : widget.price;
 
-    final leadingSymbol =
-        widget.symbol.contains('/') ? widget.symbol.split('/').first : widget.symbol;
+    final leadingSymbol = widget.symbol.contains('/')
+        ? widget.symbol.split('/').first
+        : widget.symbol;
 
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: color.withOpacity(0.1),
         child: Text(
           leadingSymbol,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.bold, fontSize: 12),
           maxLines: 1,
         ),
       ),
-      title: Text(widget.symbol, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(widget.name, style: const TextStyle(color: Colors.white70)),
+      title: Text(widget.symbol,
+          style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle:
+          Text(widget.name, style: const TextStyle(color: Colors.white70)),
       trailing: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('\$$priceStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('\$$priceStr',
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Text(widget.change, style: TextStyle(color: color, fontSize: 14)),
         ],
       ),

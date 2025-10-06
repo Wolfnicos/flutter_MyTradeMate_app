@@ -3,10 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/screens/trading_modal.dart';
 
 void main() {
-  testWidgets('TradingModal disables confirm with invalid amount and enables with valid', (tester) async {
+  testWidgets(
+      'TradingModal disables confirm with invalid amount and enables with valid',
+      (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: TradingModal(assetSymbol: 'BTC/USDT', isBuying: true, initialPrice: 50000),
+        home: TradingModal(
+            assetSymbol: 'BTC/USDT', isBuying: true, initialPrice: 50000),
       ),
     );
 
@@ -25,5 +28,4 @@ void main() {
     expect(eb.onPressed, isNotNull);
   });
 }
-
 

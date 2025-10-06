@@ -1,11 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/signal_policy.dart';
 
-class _Clock { DateTime t; _Clock(this.t); DateTime now() => t; void fwd(Duration d){ t = t.add(d); } }
+class _Clock {
+  DateTime t;
+  _Clock(this.t);
+  DateTime now() => t;
+  void fwd(Duration d) {
+    t = t.add(d);
+  }
+}
 
 void main() {
   test('Edge thresholds and hysteresis prevent flapping', () {
-    final clock = _Clock(DateTime.utc(2024,1,1,0,0,0));
+    final clock = _Clock(DateTime.utc(2024, 1, 1, 0, 0, 0));
     final pol = SignalPolicy(
       cfg: const SignalPolicyConfig(
         buyThreshold: 0.55,
@@ -29,9 +36,10 @@ void main() {
   });
 
   test('Cooldown and max trades/day prevent overtrading', () {
-    final clock = _Clock(DateTime.utc(2024,1,1,0,0,0));
+    final clock = _Clock(DateTime.utc(2024, 1, 1, 0, 0, 0));
     final pol = SignalPolicy(
-      cfg: const SignalPolicyConfig(cooldown: Duration(minutes: 10), maxTradesPerDay: 2),
+      cfg: const SignalPolicyConfig(
+          cooldown: Duration(minutes: 10), maxTradesPerDay: 2),
       now: clock.now,
       userConsent: () => true,
       quoteSizer: (_) => 50.0,
@@ -71,5 +79,3 @@ void main() {
     expect(i, isNull);
   });
 }
-
-

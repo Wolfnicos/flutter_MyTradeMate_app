@@ -3,7 +3,8 @@ import 'package:mytrademate/models/portfolio_models.dart';
 
 void main() {
   test('empty holdings -> total 0', () {
-    final snap = PortfolioAggregator.compute(const <Holding>[], const <String,double>{});
+    final snap = PortfolioAggregator.compute(
+        const <Holding>[], const <String, double>{});
     expect(snap.totalUsdt, 0.0);
     expect(snap.holdings, isEmpty);
   });
@@ -16,5 +17,4 @@ void main() {
     expect(snap.holdings.single.priceUsdt, 1.0);
   });
 }
-
 

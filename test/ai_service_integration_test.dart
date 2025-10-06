@@ -13,5 +13,3 @@ void main() {
     expect(pred.confidence, 60.0);
   });
 }
-
-

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
-import 'package:mytrademate/src/core/trading_prefs.dart';
 
 void main() {
   test('normSymbol uppercases and strips slash', () {
@@ -38,5 +37,4 @@ void main() {
     );
   });
 }
-
 

@@ -31,11 +31,9 @@ class SignalBadge extends StatelessWidget {
         color: color.withOpacity(.18),
         border: Border.all(color: color.withOpacity(.6)),
       ),
-      child: Text(text, style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+      child: Text(text,
+          style: TextStyle(fontWeight: FontWeight.w700, color: color)),
     );
   }
 }
-
-
-
 

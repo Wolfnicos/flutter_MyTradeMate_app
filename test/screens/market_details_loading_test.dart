@@ -27,5 +27,3 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 }
-
-

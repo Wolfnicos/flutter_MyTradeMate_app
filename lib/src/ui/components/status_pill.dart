@@ -21,11 +21,9 @@ class StatusPill extends StatelessWidget {
         color: color.withOpacity(.12),
         border: Border.all(color: color.withOpacity(.5)),
       ),
-      child: Text(text, style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+      child: Text(text,
+          style: TextStyle(fontWeight: FontWeight.w700, color: color)),
     );
   }
 }
-
-
-
 

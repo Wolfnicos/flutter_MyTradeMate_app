@@ -11,7 +11,8 @@ abstract class PriceRestClient {
 class DefaultPriceRestClient implements PriceRestClient {
   final DioBinanceClient _client;
 
-  DefaultPriceRestClient({required TradeEnv env}) : _client = DioBinanceClient(env: env);
+  DefaultPriceRestClient({required TradeEnv env})
+      : _client = DioBinanceClient(env: env);
 
   @visibleForTesting
   DefaultPriceRestClient.fromClient(DioBinanceClient c) : _client = c;
@@ -22,5 +23,4 @@ class DefaultPriceRestClient implements PriceRestClient {
   @override
   Future<double> tickerPrice(String symbol) => _client.tickerPrice(symbol);
 }
-
 

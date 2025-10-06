@@ -9,7 +9,9 @@ Future<void> pumpABit(WidgetTester t, {int ticks = 4}) async {
 }
 
 void main() {
-  testWidgets('TradingModal success snackbar and disables during submit (offline)', (tester) async {
+  testWidgets(
+      'TradingModal success snackbar and disables during submit (offline)',
+      (tester) async {
     final modal = TradingModal(
       assetSymbol: 'BTCUSDT',
       isBuying: true,
@@ -40,5 +42,3 @@ void main() {
     expect(find.text('Order sent (test harness)'), findsOneWidget);
   });
 }
-
-

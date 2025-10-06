@@ -19,9 +19,11 @@ void main() {
   });
 
   test('clampToMinNotionalForTest clamps up to threshold', () {
-    expect(DioBinanceClient.clampToMinNotionalForTest(quote: 5, minNotional: 10), 10);
-    expect(DioBinanceClient.clampToMinNotionalForTest(quote: 12, minNotional: 10), 12);
+    expect(
+        DioBinanceClient.clampToMinNotionalForTest(quote: 5, minNotional: 10),
+        10);
+    expect(
+        DioBinanceClient.clampToMinNotionalForTest(quote: 12, minNotional: 10),
+        12);
   });
 }
-
-

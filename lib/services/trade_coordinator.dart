@@ -47,17 +47,21 @@ class TradeCoordinator {
       quoteSizer: (_) => quote,
     );
 
-    final intent = pol.evaluate(symbol: symbol, probUp: pred.probUp, confidence: pred.confidence);
+    final intent = pol.evaluate(
+        symbol: symbol, probUp: pred.probUp, confidence: pred.confidence);
     if (intent == null) return;
 
     // place as MARKET using quote sizing by converting to quantity by last target price approximation
     // In a real system, fetch real-time price for symbol here.
-    final qty = (intent.quoteAmount / (pred.targetPrice > 0 ? pred.targetPrice : 1.0)).abs();
+    final qty =
+        (intent.quoteAmount / (pred.targetPrice > 0 ? pred.targetPrice : 1.0))
+            .abs();
 
     // Pre-trade risk checks
     if (risk != null) {
       // Derive daily delta from baseline store; in app this would be computed from portfolio
-      final (delta, _) = await PnlBaselineStore.computeAndPersist(todaysTotal: 0.0, now: now());
+      final (delta, _) = await PnlBaselineStore.computeAndPersist(
+          todaysTotal: 0.0, now: now());
       // TODO: wire real open positions count; for now use 0 as default safe value
       final input = RiskInput(
         symbol: symbol,
@@ -75,11 +79,10 @@ class TradeCoordinator {
         throw violation;
       }
     }
-    await broker.placeOrder(OrderParams(symbol: symbol, side: intent.side, type: 'MARKET', quantity: qty));
+    await broker.placeOrder(OrderParams(
+        symbol: symbol, side: intent.side, type: 'MARKET', quantity: qty));
 
     await prefs.setLastTradeAt(symbol, now());
     await prefs.incTradeCountForDay(now());
   }
 }
-
-

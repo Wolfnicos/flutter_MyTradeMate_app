@@ -16,7 +16,8 @@ class ExplainPage extends StatelessWidget {
           children: [
             Text('Prob↑: ${(data.probUp * 100).toStringAsFixed(2)}%'),
             Text('Next return: ${(data.nextReturn * 100).toStringAsFixed(2)}%'),
-            Text('Volatility: ${(data.volatility * 100).toStringAsFixed(2)}% (${data.volatilityLabel})'),
+            Text(
+                'Volatility: ${(data.volatility * 100).toStringAsFixed(2)}% (${data.volatilityLabel})'),
             const SizedBox(height: 12),
             const Text('Features (64×N) sample:'),
             Expanded(
@@ -36,5 +37,3 @@ class ExplainPage extends StatelessWidget {
     );
   }
 }
-
-

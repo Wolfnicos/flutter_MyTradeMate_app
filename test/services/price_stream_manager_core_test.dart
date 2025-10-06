@@ -12,11 +12,13 @@ class _FakeSource implements PriceEventSource {
     _controllers.add(c);
     return c.stream;
   }
+
   void emit(String json) {
     if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
       _controllers.last.add(json);
     }
   }
+
   @override
   Future<void> close() async {
     if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
@@ -28,7 +30,8 @@ class _FakeSource implements PriceEventSource {
 Future<void> _noDelay(Duration _) async {}
 
 void main() {
-  testWidgets('attach → pauseAll → resumeAll delivers events once', (tester) async {
+  testWidgets('attach → pauseAll → resumeAll delivers events once',
+      (tester) async {
     final pm = PriceStreamManager();
     final src = _FakeSource();
     addTearDown(() async => pm.resetForTest());
@@ -56,7 +59,8 @@ void main() {
     });
   });
 
-  testWidgets('detach unsubscribes; reattach yields fresh stream', (tester) async {
+  testWidgets('detach unsubscribes; reattach yields fresh stream',
+      (tester) async {
     final pm = PriceStreamManager();
     final src = _FakeSource();
     addTearDown(() async => pm.resetForTest());
@@ -85,5 +89,4 @@ void main() {
     });
   });
 }
-
 

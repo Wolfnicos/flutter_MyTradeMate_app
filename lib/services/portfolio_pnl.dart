@@ -6,8 +6,7 @@ class PnlBaselineStore {
   static const _kRefDate = 'portfolio_last_ref_yyyymmdd';
 
   @visibleForTesting
-  static String yyyymmdd(DateTime dt) =>
-      '${dt.year.toString().padLeft(4, '0')}'
+  static String yyyymmdd(DateTime dt) => '${dt.year.toString().padLeft(4, '0')}'
       '${dt.month.toString().padLeft(2, '0')}'
       '${dt.day.toString().padLeft(2, '0')}';
 
@@ -17,8 +16,8 @@ class PnlBaselineStore {
     DateTime? now,
   }) async {
     final sp = await SharedPreferences.getInstance();
-    final _now = now ?? DateTime.now().toUtc();
-    final todayKey = yyyymmdd(_now);
+    final now0 = now ?? DateTime.now().toUtc();
+    final todayKey = yyyymmdd(now0);
     final lastRef = sp.getString(_kRefDate);
     final baseline = sp.getDouble(_kTotalUsdt);
 
@@ -34,5 +33,4 @@ class PnlBaselineStore {
     return (delta, usedBaseline);
   }
 }
-
 

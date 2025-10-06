@@ -166,19 +166,29 @@ else
   LF=$(grep -Eo 'LF:[0-9]+' coverage/lcov.cleaned.info | awk -F: '{s+=$2} END{print s+0}')
 fi
 
-PCT=$(awk -v lh="$LH" -v lf="$LF" 'BEGIN{ if(lf==0){print 0}else{printf "%.2f", (lh*100.0/lf)} }')
+# Fall back to parsing the printed percent, but normalize comma → dot and strip '%'
+PCT_STR=$(echo "$SUMMARY" | grep -Eo 'lines\.*: *[0-9.,]+%' | head -n1 | tr -d ' ')
+PCT_NUM=$(printf "%s" "$PCT_STR" | tr -d '%' | tr ',' '.')
 
-echo "Coverage (cleaned core): ${PCT}% (${LH}/${LF})"
+# Prefer LH/LF if available (avoids locale issues)
+if [ -n "${LH:-}" ] && [ -n "${LF:-}" ] && [ "${LF:-0}" -gt 0 ]; then
+  PCT_NUM=$(awk -v lh="$LH" -v lf="$LF" 'BEGIN{ printf("%.2f", (lh*100.0)/lf) }')
+fi
 
-: "${COVERAGE_GATE:=60}"
-if [ -z "$LF" ] || [ "$LF" -eq 0 ]; then
-  echo "FAIL: cleaned-core trace is empty (LF=0). Fix extract patterns or tests before gating."
+# Print the nice human line
+echo "Coverage (cleaned core): ${PCT_NUM}% (${LH:-?}/${LF:-?})"
+
+# Gate (compare as integers scaled by 100 to avoid float shell math)
+SCALED=$(printf "%s" "$PCT_NUM" | awk '{printf("%d", $1*100+0.5)}')
+REQ=$(printf "%s" "${COVERAGE_GATE:-60}" | awk '{printf("%d", $1*100)}')
+
+if [ "${LF:-0}" -eq 0 ]; then
+  echo "FAIL: cleaned-core trace is empty (LF=0). Fix extract patterns."
   exit 1
 fi
 
-NEEDED=$(awk -v lf="$LF" -v gate="$COVERAGE_GATE" 'BEGIN{ printf "%d", (gate*lf+99)/100 }')
-if [ "$LH" -lt "$NEEDED" ]; then
-  echo "FAIL: coverage ${PCT}% < gate ${COVERAGE_GATE}% (${LH}/${LF} < ${NEEDED}/${LF})"
+if [ "$SCALED" -lt "$REQ" ]; then
+  echo "FAIL: coverage ${PCT_NUM}% < gate ${COVERAGE_GATE:-60}%"
   exit 1
 fi
 

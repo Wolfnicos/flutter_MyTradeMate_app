@@ -28,18 +28,25 @@ void main() {
   };
 
   test('tickSizeFromExchangeInfoForTest', () {
-    expect(DioBinanceClient.tickSizeFromExchangeInfoForTest(payload, 'BTCUSDT'), closeTo(0.10, 1e-12));
-    expect(DioBinanceClient.tickSizeFromExchangeInfoForTest(payload, 'ETHUSDT'), closeTo(0.01, 1e-12));
-    expect(DioBinanceClient.tickSizeFromExchangeInfoForTest(payload, 'BARUSDT'), 0.0);
-    expect(DioBinanceClient.tickSizeFromExchangeInfoForTest(payload, 'FOOUSDT'), 0.0);
+    expect(DioBinanceClient.tickSizeFromExchangeInfoForTest(payload, 'BTCUSDT'),
+        closeTo(0.10, 1e-12));
+    expect(DioBinanceClient.tickSizeFromExchangeInfoForTest(payload, 'ETHUSDT'),
+        closeTo(0.01, 1e-12));
+    expect(DioBinanceClient.tickSizeFromExchangeInfoForTest(payload, 'BARUSDT'),
+        0.0);
+    expect(DioBinanceClient.tickSizeFromExchangeInfoForTest(payload, 'FOOUSDT'),
+        0.0);
   });
 
   test('stepSizeFromExchangeInfoForTest', () {
-    expect(DioBinanceClient.stepSizeFromExchangeInfoForTest(payload, 'BTCUSDT'), closeTo(0.00001, 1e-12));
-    expect(DioBinanceClient.stepSizeFromExchangeInfoForTest(payload, 'ETHUSDT'), closeTo(0.001, 1e-12));
-    expect(DioBinanceClient.stepSizeFromExchangeInfoForTest(payload, 'BARUSDT'), 0.0);
-    expect(DioBinanceClient.stepSizeFromExchangeInfoForTest(payload, 'FOOUSDT'), 0.0);
+    expect(DioBinanceClient.stepSizeFromExchangeInfoForTest(payload, 'BTCUSDT'),
+        closeTo(0.00001, 1e-12));
+    expect(DioBinanceClient.stepSizeFromExchangeInfoForTest(payload, 'ETHUSDT'),
+        closeTo(0.001, 1e-12));
+    expect(DioBinanceClient.stepSizeFromExchangeInfoForTest(payload, 'BARUSDT'),
+        0.0);
+    expect(DioBinanceClient.stepSizeFromExchangeInfoForTest(payload, 'FOOUSDT'),
+        0.0);
   });
 }
-
 

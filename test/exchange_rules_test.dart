@@ -28,5 +28,3 @@ void main() {
     expect(r.validateNotional(price: 1.0, qty: 6.0), isNull);
   });
 }
-
-

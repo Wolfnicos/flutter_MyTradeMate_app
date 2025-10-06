@@ -8,7 +8,7 @@ void main() {
     expect(e.message.contains('timeout'), isTrue);
   });
   test('maps auth', () {
-    final e = ErrorMapper.map(Exception('Binance error -2015 invalid api-key')); 
+    final e = ErrorMapper.map(Exception('Binance error -2015 invalid api-key'));
     expect(e.type, AppErrorType.auth);
   });
   test('maps model load', () {
@@ -20,5 +20,4 @@ void main() {
     expect(e.type, AppErrorType.network);
   });
 }
-
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import '../src/core/trading_prefs.dart' as tp;
 import '../services/dio_binance_client.dart';
 import '../services/ai_service.dart';
@@ -12,7 +11,12 @@ class TradingModal extends StatefulWidget {
   final double? initialPrice; // for tests or pre-fetched price
   final Future<bool> Function(double amount)? placeOrderFn; // for tests
 
-  const TradingModal({super.key, required this.assetSymbol, required this.isBuying, this.initialPrice, this.placeOrderFn});
+  const TradingModal(
+      {super.key,
+      required this.assetSymbol,
+      required this.isBuying,
+      this.initialPrice,
+      this.placeOrderFn});
 
   @override
   State<TradingModal> createState() => _TradingModalState();
@@ -22,8 +26,9 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
   String _tradeType = 'Market';
   double _amount = 0.0;
   double? _currentPrice;
-  double _availableBalance = 0.0; // optionally load from prefs later
-  final RestorableTextEditingController amountCtl = RestorableTextEditingController();
+  final double _availableBalance = 0.0; // optionally load from prefs later
+  final RestorableTextEditingController amountCtl =
+      RestorableTextEditingController();
   final TextEditingController _fallbackCtrl = TextEditingController();
   bool _amountListenerAdded = false;
   bool _submitting = false;
@@ -52,7 +57,8 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
     _restored = true;
     _ensureAmountListener();
     // migrate any fallback text entered before restoration registration
-    if (_fallbackCtrl.text.isNotEmpty && amountCtl.value.text != _fallbackCtrl.text) {
+    if (_fallbackCtrl.text.isNotEmpty &&
+        amountCtl.value.text != _fallbackCtrl.text) {
       amountCtl.value.text = _fallbackCtrl.text;
     }
   }
@@ -95,7 +101,8 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
       final ai = await AIService().getPrediction(sym);
       if (mounted) {
         setState(() {
-          _aiRecommendation = '${ai.action} • ${ai.confidence.toStringAsFixed(0)}% • ${ai.volatility}';
+          _aiRecommendation =
+              '${ai.action} • ${ai.confidence.toStringAsFixed(0)}% • ${ai.volatility}';
           _aiColor = ai.action == 'BUY'
               ? Colors.green
               : (ai.action == 'SELL' ? Colors.red : Colors.amber);
@@ -111,7 +118,9 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.isBuying ? 'Buy ${widget.assetSymbol}' : 'Sell ${widget.assetSymbol}',
+          widget.isBuying
+              ? 'Buy ${widget.assetSymbol}'
+              : 'Sell ${widget.assetSymbol}',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.transparent,
@@ -146,19 +155,26 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Current Price', style: TextStyle(color: Colors.white70)),
+            const Text('Current Price',
+                style: TextStyle(color: Colors.white70)),
             Text(
-              _currentPrice == null ? '—' : '\$${_currentPrice!.toStringAsFixed(2)}',
+              _currentPrice == null
+                  ? '—'
+                  : '\$${_currentPrice!.toStringAsFixed(2)}',
               style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const Divider(height: 25, color: Colors.white12),
-            if (_aiRecommendation != null) Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('AI (action • confidence • vol):', style: TextStyle(color: Colors.white70)),
-                Text(_aiRecommendation!, style: TextStyle(color: _aiColor, fontWeight: FontWeight.bold)),
-              ],
-            ),
+            if (_aiRecommendation != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('AI (action • confidence • vol):',
+                      style: TextStyle(color: Colors.white70)),
+                  Text(_aiRecommendation!,
+                      style: TextStyle(
+                          color: _aiColor, fontWeight: FontWeight.bold)),
+                ],
+              ),
           ],
         ),
       ),
@@ -183,7 +199,7 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
   }
 
   Widget _buildTypeButton(String label, String value) {
-    bool isSelected = _tradeType == value;
+    final bool isSelected = _tradeType == value;
     return InkWell(
       onTap: () {
         setState(() {
@@ -267,24 +283,32 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
 
   Widget _buildSummaryDetails() {
     final price = _currentPrice ?? 0;
-    double estimatedUnits = (_amount > 0 && price > 0) ? _amount / price : 0.0;
-    double fee = _amount * 0.001;
-    double totalCost = _amount + fee;
+    final double estimatedUnits =
+        (_amount > 0 && price > 0) ? _amount / price : 0.0;
+    final double fee = _amount * 0.001;
+    final double totalCost = _amount + fee;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         children: [
-          _buildSummaryRow('Estimated Units:', '${estimatedUnits.toStringAsFixed(6)} ${widget.assetSymbol}', Colors.white),
-          _buildSummaryRow('Trading Fee (0.1%):', '\$${fee.toStringAsFixed(2)}', Colors.orange),
+          _buildSummaryRow(
+              'Estimated Units:',
+              '${estimatedUnits.toStringAsFixed(6)} ${widget.assetSymbol}',
+              Colors.white),
+          _buildSummaryRow('Trading Fee (0.1%):', '\$${fee.toStringAsFixed(2)}',
+              Colors.orange),
           const Divider(height: 25, color: Colors.white12),
-          _buildSummaryRow('Total Cost:', '\$${totalCost.toStringAsFixed(2)}', Colors.cyanAccent, isTotal: true),
+          _buildSummaryRow('Total Cost:', '\$${totalCost.toStringAsFixed(2)}',
+              Colors.cyanAccent,
+              isTotal: true),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, Color valueColor, {bool isTotal = false}) {
+  Widget _buildSummaryRow(String label, String value, Color valueColor,
+      {bool isTotal = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5.0),
       child: Row(
@@ -292,7 +316,9 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
         children: [
           Text(
             label,
-            style: TextStyle(color: isTotal ? Colors.white : Colors.white70, fontSize: isTotal ? 16 : 14),
+            style: TextStyle(
+                color: isTotal ? Colors.white : Colors.white70,
+                fontSize: isTotal ? 16 : 14),
           ),
           Text(
             value,
@@ -308,7 +334,8 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
   }
 
   Widget _buildActionButton(BuildContext context) {
-    final actionColor = widget.isBuying ? Colors.green.shade600 : Colors.red.shade600;
+    final actionColor =
+        widget.isBuying ? Colors.green.shade600 : Colors.red.shade600;
     final actionText = widget.isBuying ? 'Confirm Buy' : 'Confirm Sell';
 
     return SizedBox(
@@ -316,114 +343,140 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
       height: 55,
       child: ElevatedButton(
         key: tradeConfirmBtnKey,
-        onPressed: (_amount > 0 && _currentPrice != null && !_submitting) ? () async {
-          setState(() => _submitting = true);
-          // Only Market orders are supported for now
-          if (_tradeType != 'Market') {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Only Market orders are supported right now. Limit/Stop-Loss coming soon.')),
-              );
-            }
-            setState(() => _submitting = false);
-            return;
-          }
-          // Optional: simple balance check (if balance is known)
-          if (_availableBalance > 0 && _amount > _availableBalance) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Amount exceeds available balance (\$${_availableBalance.toStringAsFixed(2)}).')),
-              );
-            }
-            setState(() => _submitting = false);
-            return;
-          }
-          try {
-            // If injected handler is provided (tests), use it for deterministic behavior
-            if (widget.placeOrderFn != null) {
-              final ok = await widget.placeOrderFn!(_amount);
-              if (mounted) {
-                if (ok) {
+        onPressed: (_amount > 0 && _currentPrice != null && !_submitting)
+            ? () async {
+                setState(() => _submitting = true);
+                // Only Market orders are supported for now
+                if (_tradeType != 'Market') {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text(
+                              'Only Market orders are supported right now. Limit/Stop-Loss coming soon.')),
+                    );
+                  }
+                  setState(() => _submitting = false);
+                  return;
+                }
+                // Optional: simple balance check (if balance is known)
+                if (_availableBalance > 0 && _amount > _availableBalance) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(
+                              'Amount exceeds available balance (\$${_availableBalance.toStringAsFixed(2)}).')),
+                    );
+                  }
+                  setState(() => _submitting = false);
+                  return;
+                }
+                try {
+                  // If injected handler is provided (tests), use it for deterministic behavior
+                  if (widget.placeOrderFn != null) {
+                    final ok = await widget.placeOrderFn!(_amount);
+                    if (mounted) {
+                      if (ok) {
+                        HapticFeedback.lightImpact();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Order sent (test harness)')),
+                        );
+                        Navigator.of(context).maybePop();
+                      } else {
+                        HapticFeedback.selectionClick();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Order failed (test harness)')),
+                        );
+                      }
+                    }
+                    return;
+                  }
+                  final prefs = await tp.TradingPrefs.load();
+                  if ((prefs.apiKey?.isEmpty ?? true) ||
+                      (prefs.apiSecret?.isEmpty ?? true)) {
+                    throw Exception(
+                        'API keys missing. Open Settings and add your Binance API key & secret.');
+                  }
+                  final client = await DioBinanceClient.createFromPrefs();
+                  // Normalize symbol
+                  final sym =
+                      widget.assetSymbol.replaceAll('/', '').toUpperCase();
+                  // Pre-validate: clamp to MIN_NOTIONAL if needed
+                  var q = _amount.isFinite && _amount > 0 ? _amount : 0.0;
+                  if (q == 0.0) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content:
+                                Text('Enter a valid amount greater than 0.')),
+                      );
+                    }
+                    setState(() => _submitting = false);
+                    return;
+                  }
+                  try {
+                    q = (await client.clampQuoteToMinNotional(sym, q))
+                        .toDouble();
+                  } catch (_) {
+                    // continue with provided amount if clamp helper not available
+                  }
+                  final res = await client.newOrderMarketDouble(
+                    symbol: sym,
+                    side: widget.isBuying ? 'BUY' : 'SELL',
+                    quoteQty: q,
+                  );
+                  final order = oh.Order(
+                    id: (res['orderId']?.toString() ?? 'N/A'),
+                    symbol: sym,
+                    side: widget.isBuying ? 'BUY' : 'SELL',
+                    quoteQty: q,
+                    executedQty: double.tryParse((res['executedQty'] ??
+                            res['cummulativeQuoteQty'] ??
+                            '0')
+                        .toString()),
+                    status: (res['status'] ?? 'UNKNOWN').toString(),
+                    env: (prefs.env == tp.TradeEnv.testnet)
+                        ? oh.TradeEnv.testnet
+                        : oh.TradeEnv.live,
+                  );
+                  await oh.OrderHistoryRepository.instance.addOrder(order);
                   HapticFeedback.lightImpact();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Order sent (test harness)')),
-                  );
-                  Navigator.of(context).maybePop();
-                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Order sent (testnet)')),
+                    );
+                    Navigator.of(context).maybePop();
+                  }
+                } catch (e) {
                   HapticFeedback.selectionClick();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Order failed (test harness)')),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Order failed: ${e.toString()}')),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _submitting = false);
                 }
               }
-              return;
-            }
-            final prefs = await tp.TradingPrefs.load();
-            if ((prefs.apiKey?.isEmpty ?? true) || (prefs.apiSecret?.isEmpty ?? true)) {
-              throw Exception('API keys missing. Open Settings and add your Binance API key & secret.');
-            }
-            final client = await DioBinanceClient.createFromPrefs();
-            // Normalize symbol
-            final sym = widget.assetSymbol.replaceAll('/', '').toUpperCase();
-            // Pre-validate: clamp to MIN_NOTIONAL if needed
-            var q = _amount.isFinite && _amount > 0 ? _amount : 0.0;
-            if (q == 0.0) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Enter a valid amount greater than 0.')),
-                );
-              }
-              setState(() => _submitting = false);
-              return;
-            }
-            try {
-              q = (await client.clampQuoteToMinNotional(sym, q)).toDouble();
-            } catch (_) {
-              // continue with provided amount if clamp helper not available
-            }
-            final res = await client.newOrderMarketDouble(
-              symbol: sym,
-              side: widget.isBuying ? 'BUY' : 'SELL',
-              quoteQty: q,
-            );
-            final order = oh.Order(
-              id: (res['orderId']?.toString() ?? 'N/A'),
-              symbol: sym,
-              side: widget.isBuying ? 'BUY' : 'SELL',
-              quoteQty: q,
-              executedQty: double.tryParse((res['executedQty'] ?? res['cummulativeQuoteQty'] ?? '0').toString()),
-              status: (res['status'] ?? 'UNKNOWN').toString(),
-              env: (prefs.env == tp.TradeEnv.testnet) ? oh.TradeEnv.testnet : oh.TradeEnv.live,
-            );
-            await oh.OrderHistoryRepository.instance.addOrder(order);
-            HapticFeedback.lightImpact();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Order sent (testnet)')),
-              );
-              Navigator.of(context).maybePop();
-            }
-          } catch (e) {
-            HapticFeedback.selectionClick();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Order failed: ${e.toString()}')),
-              );
-            }
-          } finally {
-            if (mounted) setState(() => _submitting = false);
-          }
-        } : null,
+            : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: actionColor,
           disabledBackgroundColor: actionColor.withOpacity(0.4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
         child: _submitting
-            ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(strokeWidth: 2))
             : Text(
                 actionText,
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
               ),
       ),
     );
@@ -441,13 +494,13 @@ String? validateQuoteForTest(num? q) {
 bool isPlaceEnabledForTest(num? q) => validateQuoteForTest(q) == null;
 
 @visibleForTesting
-final amountFieldKey = Key('trading_modal.amount');
+const amountFieldKey = Key('trading_modal.amount');
 
 @visibleForTesting
-final placeOrderBtnKey = Key('trading_modal.place');
+const placeOrderBtnKey = Key('trading_modal.place');
 
 @visibleForTesting
-final tradeConfirmBtnKey = Key('trade.confirm');
+const tradeConfirmBtnKey = Key('trade.confirm');
 
 @visibleForTesting
-final tradeAmountFieldKey = Key('trade.amount');
+const tradeAmountFieldKey = Key('trade.amount');

@@ -10,7 +10,8 @@ Future<void> pumpABit(WidgetTester t, {int ticks = 4}) async {
 }
 
 void main() {
-  testWidgets('MarketDetails shows progress during reload (offline DI)', (tester) async {
+  testWidgets('MarketDetails shows progress during reload (offline DI)',
+      (tester) async {
     bool reloaded = false;
     Future<void> load() async {}
     Future<void> reload() async {

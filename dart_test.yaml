@@ -1,0 +1,7 @@
+paths:
+  - test
+timeout: 10s
+tags:
+  ws: { timeout: 20s }
+  slow: { timeout: 60s }
+

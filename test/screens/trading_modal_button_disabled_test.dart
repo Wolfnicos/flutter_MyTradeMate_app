@@ -7,7 +7,8 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          body: TradingModal(assetSymbol: 'BTCUSDT', isBuying: true, initialPrice: 50000),
+          body: TradingModal(
+              assetSymbol: 'BTCUSDT', isBuying: true, initialPrice: 50000),
         ),
       ),
     );
@@ -18,9 +19,8 @@ void main() {
     await tester.enterText(amountField, '0');
     await tester.pumpAndSettle();
 
-    final btnWidget = tester.widget<ElevatedButton>(find.byKey(tradeConfirmBtnKey));
+    final btnWidget =
+        tester.widget<ElevatedButton>(find.byKey(tradeConfirmBtnKey));
     expect(btnWidget.onPressed, isNull);
   });
 }
-
-

@@ -9,10 +9,12 @@ Future<void> pumpABit(WidgetTester t, {int ticks = 3}) async {
 }
 
 void main() {
-  testWidgets('AiSignalCard renders direction/confidence/return', (tester) async {
+  testWidgets('AiSignalCard renders direction/confidence/return',
+      (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(
-        body: AiSignalCard(probUp: 0.61, nextReturn: 0.0123, volatility: 0.08, horizon: '1h'),
+        body: AiSignalCard(
+            probUp: 0.61, nextReturn: 0.0123, volatility: 0.08, horizon: '1h'),
       ),
     ));
 

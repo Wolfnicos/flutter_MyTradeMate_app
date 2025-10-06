@@ -6,7 +6,8 @@ import 'package:mytrademate/services/price_stream.dart';
 import 'package:mytrademate/services/price_stream_manager.dart';
 
 class _FakeSource implements PriceEventSource {
-  final List<StreamController<dynamic>> _controllers = <StreamController<dynamic>>[];
+  final List<StreamController<dynamic>> _controllers =
+      <StreamController<dynamic>>[];
   int connects = 0;
 
   @override
@@ -34,7 +35,8 @@ class _FakeSource implements PriceEventSource {
 Future<void> _noDelay(Duration _) async {}
 
 void main() {
-  testWidgets('AppLifecycleObserver pauses/resumes streams without duplicates', (tester) async {
+  testWidgets('AppLifecycleObserver pauses/resumes streams without duplicates',
+      (tester) async {
     final pm = PriceStreamManager();
     addTearDown(() async => pm.resetForTest());
 
@@ -69,5 +71,4 @@ void main() {
     });
   });
 }
-
 

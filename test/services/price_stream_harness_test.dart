@@ -46,7 +46,8 @@ void main() {
 
   test('reconnects deterministically and forwards prices', () async {
     final src = FakeSource()..failImmediately = true;
-    final ps = PriceStream(symbol: 'BTCUSDT', testnet: true, source: src, sleep: noDelay);
+    final ps = PriceStream(
+        symbol: 'BTCUSDT', testnet: true, source: src, sleep: noDelay);
     final values = <double>[];
     final sub = ps.prices.listen(values.add, onError: (_) {});
 
@@ -68,5 +69,3 @@ void main() {
     await sub.cancel();
   });
 }
-
-

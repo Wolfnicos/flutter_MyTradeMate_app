@@ -4,7 +4,7 @@ import 'package:mytrademate/services/ai_service.dart';
 void main() {
   test('mapToExplain preserves AiResult metrics and features', () {
     final seq = List.generate(64, (i) => <double>[i.toDouble(), i + 1.0]);
-    final r = AIPrediction(
+    const r = AIPrediction(
       action: 'BUY',
       confidence: 61.0,
       targetPrice: 1234.56,
@@ -23,5 +23,3 @@ void main() {
     expect(d.features.first.length, 2);
   });
 }
-
-

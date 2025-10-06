@@ -15,7 +15,8 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: DashboardScreen()));
 
     // Orders -> navigates
-    await tester.scrollUntilVisible(find.byKey(const Key('dash.orders')), 200.0);
+    await tester.scrollUntilVisible(
+        find.byKey(const Key('dash.orders')), 200.0);
     await tester.tap(find.byKey(const Key('dash.orders')), warnIfMissed: false);
     await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(find.byType(OrderHistoryScreen), findsOneWidget);
@@ -25,17 +26,19 @@ void main() {
     await tester.pumpAndSettle();
 
     // Explain -> snackbar
-    await tester.scrollUntilVisible(find.byKey(const Key('dash.explain')), 200.0);
-    await tester.tap(find.byKey(const Key('dash.explain')), warnIfMissed: false);
+    await tester.scrollUntilVisible(
+        find.byKey(const Key('dash.explain')), 200.0);
+    await tester.tap(find.byKey(const Key('dash.explain')),
+        warnIfMissed: false);
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.byType(SnackBar), findsOneWidget);
 
     // Settings -> navigates
-    await tester.scrollUntilVisible(find.byKey(const Key('dash.settings')), 200.0);
-    await tester.tap(find.byKey(const Key('dash.settings')), warnIfMissed: false);
+    await tester.scrollUntilVisible(
+        find.byKey(const Key('dash.settings')), 200.0);
+    await tester.tap(find.byKey(const Key('dash.settings')),
+        warnIfMissed: false);
     await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(find.byType(SettingsScreen), findsOneWidget);
   });
 }
-
-

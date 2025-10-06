@@ -15,11 +15,11 @@ void main() {
   });
 
   test('clampMinNotionalForTest increases qty just enough', () {
-    final q1 = clampMinNotionalForTest(qty: 0.0009, price: 10000, minNotional: 10);
+    final q1 =
+        clampMinNotionalForTest(qty: 0.0009, price: 10000, minNotional: 10);
     expect(q1 * 10000, greaterThanOrEqualTo(10));
-    final q2 = clampMinNotionalForTest(qty: 0.002, price: 10000, minNotional: 10);
+    final q2 =
+        clampMinNotionalForTest(qty: 0.002, price: 10000, minNotional: 10);
     expect(q2, closeTo(0.002, 1e-12));
   });
 }
-
-

@@ -15,12 +15,14 @@ class TradeSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(children: [
-            const Text('Place order', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Place order',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const Spacer(),
             if (isTest) const Chip(label: Text('TESTNET')),
           ]),
           const SizedBox(height: 12),
-          Text('Symbol: $symbol • Market • Quote ${prefs.fixedQuote.toStringAsFixed(0)} USDT',
+          Text(
+              'Symbol: $symbol • Market • Quote ${prefs.fixedQuote.toStringAsFixed(0)} USDT',
               style: const TextStyle(fontSize: 13)),
           const SizedBox(height: 16),
           Row(
@@ -45,7 +47,4 @@ class TradeSheet extends StatelessWidget {
     );
   }
 }
-
-
-
 

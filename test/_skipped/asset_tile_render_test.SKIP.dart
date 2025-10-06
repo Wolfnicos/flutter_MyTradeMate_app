@@ -9,11 +9,11 @@ void main() {
         home: Scaffold(
           body: Builder(builder: (context) {
             return const AssetTile(
-            symbol: 'BTCUSDT',
-            name: 'Bitcoin',
-            price: '12345.67',
-            change: '2.34%',
-            isUp: true,
+              symbol: 'BTCUSDT',
+              name: 'Bitcoin',
+              price: '12345.67',
+              change: '2.34%',
+              isUp: true,
             );
           }),
         ),
@@ -26,5 +26,3 @@ void main() {
     expect(find.textContaining('2.34'), findsOneWidget);
   });
 }
-
-

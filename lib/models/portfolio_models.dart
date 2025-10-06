@@ -11,8 +11,10 @@ class PortfolioSnapshot {
   final double dailyPnl;
   const PortfolioSnapshot(this.holdings, this.totalUsdt, {this.dailyPnl = 0.0});
 
-  PortfolioSnapshot copyWith({List<Holding>? holdings, double? totalUsdt, double? dailyPnl}) =>
-      PortfolioSnapshot(holdings ?? this.holdings, totalUsdt ?? this.totalUsdt, dailyPnl: dailyPnl ?? this.dailyPnl);
+  PortfolioSnapshot copyWith(
+          {List<Holding>? holdings, double? totalUsdt, double? dailyPnl}) =>
+      PortfolioSnapshot(holdings ?? this.holdings, totalUsdt ?? this.totalUsdt,
+          dailyPnl: dailyPnl ?? this.dailyPnl);
 }
 
 class PortfolioAggregator {
@@ -35,7 +37,8 @@ class PortfolioAggregator {
     return out;
   }
 
-  static PortfolioSnapshot compute(List<Holding> holdings, Map<String, double> prices) {
+  static PortfolioSnapshot compute(
+      List<Holding> holdings, Map<String, double> prices) {
     final enriched = holdings.map((h) {
       final p = h.asset == 'USDT' ? 1.0 : (prices[h.asset] ?? 0.0);
       return Holding(h.asset, h.qty, p);
@@ -49,5 +52,3 @@ class PortfolioAggregator {
 // Does not affect runtime behavior; kept under @visibleForTesting via import site
 double sumUsdtForTest(Iterable<Holding> holdings) =>
     holdings.fold(0.0, (s, e) => s + e.qty * e.priceUsdt);
-
-

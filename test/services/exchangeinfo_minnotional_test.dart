@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
 
 void main() {
-  test('minNotionalFromExchangeInfoForTest parses string/num and falls back', () {
+  test('minNotionalFromExchangeInfoForTest parses string/num and falls back',
+      () {
     final payload = {
       'symbols': [
         {
@@ -52,5 +53,4 @@ void main() {
     );
   });
 }
-
 

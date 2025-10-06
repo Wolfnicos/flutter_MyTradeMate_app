@@ -1,0 +1,41 @@
+name: flutter-testnet-probe
+
+on:
+  push:
+    branches: [ "**" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testnet-real:
+    name: Real Testnet probe (gated)
+    if: ${{ github.event_name == 'push' && github.repository == 'lupudragos/mytrademate' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Run real testnet smoke
+        env:
+          BINANCE_TESTNET_KEY: ${{ secrets.BINANCE_TESTNET_KEY || '' }}
+          BINANCE_TESTNET_SECRET: ${{ secrets.BINANCE_TESTNET_SECRET || '' }}
+        run: |
+          if [ -z "$BINANCE_TESTNET_KEY" ] || [ -z "$BINANCE_TESTNET_SECRET" ]; then
+            echo "Secrets not set; skipping testnet smoke"
+            exit 0
+          fi
+          flutter test test/e2e/testnet_live_call_test.dart \
+            --dart-define=BINANCE_TESTNET_KEY=$BINANCE_TESTNET_KEY \
+            --dart-define=BINANCE_TESTNET_SECRET=$BINANCE_TESTNET_SECRET
+
+

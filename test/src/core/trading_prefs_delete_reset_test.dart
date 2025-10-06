@@ -23,5 +23,3 @@ void main() {
     expect(await p.getDefaultQuote(), isNull);
   });
 }
-
-

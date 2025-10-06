@@ -2,12 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
 
 void main() {
-  test('parseKlinesForTest handles mixed string/num values and preserves rows', () {
+  test('parseKlinesForTest handles mixed string/num values and preserves rows',
+      () {
     final c = DioBinanceClient.fakeForTest();
     final raw = [
       // [openTime, o, h, l, c, v, closeTime, q, n, takerBuyBase, takerBuyQuote, ignore]
       [0, 0, 0, 0, '1000.0', 0, 0, 0, 0, 0, 0, 0], // close as string
-      [0, 0, 0, 0, 1001.0,   0, 0, 0, 0, 0, 0, 0], // close as num
+      [0, 0, 0, 0, 1001.0, 0, 0, 0, 0, 0, 0, 0], // close as num
     ];
 
     final kl = c.parseKlinesForTest(raw);
@@ -18,5 +19,3 @@ void main() {
     expect(kl[1] is List<dynamic>, isTrue);
   });
 }
-
-

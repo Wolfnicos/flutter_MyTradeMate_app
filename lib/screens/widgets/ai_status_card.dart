@@ -18,18 +18,23 @@ class AIStatusCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Strategy: Dynamic AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                Switch(value: active, onChanged: (_) {}, activeColor: Colors.cyan),
+                const Text('Strategy: Dynamic AI',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Switch(
+                    value: active, onChanged: (_) {}, activeColor: Colors.cyan),
               ],
             ),
             const SizedBox(height: 5),
-            const Text('Status: Active. Monitoring Crypto & Stocks.', style: TextStyle(color: Colors.white70)),
+            const Text('Status: Active. Monitoring Crypto & Stocks.',
+                style: TextStyle(color: Colors.white70)),
             const Divider(height: 25, color: Colors.white12),
             Center(
               child: TextButton.icon(
                 onPressed: onModify,
                 icon: const Icon(Icons.settings, color: Colors.indigoAccent),
-                label: const Text('Modify Strategy Settings', style: TextStyle(color: Colors.indigoAccent)),
+                label: const Text('Modify Strategy Settings',
+                    style: TextStyle(color: Colors.indigoAccent)),
               ),
             ),
           ],
@@ -38,5 +43,4 @@ class AIStatusCard extends StatelessWidget {
     );
   }
 }
-
 

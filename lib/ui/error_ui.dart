@@ -14,7 +14,8 @@ SnackBar buildErrorToast(UserError err) {
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: err.diagnostics));
           },
-          child: const Text('Copy logs', style: TextStyle(color: Colors.white70)),
+          child:
+              const Text('Copy logs', style: TextStyle(color: Colors.white70)),
         )
       ],
     ),
@@ -50,7 +51,8 @@ class InlineErrorBox extends StatelessWidget {
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: err.diagnostics));
               // ignore: use_build_context_synchronously
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied diagnostics')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Copied diagnostics')));
             },
             child: const Text('Copy logs'),
           ),
@@ -59,5 +61,4 @@ class InlineErrorBox extends StatelessWidget {
     );
   }
 }
-
 

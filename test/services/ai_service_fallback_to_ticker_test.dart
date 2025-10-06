@@ -29,18 +29,18 @@ class _Models implements ModelsAdapter {
 
   @override
   Future<({double? probUp, double? nextReturn, double? volatility})>
-          predictAllFromSequence(List<List<double>> seq) async =>
-      (probUp: 0.56, nextReturn: 0.01, volatility: 0.05);
+      predictAllFromSequence(List<List<double>> seq) async =>
+          (probUp: 0.56, nextReturn: 0.01, volatility: 0.05);
 }
 
 void main() {
   test('AIService falls back to ticker features when klines fail', () async {
-    final svc = AIService(client: _ErrClient(), fb: const FeatureBuilder(), models: _Models());
+    final svc = AIService(
+        client: _ErrClient(), fb: const FeatureBuilder(), models: _Models());
     final r = await svc.inferForSymbol('BTCUSDT');
     expect(r.action, 'BUY');
     expect(r.confidence, greaterThan(55));
     expect(r.targetPrice, greaterThan(0));
   });
 }
-
 

@@ -4,7 +4,8 @@ import 'package:mytrademate/services/mtm_models.dart';
 
 class _FakeClient implements BinanceClientLike {
   @override
-  Future<List<List<num>>> klines(String symbol, String interval, {int limit = 50}) async {
+  Future<List<List<num>>> klines(String symbol, String interval,
+      {int limit = 50}) async {
     return const [
       [0, 100, 102, 99, 101, 123],
       [1, 101, 103, 100, 102, 234],
@@ -39,11 +40,13 @@ class _EchoModels extends MtmModels {
   }
 
   @override
-  double predictDirection(Object input) => _extractLast(input).toDouble() / 1000.0;
+  double predictDirection(Object input) =>
+      _extractLast(input).toDouble() / 1000.0;
   @override
   double predictReturn(Object input) => _extractLast(input).toDouble() / 100.0;
   @override
-  double predictVolatility(Object input) => _extractLast(input).toDouble() / 10000.0;
+  double predictVolatility(Object input) =>
+      _extractLast(input).toDouble() / 10000.0;
 }
 
 class _ModelsAdapter implements ModelsAdapter {
@@ -52,15 +55,18 @@ class _ModelsAdapter implements ModelsAdapter {
   @override
   List<String> get featCols => const ['last'];
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAll(Map<String, double> features) async {
+  Future<({double? probUp, double? nextReturn, double? volatility})> predictAll(
+      Map<String, double> features) async {
     // Build a minimal sequence from last
     final last = features['last'] ?? 0.0;
     final seq = List<List<double>>.generate(64, (_) => [last]);
     final out = await m.predictAllFromSequence(seq);
     return out;
   }
+
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAllFromSequence(List<List<double>> seq) async {
+  Future<({double? probUp, double? nextReturn, double? volatility})>
+      predictAllFromSequence(List<List<double>> seq) async {
     final out = await m.predictAllFromSequence(seq);
     return out;
   }
@@ -81,5 +87,4 @@ void main() {
     expect(toBinanceSymbolForTest(' ethusdt '), 'ETHUSDT');
   });
 }
-
 

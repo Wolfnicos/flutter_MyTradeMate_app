@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
 
 void main() {
-  test('minNotionalFromExchangeInfoForTest works regardless of filters order', () {
+  test('minNotionalFromExchangeInfoForTest works regardless of filters order',
+      () {
     final payload = {
       'symbols': [
         {
@@ -23,10 +24,13 @@ void main() {
       ],
     };
 
-    final btcMin = DioBinanceClient.minNotionalFromExchangeInfoForTest(payload, 'BTCUSDT');
-    final ethMin = DioBinanceClient.minNotionalFromExchangeInfoForTest(payload, 'ETHUSDT');
+    final btcMin =
+        DioBinanceClient.minNotionalFromExchangeInfoForTest(payload, 'BTCUSDT');
+    final ethMin =
+        DioBinanceClient.minNotionalFromExchangeInfoForTest(payload, 'ETHUSDT');
 
     expect(btcMin, closeTo(10.0, 1e-12));
     expect(ethMin, closeTo(5.0, 1e-12));
   });
 }
+

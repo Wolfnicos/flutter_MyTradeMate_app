@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
 
 void main() {
-  test('minNotionalFromExchangeInfoForTest extracts numeric/string minNotional', () {
+  test('minNotionalFromExchangeInfoForTest extracts numeric/string minNotional',
+      () {
     final json = {
       'symbols': [
         {
@@ -14,7 +15,8 @@ void main() {
         },
       ],
     };
-    final v = DioBinanceClient.minNotionalFromExchangeInfoForTest(json, 'BTCUSDT');
+    final v =
+        DioBinanceClient.minNotionalFromExchangeInfoForTest(json, 'BTCUSDT');
     expect(v, 10.0);
 
     final json2 = {
@@ -27,9 +29,9 @@ void main() {
         },
       ],
     };
-    final v2 = DioBinanceClient.minNotionalFromExchangeInfoForTest(json2, 'ETHUSDT');
+    final v2 =
+        DioBinanceClient.minNotionalFromExchangeInfoForTest(json2, 'ETHUSDT');
     expect(v2, 5);
   });
 }
-
 

@@ -3,7 +3,7 @@ import 'package:mytrademate/services/risk_manager.dart';
 
 void main() {
   test('allows trade when within limits', () {
-    final rm = RiskManager(const RiskConfig(
+    const rm = RiskManager(RiskConfig(
       maxPositionQuoteUsdt: 500.0,
       dailyLossCapUsdt: 100.0,
       maxConcurrentPositions: 3,
@@ -21,7 +21,7 @@ void main() {
   });
 
   test('blocks when max position exceeded', () {
-    final rm = RiskManager(const RiskConfig(maxPositionQuoteUsdt: 100.0));
+    const rm = RiskManager(RiskConfig(maxPositionQuoteUsdt: 100.0));
     final v = rm.check(RiskInput(
       symbol: 'BTCUSDT',
       desiredQuoteUsdt: 150.0,
@@ -34,7 +34,7 @@ void main() {
   });
 
   test('blocks when daily loss cap reached', () {
-    final rm = RiskManager(const RiskConfig(dailyLossCapUsdt: 100.0));
+    const rm = RiskManager(RiskConfig(dailyLossCapUsdt: 100.0));
     final v = rm.check(RiskInput(
       symbol: 'BTCUSDT',
       desiredQuoteUsdt: 10.0,
@@ -47,7 +47,7 @@ void main() {
   });
 
   test('blocks when max concurrency reached', () {
-    final rm = RiskManager(const RiskConfig(maxConcurrentPositions: 2));
+    const rm = RiskManager(RiskConfig(maxConcurrentPositions: 2));
     final v = rm.check(RiskInput(
       symbol: 'ETHUSDT',
       desiredQuoteUsdt: 10.0,
@@ -61,7 +61,8 @@ void main() {
 
   test('blocks when cooling down after loss', () {
     final now = DateTime.fromMillisecondsSinceEpoch(60 * 1000);
-    final rm = RiskManager(const RiskConfig(cooldownAfterLoss: Duration(minutes: 10)));
+    const rm =
+        RiskManager(RiskConfig(cooldownAfterLoss: Duration(minutes: 10)));
     final v = rm.check(RiskInput(
       symbol: 'BTCUSDT',
       desiredQuoteUsdt: 10.0,
@@ -75,7 +76,7 @@ void main() {
   });
 
   test('blocks when circuit breaker triggered', () {
-    final rm = RiskManager(const RiskConfig(circuitBreakerOnUnhealthy: true));
+    const rm = RiskManager(RiskConfig(circuitBreakerOnUnhealthy: true));
     final v = rm.check(RiskInput(
       symbol: 'BTCUSDT',
       desiredQuoteUsdt: 10.0,
@@ -88,5 +89,3 @@ void main() {
     expect(v!.code, 'CIRCUIT_BREAKER');
   });
 }
-
-

@@ -13,12 +13,14 @@ class FakeSource implements PriceEventSource {
     _controllers.add(c);
     return c.stream;
   }
+
   @override
   Future<void> close() async {
     if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
       await _controllers.last.close();
     }
   }
+
   void emit(String j) {
     if (_controllers.isNotEmpty && !_controllers.last.isClosed) {
       _controllers.last.add(j);
@@ -52,5 +54,3 @@ void main() {
     expect(src.connects, 2);
   });
 }
-
-

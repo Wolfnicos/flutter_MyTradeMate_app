@@ -28,7 +28,8 @@ void main() {
     expect(c.parseTickerPriceForTest({'c': '99.9'}), 99.9);
   });
 
-  test('supportsSymbolFromExchangeInfoForTest finds symbol case-insensitive', () {
+  test('supportsSymbolFromExchangeInfoForTest finds symbol case-insensitive',
+      () {
     final info = {
       'symbols': [
         {'symbol': 'BTCUSDT'},
@@ -36,12 +37,16 @@ void main() {
       ]
     };
     // use static helper that normalizes case for matching
-    expect(DioBinanceClient.minNotionalFromExchangeInfoForTest({'symbols': []}, 'ETHUSDT'), 0);
+    expect(
+        DioBinanceClient.minNotionalFromExchangeInfoForTest(
+            {'symbols': []}, 'ETHUSDT'),
+        0);
     // supportsSymbolFromExchangeInfoForTest equivalent via supportsSymbolForTest
     final cli = DioBinanceClient.fakeForTest();
-    expect(cli.supportsSymbolForTest(['BTCUSDT', 'ETHUSDT'], 'ethusdt'), isTrue);
-    expect(cli.supportsSymbolForTest(['BTCUSDT', 'ETHUSDT'], 'ABCUSDT'), isFalse);
+    expect(
+        cli.supportsSymbolForTest(['BTCUSDT', 'ETHUSDT'], 'ethusdt'), isTrue);
+    expect(
+        cli.supportsSymbolForTest(['BTCUSDT', 'ETHUSDT'], 'ABCUSDT'), isFalse);
   });
 }
-
 

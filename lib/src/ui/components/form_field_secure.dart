@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class FormFieldSecure extends StatefulWidget {
   final TextEditingController controller;
   final String label;
-  const FormFieldSecure({super.key, required this.controller, required this.label});
+  const FormFieldSecure(
+      {super.key, required this.controller, required this.label});
 
   @override
   State<FormFieldSecure> createState() => _FormFieldSecureState();
@@ -26,7 +27,4 @@ class _FormFieldSecureState extends State<FormFieldSecure> {
     );
   }
 }
-
-
-
 

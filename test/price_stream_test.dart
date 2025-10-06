@@ -9,5 +9,3 @@ void main() {
     expect(ps.prices, isA<Stream<double>>());
   });
 }
-
-

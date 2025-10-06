@@ -15,7 +15,8 @@ void main() {
     // Default env is testnet when unset
     expect(p.env, TradeEnv.testnet);
 
-    await p.save(apiKey: 'KEY', apiSecret: '', env: TradeEnv.live, fixedQuote: 12.5);
+    await p.save(
+        apiKey: 'KEY', apiSecret: '', env: TradeEnv.live, fixedQuote: 12.5);
     // Empty secret keeps hasCreds false
     expect(p.apiKey, 'KEY');
     expect(p.apiSecret, isNull);
@@ -27,5 +28,4 @@ void main() {
     expect(p.hasCreds, isTrue);
   });
 }
-
 

@@ -11,6 +11,7 @@ class MtmModels {
     await _i!._ensureLoaded();
     return _i!;
   }
+
   late final tfl.Interpreter _dir;
   late final tfl.Interpreter _ret;
   late final tfl.Interpreter _vol;
@@ -40,16 +41,16 @@ class MtmModels {
       json.decode(await rootBundle.loadString('assets/models/feat_cols.json')),
     );
 
-    Future<tfl.Interpreter> _load(String base) async {
+    Future<tfl.Interpreter> load(String base) async {
       final path = fp16
           ? 'assets/models/${base}_fp16_builtin.tflite'
           : 'assets/models/${base}_f32_builtin.tflite';
       return tfl.Interpreter.fromAsset(path);
     }
 
-    _dir = await _load('direction');
-    _ret = await _load('return');
-    _vol = await _load('volatility');
+    _dir = await load('direction');
+    _ret = await load('return');
+    _vol = await load('volatility');
 
     _loaded = true;
   }
@@ -93,7 +94,6 @@ class MtmModels {
   }
 }
 
-
 class MtmOutput {
   final double probUp, nextReturn, volatility;
   const MtmOutput(this.probUp, this.nextReturn, this.volatility);
@@ -123,22 +123,28 @@ extension MtmRun on MtmModels {
     final vector = featCols.map((k) => features[k] ?? 0.0).toList();
     try {
       final out = await runFor(vector);
-      return (probUp: out.probUp, nextReturn: out.nextReturn, volatility: out.volatility);
+      return (
+        probUp: out.probUp,
+        nextReturn: out.nextReturn,
+        volatility: out.volatility
+      );
     } catch (_) {
       return (probUp: null, nextReturn: null, volatility: null);
     }
   }
 
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAllFromSequence(
-      List<List<double>> seq) async {
+  Future<({double? probUp, double? nextReturn, double? volatility})>
+      predictAllFromSequence(List<List<double>> seq) async {
     await _ensureLoaded();
     try {
       final out = await runSequence(seq);
-      return (probUp: out.probUp, nextReturn: out.nextReturn, volatility: out.volatility);
+      return (
+        probUp: out.probUp,
+        nextReturn: out.nextReturn,
+        volatility: out.volatility
+      );
     } catch (_) {
       return (probUp: null, nextReturn: null, volatility: null);
     }
   }
 }
-
-

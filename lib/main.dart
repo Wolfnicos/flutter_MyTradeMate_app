@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'core/logging.dart';
 import 'package:local_auth/local_auth.dart';
 import 'screens/dashboard_screen.dart';
 import 'app/lifecycle_observer.dart';
@@ -10,10 +11,15 @@ import 'screens/profile_screen.dart';
 import 'screens/order_history_screen.dart';
 import 'services/market_data_service.dart';
 import 'services/dio_binance_client.dart';
+import 'src/core/trading_prefs.dart';
+import 'services/price_rest_client.dart';
 import 'src/core/trading_prefs.dart' show TradeEnv; // if needed by clients
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await TradingPrefs.load();
+  final optIn = await prefs.getTelemetryOptIn();
+  AppLogger.init(optInTelemetry: optIn);
   final obs = AppLifecycleObserver();
   WidgetsBinding.instance.addObserver(obs);
   runApp(const MyTradeMateApp());
@@ -26,7 +32,8 @@ class MyTradeMateApp extends StatefulWidget {
   State<MyTradeMateApp> createState() => _MyTradeMateAppState();
 }
 
-class _MyTradeMateAppState extends State<MyTradeMateApp> with WidgetsBindingObserver {
+class _MyTradeMateAppState extends State<MyTradeMateApp>
+    with WidgetsBindingObserver {
   bool _lockCheckDone = false;
   MarketDataService? _marketData;
   DioBinanceClient? _dio;
@@ -72,7 +79,8 @@ class _MyTradeMateAppState extends State<MyTradeMateApp> with WidgetsBindingObse
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final md = _marketData;
     if (md == null) return;
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       md.pause();
     } else if (state == AppLifecycleState.resumed) {
       md.resume();
@@ -92,12 +100,15 @@ class _MyTradeMateAppState extends State<MyTradeMateApp> with WidgetsBindingObse
         scaffoldBackgroundColor: const Color(0xFF121212),
         cardColor: const Color(0xFF1E1E1E),
         textTheme: const TextTheme(
-          titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          titleLarge:
+              TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           bodyMedium: TextStyle(color: Colors.white70),
         ),
         useMaterial3: true,
       ),
-      home: _lockCheckDone ? const MainNavigator() : const Scaffold(body: Center(child: CircularProgressIndicator())),
+      home: _lockCheckDone
+          ? const MainNavigator()
+          : const Scaffold(body: Center(child: CircularProgressIndicator())),
     );
     if (md == null) return app;
     return InheritedMarketData(service: md, child: app);
@@ -141,10 +152,14 @@ class _MainNavigatorState extends State<MainNavigator> {
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Market'),
-          BottomNavigationBarItem(icon: Icon(Icons.psychology), label: 'AI Strategies'),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Portfolio'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Orders'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.show_chart), label: 'Market'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.psychology), label: 'AI Strategies'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.account_balance_wallet), label: 'Portfolio'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long), label: 'Orders'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,

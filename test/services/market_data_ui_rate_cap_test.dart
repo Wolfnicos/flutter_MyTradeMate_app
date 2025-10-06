@@ -14,7 +14,7 @@ void main() {
       pollInterval: const Duration(days: 1),
     );
 
-    final symbol = 'BTCUSDT';
+    const symbol = 'BTCUSDT';
     final events = <double>[];
     final sub = svc.prices(symbol).listen((v) => events.add(v));
     await svc.startSymbol(symbol);
@@ -30,8 +30,7 @@ void main() {
     await sub.cancel();
     await svc.dispose();
 
-    expect(events.length <= 6, isTrue, reason: 'UI rate should be capped near 5 Hz');
+    expect(events.length <= 6, isTrue,
+        reason: 'UI rate should be capped near 5 Hz');
   }, timeout: const Timeout(Duration(seconds: 5)));
 }
-
-

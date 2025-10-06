@@ -5,9 +5,14 @@ class AppConfig {
   final String? apiSecret;
   final bool testnet;
   final double fixedQuote;
-  bool get hasKeys => (apiKey?.isNotEmpty ?? false) && (apiSecret?.isNotEmpty ?? false);
+  bool get hasKeys =>
+      (apiKey?.isNotEmpty ?? false) && (apiSecret?.isNotEmpty ?? false);
 
-  const AppConfig({this.apiKey, this.apiSecret, required this.testnet, required this.fixedQuote});
+  const AppConfig(
+      {this.apiKey,
+      this.apiSecret,
+      required this.testnet,
+      required this.fixedQuote});
 }
 
 class LocalStore {
@@ -22,7 +27,7 @@ class LocalStore {
       testnet: sp.getBool('testnet') ?? true,
       fixedQuote: sp.getDouble('fixedQuote') ?? 50,
     );
-    }
+  }
 
   Future<void> saveConfig({
     String? apiKey,
@@ -45,7 +50,4 @@ class LocalStore {
     await sp.setDouble('fixedQuote', fixedQuote);
   }
 }
-
-
-
 

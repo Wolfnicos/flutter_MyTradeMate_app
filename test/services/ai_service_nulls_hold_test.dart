@@ -26,8 +26,8 @@ class _NullModels implements ModelsAdapter {
 
   @override
   Future<({double? probUp, double? nextReturn, double? volatility})>
-          predictAllFromSequence(List<List<double>> seq) async =>
-      (probUp: null, nextReturn: null, volatility: null);
+      predictAllFromSequence(List<List<double>> seq) async =>
+          (probUp: null, nextReturn: null, volatility: null);
 }
 
 void main() {
@@ -43,5 +43,4 @@ void main() {
     expect(r.targetPrice, greaterThan(0));
   });
 }
-
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 /// A compact, branded alert card that reflects AI state
 /// (loading / success / warning / error) and exposes an action button.
 ///
@@ -52,7 +53,9 @@ class AIAlertCard extends StatelessWidget {
     final resolvedSubtitle = subtitle ?? _defaultSubtitle(derivedVariant);
     final resolvedButton = buttonText ?? _defaultButton(derivedVariant);
 
-    final disabled = isLoading || onPressed == null || derivedVariant == AIAlertVariant.error;
+    final disabled = isLoading ||
+        onPressed == null ||
+        derivedVariant == AIAlertVariant.error;
 
     return Card(
       color: palette.background,
@@ -66,7 +69,10 @@ class AIAlertCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _LeadingIcon(variant: derivedVariant, palette: palette, isLoading: isLoading),
+              _LeadingIcon(
+                  variant: derivedVariant,
+                  palette: palette,
+                  isLoading: isLoading),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -84,7 +90,9 @@ class AIAlertCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      errorText ?? _appendRecCount(resolvedSubtitle, recommendationCount),
+                      errorText ??
+                          _appendRecCount(
+                              resolvedSubtitle, recommendationCount),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -100,11 +108,14 @@ class AIAlertCard extends StatelessWidget {
               ElevatedButton(
                 onPressed: disabled ? null : onPressed,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: disabled ? palette.buttonDisabled : palette.button,
+                  backgroundColor:
+                      disabled ? palette.buttonDisabled : palette.button,
                   foregroundColor: palette.buttonText,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 child: Text(
                   resolvedButton,
@@ -119,7 +130,8 @@ class AIAlertCard extends StatelessWidget {
   }
 
   AIAlertVariant _deriveVariant() {
-    if (errorText != null && errorText!.trim().isNotEmpty) return AIAlertVariant.error;
+    if (errorText != null && errorText!.trim().isNotEmpty)
+      return AIAlertVariant.error;
     if (isLoading) return AIAlertVariant.info;
     if ((recommendationCount ?? 0) > 0) return AIAlertVariant.success;
     return variant ?? AIAlertVariant.info;
@@ -172,43 +184,43 @@ class AIAlertCard extends StatelessWidget {
   _Palette _paletteFor(AIAlertVariant v) {
     switch (v) {
       case AIAlertVariant.info:
-        return _Palette(
-          background: const Color(0xFF1B1530),
+        return const _Palette(
+          background: Color(0xFF1B1530),
           title: Colors.white,
           subtitle: Colors.white70,
           icon: Colors.cyanAccent,
-          button: const Color(0xFF2CDA9D),
-          buttonDisabled: const Color(0xFF3A3650),
+          button: Color(0xFF2CDA9D),
+          buttonDisabled: Color(0xFF3A3650),
           buttonText: Colors.white,
         );
       case AIAlertVariant.success:
-        return _Palette(
-          background: const Color(0xFF0E2A1E),
-          title: const Color(0xFFE8FFF3),
-          subtitle: const Color(0xFFBFE9D5),
-          icon: const Color(0xFF2CDA9D),
-          button: const Color(0xFF2CDA9D),
-          buttonDisabled: const Color(0xFF214536),
+        return const _Palette(
+          background: Color(0xFF0E2A1E),
+          title: Color(0xFFE8FFF3),
+          subtitle: Color(0xFFBFE9D5),
+          icon: Color(0xFF2CDA9D),
+          button: Color(0xFF2CDA9D),
+          buttonDisabled: Color(0xFF214536),
           buttonText: Colors.white,
         );
       case AIAlertVariant.warning:
-        return _Palette(
-          background: const Color(0xFF2A240E),
-          title: const Color(0xFFFFF7E6),
-          subtitle: const Color(0xFFEAD9A1),
-          icon: const Color(0xFFFFC107),
-          button: const Color(0xFFFFC107),
-          buttonDisabled: const Color(0xFF4A442E),
+        return const _Palette(
+          background: Color(0xFF2A240E),
+          title: Color(0xFFFFF7E6),
+          subtitle: Color(0xFFEAD9A1),
+          icon: Color(0xFFFFC107),
+          button: Color(0xFFFFC107),
+          buttonDisabled: Color(0xFF4A442E),
           buttonText: Colors.black,
         );
       case AIAlertVariant.error:
-        return _Palette(
-          background: const Color(0xFF2A1010),
-          title: const Color(0xFFFFE8E8),
-          subtitle: const Color(0xFFF5BDBD),
-          icon: const Color(0xFFE57373),
-          button: const Color(0xFFE57373),
-          buttonDisabled: const Color(0xFF4A2B2B),
+        return const _Palette(
+          background: Color(0xFF2A1010),
+          title: Color(0xFFFFE8E8),
+          subtitle: Color(0xFFF5BDBD),
+          icon: Color(0xFFE57373),
+          button: Color(0xFFE57373),
+          buttonDisabled: Color(0xFF4A2B2B),
           buttonText: Colors.white,
         );
     }
@@ -219,7 +231,8 @@ class _LeadingIcon extends StatelessWidget {
   final AIAlertVariant variant;
   final _Palette palette;
   final bool isLoading;
-  const _LeadingIcon({required this.variant, required this.palette, required this.isLoading});
+  const _LeadingIcon(
+      {required this.variant, required this.palette, required this.isLoading});
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +251,7 @@ class _LeadingIcon extends StatelessWidget {
         children: [
           Icon(icon, color: palette.icon, size: 28),
           if (isLoading)
-            Positioned.fill(
+            const Positioned.fill(
               child: Align(
                 alignment: Alignment.bottomRight,
                 child: SizedBox(
@@ -274,5 +287,4 @@ class _Palette {
     required this.buttonText,
   });
 }
-
 

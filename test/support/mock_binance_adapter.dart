@@ -10,15 +10,19 @@ class MockBinanceAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 
   @override
-  Future<ResponseBody> fetch(RequestOptions options, Stream<List<int>>? requestStream, Future<void>? cancelFuture) async {
-    final key = '${options.method.toUpperCase()} ${options.path.split('?').first}';
+  Future<ResponseBody> fetch(RequestOptions options,
+      Stream<List<int>>? requestStream, Future<void>? cancelFuture) async {
+    final key =
+        '${options.method.toUpperCase()} ${options.path.split('?').first}';
     final file = routes[key];
     if (file == null) {
       return _json(404, {'error': 'No mock for $key'});
     }
     if (file.endsWith('.html')) {
       final html = loadFixtureString(file);
-      return _bytes(503, html.codeUnits, headers: {Headers.contentTypeHeader: ['text/html']});
+      return _bytes(503, html.codeUnits, headers: {
+        Headers.contentTypeHeader: ['text/html']
+      });
     }
     final data = loadFixtureJson(file);
     if (data is Map && data['__status'] is int) {
@@ -32,11 +36,12 @@ class MockBinanceAdapter implements HttpClientAdapter {
   ResponseBody _json(int status, Object body) => ResponseBody.fromString(
         jsonEncode(body),
         status,
-        headers: {Headers.contentTypeHeader: ['application/json']},
+        headers: {
+          Headers.contentTypeHeader: ['application/json']
+        },
       );
 
-  ResponseBody _bytes(int status, List<int> bytes, {Map<String, List<String>>? headers}) =>
+  ResponseBody _bytes(int status, List<int> bytes,
+          {Map<String, List<String>>? headers}) =>
       ResponseBody.fromBytes(bytes, status, headers: headers);
 }
-
-

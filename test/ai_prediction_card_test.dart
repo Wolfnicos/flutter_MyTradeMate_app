@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/screens/widgets/ai_prediction_card.dart';
 
 void main() {
-  testWidgets('AIPredictionCard renders loading then error or data', (tester) async {
+  testWidgets('AIPredictionCard renders loading then error or data',
+      (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(body: AIPredictionCard(symbol: 'BTCUSDT')),
     ));
@@ -15,3 +16,4 @@ void main() {
     expect(find.byType(Card), findsWidgets);
   });
 }
+

@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
 
 void main() {
-  test('parseBalancesForTest transforms strings/nums and filters zero totals', () {
+  test('parseBalancesForTest transforms strings/nums and filters zero totals',
+      () {
     final c = DioBinanceClient.fakeForTest();
     final account = {
       'balances': [
@@ -35,5 +36,4 @@ void main() {
     expect(usdt['valueUsdt'], 30.0);
   });
 }
-
 

@@ -12,6 +12,3 @@ class Throttler {
     _timer = Timer(duration, () {});
   }
 }
-
-
-

@@ -9,7 +9,8 @@ class SparklineChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     if (data.isEmpty) {
-      return Center(child: Text('No data', style: TextStyle(color: cs.outline)));
+      return Center(
+          child: Text('No data', style: TextStyle(color: cs.outline)));
     }
     return LineChart(
       LineChartData(
@@ -23,7 +24,8 @@ class SparklineChart extends StatelessWidget {
             color: cs.primary,
             dotData: const FlDotData(show: false),
             spots: [
-              for (var i = 0; i < data.length; i++) FlSpot(i.toDouble(), data[i])
+              for (var i = 0; i < data.length; i++)
+                FlSpot(i.toDouble(), data[i])
             ],
           ),
         ],
@@ -31,7 +33,4 @@ class SparklineChart extends StatelessWidget {
     );
   }
 }
-
-
-
 

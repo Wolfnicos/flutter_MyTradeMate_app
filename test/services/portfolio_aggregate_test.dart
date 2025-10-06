@@ -10,9 +10,7 @@ void main() {
     ];
     final prices = {'BTC': 60000.0};
     final snap = PortfolioAggregator.compute(holdings, prices);
-    final expected = 50.0 /*usdt*/ + 0.01 * 60000.0;
+    const expected = 50.0 /*usdt*/ + 0.01 * 60000.0;
     expect(snap.totalUsdt, closeTo(expected, 1e-6));
   });
 }
-
-

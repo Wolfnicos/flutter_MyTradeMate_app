@@ -24,7 +24,8 @@ void main() {
 
     // place BUY MARKET
     final buy = broker.place(
-      PaperOrderReq.market(symbol: 'BTCUSDT', side: OrderSide.buy, quantity: 0.1),
+      PaperOrderReq.market(
+          symbol: 'BTCUSDT', side: OrderSide.buy, quantity: 0.1),
     ) as PaperOrder;
     expect(buy.status, equals(OrderStatus.filled));
 
@@ -34,7 +35,8 @@ void main() {
 
     // place SELL MARKET
     final sell = broker.place(
-      PaperOrderReq.market(symbol: 'BTCUSDT', side: OrderSide.sell, quantity: 0.1),
+      PaperOrderReq.market(
+          symbol: 'BTCUSDT', side: OrderSide.sell, quantity: 0.1),
     ) as PaperOrder;
     expect(sell.status, equals(OrderStatus.filled));
 
@@ -42,5 +44,3 @@ void main() {
     expect(broker.realizedPnlUsdt('USDT') > 0, isTrue);
   });
 }
-
-

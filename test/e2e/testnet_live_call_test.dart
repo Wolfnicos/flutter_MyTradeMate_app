@@ -2,8 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
 
 void main() {
-  final apiKey = const String.fromEnvironment('BINANCE_TESTNET_KEY', defaultValue: '');
-  final secret = const String.fromEnvironment('BINANCE_TESTNET_SECRET', defaultValue: '');
+  const apiKey =
+      String.fromEnvironment('BINANCE_TESTNET_KEY', defaultValue: '');
+  const secret =
+      String.fromEnvironment('BINANCE_TESTNET_SECRET', defaultValue: '');
   final enabled = apiKey.isNotEmpty && secret.isNotEmpty;
 
   test('REAL TESTNET: /time and /exchangeInfo', () async {
@@ -13,7 +15,4 @@ void main() {
     expect(t.statusCode, 200);
   }, skip: !enabled);
 }
-
-
-
 

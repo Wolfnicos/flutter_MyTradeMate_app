@@ -16,7 +16,8 @@ class Sparkline extends StatelessWidget {
     return AspectRatio(
       aspectRatio: 4 / 1.6,
       child: CustomPaint(
-        painter: _SparkPainter(values, Theme.of(context).colorScheme.primary, strokeWidth),
+        painter: _SparkPainter(
+            values, Theme.of(context).colorScheme.primary, strokeWidth),
         child: Container(padding: padding),
       ),
     );
@@ -99,5 +100,7 @@ class _SparkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SparkPainter oldDelegate) =>
-      oldDelegate.v != v || oldDelegate.color != color || oldDelegate.width != width;
+      oldDelegate.v != v ||
+      oldDelegate.color != color ||
+      oldDelegate.width != width;
 }

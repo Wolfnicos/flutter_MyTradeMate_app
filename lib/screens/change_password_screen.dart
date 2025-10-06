@@ -29,11 +29,25 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(controller: _cur, obscureText: true, decoration: const InputDecoration(labelText: 'Current password', border: OutlineInputBorder())),
+            TextField(
+                controller: _cur,
+                obscureText: true,
+                decoration: const InputDecoration(
+                    labelText: 'Current password',
+                    border: OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: _new, obscureText: true, decoration: const InputDecoration(labelText: 'New password', border: OutlineInputBorder())),
+            TextField(
+                controller: _new,
+                obscureText: true,
+                decoration: const InputDecoration(
+                    labelText: 'New password', border: OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: _confirm, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm new password', border: OutlineInputBorder())),
+            TextField(
+                controller: _confirm,
+                obscureText: true,
+                decoration: const InputDecoration(
+                    labelText: 'Confirm new password',
+                    border: OutlineInputBorder())),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -50,18 +64,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Future<void> _submit() async {
     if (_new.text != _confirm.text) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('New passwords do not match')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('New passwords do not match')));
       return;
     }
     setState(() => _busy = true);
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
     setState(() => _busy = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed (demo)')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Password changed (demo)')));
     Navigator.pop(context);
   }
 }
-
-
-
 

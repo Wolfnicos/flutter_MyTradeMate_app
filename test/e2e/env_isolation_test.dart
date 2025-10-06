@@ -19,7 +19,10 @@ void main() {
 
     // Pretend app placed a TESTNET order
     final ok = await testnet.post('/api/v3/order', data: {
-      'symbol': 'BTCUSDT', 'side': 'BUY', 'type': 'MARKET', 'quoteOrderQty': '50'
+      'symbol': 'BTCUSDT',
+      'side': 'BUY',
+      'type': 'MARKET',
+      'quoteOrderQty': '50'
     });
     expect(ok.statusCode, 200);
 
@@ -28,7 +31,4 @@ void main() {
     expect(t.statusCode, 200);
   });
 }
-
-
-
 

@@ -23,7 +23,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('runSequence handles nulls (defaults used upstream)', () async {
-    final m = _AllNull()..markLoadedForTest(const ['a','b','c']);
+    final m = _AllNull()..markLoadedForTest(const ['a', 'b', 'c']);
     final seq = List.generate(64, (_) => <double>[0, 0, 0]);
     final out = await m.predictAllFromSequence(seq);
     expect(out.probUp, isNull);
@@ -32,7 +32,7 @@ void main() {
   });
 
   test('runSequence aggregates provided values', () async {
-    final m = _AllVals()..markLoadedForTest(const ['a','b','c']);
+    final m = _AllVals()..markLoadedForTest(const ['a', 'b', 'c']);
     final seq = List.generate(64, (_) => <double>[0, 0, 0]);
     final out = await m.predictAllFromSequence(seq);
     expect(out.probUp, 0.6);
@@ -40,5 +40,3 @@ void main() {
     expect(out.volatility, 0.1);
   });
 }
-
-

@@ -12,13 +12,11 @@ void main() {
   test('parseKlines casts to list of list', () {
     final c = DioBinanceClient.fakeForTest();
     final raw = [
-      [0,0,0,0, '1000.0', 0,0,0,0,0,0,0],
-      [0,0,0,0, 1001.0,   0,0,0,0,0,0,0],
+      [0, 0, 0, 0, '1000.0', 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 1001.0, 0, 0, 0, 0, 0, 0, 0],
     ];
     final kl = c.parseKlinesForTest(raw);
     expect(kl.length, 2);
-  expect(kl.first[4], '1000.0');
+    expect(kl.first[4], '1000.0');
   });
 }
-
-

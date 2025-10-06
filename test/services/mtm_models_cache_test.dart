@@ -21,17 +21,22 @@ class _EchoModels extends MtmModels {
   }
 
   @override
-  double predictDirection(Object input) => _extractLastClose(input).toDouble() / 1000.0;
+  double predictDirection(Object input) =>
+      _extractLastClose(input).toDouble() / 1000.0;
 
   @override
-  double predictReturn(Object input) => _extractLastClose(input).toDouble() / 10000.0;
+  double predictReturn(Object input) =>
+      _extractLastClose(input).toDouble() / 10000.0;
 
   @override
-  double predictVolatility(Object input) => _extractLastClose(input).toDouble() / 100.0;
+  double predictVolatility(Object input) =>
+      _extractLastClose(input).toDouble() / 100.0;
 }
 
 void main() {
-  test('predictAllFromSequence uses overridden predictors after markLoadedForTest', () async {
+  test(
+      'predictAllFromSequence uses overridden predictors after markLoadedForTest',
+      () async {
     final m = _EchoModels();
     m.markLoadedForTest(const ['last', 'ret1']);
     final out = await m.predictAllFromSequence(const [
@@ -43,7 +48,8 @@ void main() {
     expect(out.volatility, closeTo(2.0, 1e-6));
   });
 
-  test('predictAll returns finite numbers with overridden predictors', () async {
+  test('predictAll returns finite numbers with overridden predictors',
+      () async {
     final m = _EchoModels();
     m.markLoadedForTest(const ['last', 'ret1']);
     final out = await m.predictAll({'last': 300.0, 'ret1': 0.0});
@@ -52,5 +58,3 @@ void main() {
     expect(out.volatility, isA<num>());
   });
 }
-
-

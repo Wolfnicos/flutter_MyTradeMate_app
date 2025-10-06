@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/ai_service.dart';
 
 void main() {
-  test('featuresFromTickerForTest returns a 64xN finite sequence and is stable for same input', () {
+  test(
+      'featuresFromTickerForTest returns a 64xN finite sequence and is stable for same input',
+      () {
     final seq1 = featuresFromTickerForTest(1234.5);
     final seq2 = featuresFromTickerForTest(1234.5);
 
@@ -24,5 +26,4 @@ void main() {
     }
   });
 }
-
 

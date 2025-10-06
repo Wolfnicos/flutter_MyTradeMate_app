@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mytrademate/screens/widgets/ai_prediction_card.dart';
-import 'package:mytrademate/services/ai_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +12,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('toggles persist and control visibility of warnings', (tester) async {
+  testWidgets('toggles persist and control visibility of warnings',
+      (tester) async {
     // Provide a simple fake AIService via instance override if needed
     // Here we rely on AIPredictionCard calling AIService().getPrediction(symbol)
     // which should succeed in existing test setup with fake path.
@@ -58,5 +58,3 @@ void main() {
     expect(find.byType(SwitchListTile), findsWidgets);
   });
 }
-
-

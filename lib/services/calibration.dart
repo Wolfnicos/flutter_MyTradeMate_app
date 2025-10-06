@@ -51,7 +51,7 @@ class IsotonicCalibrator extends Calibrator {
   double calibrate(double p) {
     if (p <= xs.first) return ys.first;
     if (p >= xs.last) return ys.last;
-    int hi = xs.indexWhere((x) => x >= p);
+    final int hi = xs.indexWhere((x) => x >= p);
     if (hi <= 0) return ys.first;
     final lo = hi - 1;
     final x0 = xs[lo], x1 = xs[hi];
@@ -63,7 +63,8 @@ class IsotonicCalibrator extends Calibrator {
 }
 
 class CalibrationStore {
-  static Future<Calibrator?> tryLoadFromAssets({String path = 'assets/models/calibration.json'}) async {
+  static Future<Calibrator?> tryLoadFromAssets(
+      {String path = 'assets/models/calibration.json'}) async {
     try {
       final s = await rootBundle.loadString(path);
       return parseJson(s);
@@ -89,13 +90,13 @@ class CalibrationStore {
     if (kind == 'isotonic') {
       // accept either points: [[x,y],...] or params.x / params.y arrays
       final params = (m['params'] as Map?) ?? const {};
-      List<dynamic>? pts = m['points'] as List<dynamic>?;
+      final List<dynamic>? pts = m['points'] as List<dynamic>?;
       if (pts != null) {
         final xs = <double>[];
         final ys = <double>[];
         for (final p in pts) {
           xs.add(((p as List)[0] as num).toDouble());
-          ys.add(((p as List)[1] as num).toDouble());
+          ys.add(((p)[1] as num).toDouble());
         }
         return IsotonicCalibrator(xs, ys);
       }
@@ -117,16 +118,22 @@ class ReliabilityBin {
   const ReliabilityBin(this.lo, this.hi, this.n, this.meanPred, this.meanTrue);
 }
 
-List<ReliabilityBin> reliabilityBins(List<double> p, List<int> y, {int bins = 15}) {
+List<ReliabilityBin> reliabilityBins(List<double> p, List<int> y,
+    {int bins = 15}) {
   final n = p.length;
   final out = <ReliabilityBin>[];
   for (var b = 0; b < bins; b++) {
     final lo = b / bins, hi = (b + 1) / bins;
-    double sP = 0, sY = 0; int k = 0;
+    double sP = 0, sY = 0;
+    int k = 0;
     for (var i = 0; i < n; i++) {
       final v = p[i];
       final inLast = b == bins - 1 ? (v >= lo && v <= hi) : (v >= lo && v < hi);
-      if (inLast) { sP += v; sY += y[i]; k++; }
+      if (inLast) {
+        sP += v;
+        sY += y[i];
+        k++;
+      }
     }
     if (k == 0) continue;
     out.add(ReliabilityBin(lo, hi, k, sP / k, sY / k));
@@ -144,7 +151,8 @@ double expectedCalibrationError(List<ReliabilityBin> bins, int total) {
 
 double brierScore(List<double> p, List<int> y) {
   assert(p.length == y.length);
-  double s = 0.0; final n = p.length;
+  double s = 0.0;
+  final n = p.length;
   for (var i = 0; i < n; i++) {
     final e = p[i] - y[i];
     s += e * e;
@@ -154,7 +162,8 @@ double brierScore(List<double> p, List<int> y) {
 
 double logLoss(List<double> p, List<int> y, {double eps = 1e-12}) {
   assert(p.length == y.length);
-  double s = 0.0; final n = p.length;
+  double s = 0.0;
+  final n = p.length;
   for (var i = 0; i < n; i++) {
     final pi = p[i].clamp(eps, 1.0 - eps);
     s += -(y[i] == 1 ? math.log(pi) : math.log(1 - pi));
@@ -168,23 +177,30 @@ double rocAuc(List<double> p, List<int> y) {
   final n = p.length;
   final idx = List<int>.generate(n, (i) => i);
   idx.sort((a, b) => p[a].compareTo(p[b]));
-  var rank = List<double>.filled(n, 0);
+  final rank = List<double>.filled(n, 0);
   var i = 0;
   while (i < n) {
     var j = i + 1;
-    while (j < n && p[idx[j]] == p[idx[i]]) j++;
+    while (j < n && p[idx[j]] == p[idx[i]]) {
+      j++;
+    }
     final r = (i + j + 1) / 2.0; // average rank for ties (1-based)
-    for (var k = i; k < j; k++) rank[idx[k]] = r;
+    for (var k = i; k < j; k++) {
+      rank[idx[k]] = r;
+    }
     i = j;
   }
-  double sumPosRanks = 0.0; int nPos = 0, nNeg = 0;
+  double sumPosRanks = 0.0;
+  int nPos = 0, nNeg = 0;
   for (var t = 0; t < n; t++) {
-    if (y[t] == 1) { sumPosRanks += rank[t]; nPos++; } else { nNeg++; }
+    if (y[t] == 1) {
+      sumPosRanks += rank[t];
+      nPos++;
+    } else {
+      nNeg++;
+    }
   }
   if (nPos == 0 || nNeg == 0) return 0.5;
   final u = sumPosRanks - nPos * (nPos + 1) / 2.0;
   return u / (nPos * nNeg);
 }
-
-
-

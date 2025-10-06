@@ -4,7 +4,8 @@ import 'package:mytrademate/services/feature_builder.dart';
 
 class _ClientTicker24hFails implements BinanceClientLike {
   @override
-  Future<List<List<num>>> klines(String symbol, String interval, {int limit = 200}) async {
+  Future<List<List<num>>> klines(String symbol, String interval,
+      {int limit = 200}) async {
     throw Exception('klines down');
   }
 
@@ -12,7 +13,8 @@ class _ClientTicker24hFails implements BinanceClientLike {
   Future<double> tickerPrice(String symbol) async => 1000.0;
 
   @override
-  Future<Map<String, dynamic>> ticker24h(String symbol) async => throw Exception('24h down');
+  Future<Map<String, dynamic>> ticker24h(String symbol) async =>
+      throw Exception('24h down');
 }
 
 class _ModelsHold implements ModelsAdapter {
@@ -20,12 +22,14 @@ class _ModelsHold implements ModelsAdapter {
   List<String> get featCols => const ['last', 'ret1', 'sma5', 'sma20', 'rsi14'];
 
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAll(Map<String, double> features) async =>
+  Future<({double? probUp, double? nextReturn, double? volatility})> predictAll(
+          Map<String, double> features) async =>
       (probUp: 0.5, nextReturn: 0.0, volatility: 0.04);
 
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAllFromSequence(List<List<double>> seq) async =>
-      (probUp: 0.5, nextReturn: 0.0, volatility: 0.04);
+  Future<({double? probUp, double? nextReturn, double? volatility})>
+      predictAllFromSequence(List<List<double>> seq) async =>
+          (probUp: 0.5, nextReturn: 0.0, volatility: 0.04);
 }
 
 void main() {
@@ -41,5 +45,4 @@ void main() {
     expect(r.targetPrice, greaterThan(0));
   });
 }
-
 

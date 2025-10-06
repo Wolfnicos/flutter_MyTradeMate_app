@@ -11,5 +11,3 @@ void main() {
     expect(find.text('MyTradeMate'), findsOneWidget);
   });
 }
-
-

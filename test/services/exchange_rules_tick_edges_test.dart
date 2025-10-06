@@ -21,5 +21,3 @@ void main() {
     expect(roundPriceToTickForTest(100.026, 0.05), closeTo(100.05, 1e-9));
   });
 }
-
-

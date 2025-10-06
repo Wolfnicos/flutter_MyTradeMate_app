@@ -17,15 +17,18 @@ class _Echo extends MtmModels {
   }
 
   @override
-  double predictDirection(Object input) => _extractLast(input).toDouble() / 100.0;
+  double predictDirection(Object input) =>
+      _extractLast(input).toDouble() / 100.0;
   @override
   double predictReturn(Object input) => _extractLast(input).toDouble() / 200.0;
   @override
-  double predictVolatility(Object input) => _extractLast(input).toDouble() / 50.0;
+  double predictVolatility(Object input) =>
+      _extractLast(input).toDouble() / 50.0;
 }
 
 void main() {
-  test('markLoadedForTest allows predictions; different sequences differ', () async {
+  test('markLoadedForTest allows predictions; different sequences differ',
+      () async {
     final m = _Echo()..markLoadedForTest(const ['last']);
     final a = await m.predictAllFromSequence(const [
       [50.0],
@@ -40,5 +43,3 @@ void main() {
     expect(b.probUp, isNot(equals(a.probUp)));
   });
 }
-
-

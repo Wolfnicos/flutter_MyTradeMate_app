@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
 
 void main() {
-  test('toQueryForTest stringifies primitives, drops null and nested types', () {
+  test('toQueryForTest stringifies primitives, drops null and nested types',
+      () {
     final c = DioBinanceClient.fakeForTest();
 
     final out = c.toQueryForTest({
@@ -26,3 +27,4 @@ void main() {
     expect(out.containsKey('h_nested_null'), isFalse);
   });
 }
+

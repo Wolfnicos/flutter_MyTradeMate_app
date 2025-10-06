@@ -19,10 +19,12 @@ Future<void> setSurface(
 }
 
 void main() {
-  testWidgets('Rotate (surface size change) keeps TradingModal field', (tester) async {
+  testWidgets('Rotate (surface size change) keeps TradingModal field',
+      (tester) async {
     await tester.pumpWidget(const MaterialApp(
       restorationScopeId: 'app',
-      home: TradingModal(assetSymbol: 'BTCUSDT', isBuying: true, initialPrice: 1000),
+      home: TradingModal(
+          assetSymbol: 'BTCUSDT', isBuying: true, initialPrice: 1000),
     ));
 
     // Use a larger logical width to avoid layout overflows in summary row
@@ -38,5 +40,3 @@ void main() {
     expect(find.text('0.5'), findsOneWidget);
   });
 }
-
-

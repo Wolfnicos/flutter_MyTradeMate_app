@@ -26,8 +26,6 @@ void main() {
       now: DateTime.utc(2025, 10, 2, 9),
     );
     expect(baseline, 250.0); // baseline reset for new day
-    expect(delta, 0.0);      // at start of day
+    expect(delta, 0.0); // at start of day
   });
 }
-
-

@@ -1,34 +1,95 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show WebSocket, WebSocketException;
 import 'package:flutter/foundation.dart' show visibleForTesting;
-import 'package:web_socket_channel/io.dart';
+import 'package:mytrademate/core/logging.dart';
+import 'package:mytrademate/core/errors.dart';
+import 'package:mytrademate/services/binance_ws_url.dart';
 
 typedef SleepFn = Future<void> Function(Duration);
 
 /// Interfață injectabilă pentru sursa de evenimente preț (determinist în teste).
 abstract class PriceEventSource {
   Stream<dynamic> connect(Uri uri);
+  // Convenience: build URL from symbol using unified builder
+  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
+    final uri = binanceWsUrl(symbol, testnet: testnet);
+    return connect(uri);
+  }
   Future<void> close();
 }
 
-/// Implementarea reală (WebSocket Binance).
+/// Implementarea reală (WebSocket Binance) - folosește dart:io direct
 class RealPriceEventSource implements PriceEventSource {
-  IOWebSocketChannel? _ch;
+  WebSocket? _ws;
+  StreamController<dynamic>? _controller;
+  
+  @override
+  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
+    final uri = binanceWsUrl(symbol, testnet: testnet);
+    return connect(uri);
+  }
+  
   @override
   Stream<dynamic> connect(Uri uri) {
-    _ch = IOWebSocketChannel.connect(uri.toString());
-    return _ch!.stream;
+    _controller = StreamController<dynamic>();
+    
+    // Construim URL-ul manual ca String pentru control total
+    final scheme = 'wss';
+    final host = uri.host;
+    final port = uri.hasPort && uri.port != 0 ? ':${uri.port}' : '';
+    final path = uri.path;
+    final cleanUrl = '$scheme://$host$port$path';
+    
+    AppLogger.instance.info('ws.connect.direct', context: {
+      'cleanUrl': cleanUrl,
+      'host': host,
+      'port': uri.port,
+      'path': path,
+    });
+    
+    // Folosim dart:io WebSocket direct, nu IOWebSocketChannel
+    WebSocket.connect(cleanUrl).then((ws) {
+      _ws = ws;
+      ws.pingInterval = const Duration(seconds: 15);
+      ws.listen(
+        (data) {
+          if (_controller != null && !_controller!.isClosed) {
+            _controller!.add(data);
+          }
+        },
+        onError: (err) {
+          if (_controller != null && !_controller!.isClosed) {
+            _controller!.addError(err);
+          }
+        },
+        onDone: () {
+          if (_controller != null && !_controller!.isClosed) {
+            _controller!.close();
+          }
+        },
+        cancelOnError: false,
+      );
+    }).catchError((err) {
+      AppLogger.instance.error('ws.connect.failed', context: {'error': err.toString()});
+      if (_controller != null && !_controller!.isClosed) {
+        _controller!.addError(err);
+      }
+    });
+    
+    return _controller!.stream;
   }
 
   @override
   Future<void> close() async {
-    await _ch?.sink.close();
+    await _ws?.close();
+    await _controller?.close();
   }
 }
 
 class PriceStream {
-  final String symbol;      // ex: BTCUSDT
-  final bool testnet;       // true => testnet.binance.vision
+  final String symbol; // ex: BTCUSDT
+  final bool testnet; // true => testnet.binance.vision
   final Duration reconnectDelay;
   final PriceEventSource _source;
   final SleepFn _sleep;
@@ -59,8 +120,12 @@ class PriceStream {
   Future<void> pause() async {
     _paused = true;
     _manuallyClosed = true; // oprește reconectările
-    try { await _sub?.cancel(); } catch (_) {}
-    try { await _source.close(); } catch (_) {}
+    try {
+      await _sub?.cancel();
+    } catch (_) {}
+    try {
+      await _source.close();
+    } catch (_) {}
     _sub = null;
   }
 
@@ -75,7 +140,8 @@ class PriceStream {
   }
 
   @visibleForTesting
-  static Duration backoffForAttempt(int attempt, {Duration max = const Duration(seconds: 30)}) {
+  static Duration backoffForAttempt(int attempt,
+      {Duration max = const Duration(seconds: 30)}) {
     final table = <int, int>{1: 1, 2: 2, 3: 5, 4: 10, 5: 20};
     final secs = table[attempt] ?? 30;
     final d = Duration(seconds: secs);
@@ -83,44 +149,78 @@ class PriceStream {
   }
 
   @visibleForTesting
-  static bool shouldTripCircuit(int consecutiveFailures, {int maxFailures = 6}) {
+  static bool shouldTripCircuit(int consecutiveFailures,
+      {int maxFailures = 6}) {
     return consecutiveFailures >= maxFailures;
   }
 
   Future<void> _connect() async {
-    final sym = symbol.toLowerCase();
-    final uri = testnet
-        ? Uri.parse('wss://testnet.binance.vision/ws/$sym@miniTicker')
-        : Uri.parse('wss://stream.binance.com:9443/ws/$sym@miniTicker');
+    try {
+      final url = binanceWsUrl(symbol, testnet: testnet);
+      AppLogger.instance.info('ws.connect', context: {
+        'url': url.toString(),
+        'symbol': symbol,
+        'testnet': testnet
+      });
 
-    final stream = _source.connect(uri);
-    _sub = stream.listen(
-      (event) {
-        try {
-          final data = json.decode(event);
-          final raw = (data is Map)
-              ? (data['c'] ?? (data['data'] != null ? data['data']['c'] : null))
-              : null;
-          final v = raw is num ? raw.toDouble() : double.tryParse('$raw');
-          if (v != null && !_controller.isClosed) {
-            _controller.add(v);
-            _retries = 0; // reset on good data
+      final stream = _source.connectFromSymbol(symbol, testnet: testnet);
+      _sub = stream.listen(
+        (event) {
+          try {
+            final data = json.decode(event);
+            final raw = (data is Map)
+                ? (data['c'] ?? (data['data'] != null ? data['data']['c'] : null))
+                : null;
+            final v = raw is num ? raw.toDouble() : double.tryParse('$raw');
+            if (v != null && !_controller.isClosed) {
+              _controller.add(v);
+              _retries = 0; // reset on good data
+            }
+          } catch (_) {}
+        },
+        onDone: () async {
+          if (_manuallyClosed) return;
+          if (_paused) return; // dacă e pauzat, nu reconecta
+          if (!_controller.isClosed) {
+            _controller.addError(
+                UserError(AppErrorType.network, 'Connection closed. Retrying…', 'ws.onDone'));
           }
-        } catch (_) {}
-      },
-      onDone: () async {
-        if (_manuallyClosed) return;
-        if (_paused) return; // dacă e pauzat, nu reconecta
-        await _scheduleReconnectWithBackoff();
-      },
-      onError: (_, __) async {
-        if (_manuallyClosed) return;
-        if (_paused) return; // dacă e pauzat, nu reconecta
-        await _scheduleReconnectWithBackoff();
-      },
-      cancelOnError: true,
-    );
+          await _scheduleReconnectWithBackoff();
+        },
+        onError: (err, __) async {
+          if (_manuallyClosed) return;
+          if (_paused) return; // dacă e pauzat, nu reconecta
+          if (!_controller.isClosed) {
+            _controller.addError(ErrorMapper.map(err));
+          }
+          await _scheduleReconnectWithBackoff();
+        },
+        cancelOnError: true,
+      );
+    } on WebSocketException catch (e, st) {
+      AppLogger.instance.warn('ws.connect.fail', context: {
+        'error': e.toString(),
+        'stack': st.toString(),
+      });
+      if (!_controller.isClosed) {
+        _controller.addError(ErrorMapper.map(e));
+      }
+      await _scheduleReconnectWithBackoff();
+      return;
+    } catch (e, st) {
+      AppLogger.instance.error('ws.connect.unexpected', context: {
+        'error': e.toString(),
+        'stack': st.toString(),
+      });
+      if (!_controller.isClosed) {
+        _controller.addError(ErrorMapper.map(e));
+      }
+      await _scheduleReconnectWithBackoff();
+      return;
+    }
   }
+
+  // URL moved to binance_ws_url.dart
 
   Future<void> _scheduleReconnectWithBackoff() async {
     _disconnect();
@@ -157,8 +257,12 @@ class PriceStream {
   Future<void> close() async {
     _manuallyClosed = true;
     _paused = false;
-    try { await _sub?.cancel(); } catch (_) {}
-    try { await _source.close(); } catch (_) {}
+    try {
+      await _sub?.cancel();
+    } catch (_) {}
+    try {
+      await _source.close();
+    } catch (_) {}
     _sub = null;
     await _controller.close();
   }

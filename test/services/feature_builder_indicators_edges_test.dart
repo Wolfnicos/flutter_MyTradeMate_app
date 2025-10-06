@@ -16,7 +16,8 @@ void main() {
 
   test('SMA/sequence stable on noisy series', () {
     const fb = FeatureBuilder();
-    final closes = List<double>.generate(64, (i) => 1000 + math.sin(i / 3.14) * 5);
+    final closes =
+        List<double>.generate(64, (i) => 1000 + math.sin(i / 3.14) * 5);
     final seq = fb.sequenceFromCloses(closes, length: 64);
     expect(seq.length, 64);
     for (final row in seq) {
@@ -26,5 +27,4 @@ void main() {
     }
   });
 }
-
 

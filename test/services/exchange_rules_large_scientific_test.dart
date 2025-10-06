@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/exchange_rules.dart';
 
 void main() {
-  test('roundPriceToTickForTest handles very large values and scientific-like cases', () {
+  test(
+      'roundPriceToTickForTest handles very large values and scientific-like cases',
+      () {
     // very large value + large tick → round to nearest multiple
     // 1_000_000.25 / 0.5 = 2_000_000.5 -> up => 1_000_000.5
     expect(roundPriceToTickForTest(1000000.25, 0.5), 1000000.5);
@@ -19,5 +21,4 @@ void main() {
     expect(roundPriceToTickForTest(100000000.0, 1000.0), 100000000.0);
   });
 }
-
 

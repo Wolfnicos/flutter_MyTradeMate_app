@@ -15,8 +15,10 @@ class ExchangeRules {
     required this.minNotional,
   });
 
-  factory ExchangeRules.fromExchangeInfo(Map<String, dynamic> info, String symbol) {
-    final sym = (info['symbols'] as List).firstWhere((s) => s['symbol'] == symbol);
+  factory ExchangeRules.fromExchangeInfo(
+      Map<String, dynamic> info, String symbol) {
+    final sym =
+        (info['symbols'] as List).firstWhere((s) => s['symbol'] == symbol);
     int priceScale = 8, qtyScale = 8;
     double tickSize = 0.00000001, stepSize = 0.00000001, minNotional = 0.0;
 
@@ -136,7 +138,3 @@ extension ExchangeRulesForTest on ExchangeRules {
     );
   }
 }
-
-
-
-

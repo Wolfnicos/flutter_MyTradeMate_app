@@ -5,7 +5,8 @@ import 'package:mytrademate/src/core/trading_prefs.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('hasCreds toggles with api key/secret and fixedQuote defaults/sets', () async {
+  test('hasCreds toggles with api key/secret and fixedQuote defaults/sets',
+      () async {
     SharedPreferences.setMockInitialValues({});
     final p = await TradingPrefs.inMemoryForTest();
 
@@ -15,10 +16,13 @@ void main() {
     expect(p.fixedQuote, 50.0);
 
     // Set credentials and fixed quote through save
-    await p.save(apiKey: 'k123', apiSecret: 's456', env: TradeEnv.testnet, fixedQuote: 25.0);
+    await p.save(
+        apiKey: 'k123',
+        apiSecret: 's456',
+        env: TradeEnv.testnet,
+        fixedQuote: 25.0);
     expect(p.hasCreds, isTrue);
     expect(p.fixedQuote, 25.0);
   });
 }
-
 

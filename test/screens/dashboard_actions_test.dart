@@ -38,5 +38,3 @@ void main() {
     expect(find.text('Explain is available from AI cards'), findsOneWidget);
   });
 }
-
-

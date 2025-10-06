@@ -27,9 +27,10 @@ void main() {
     final p = await TradingPrefs.inMemoryForTest();
 
     final env = await p.getEnv();
-    final dq  = await p.getDefaultQuote();
+    final dq = await p.getDefaultQuote();
     // Acceptăm fie null, fie valorile implicite "testnet"/"USDT" în funcție de implementare
     expect(env, anyOf(isNull, 'testnet'));
-    expect(dq,  anyOf(isNull, 'USDT'));
+    expect(dq, anyOf(isNull, 'USDT'));
   });
 }
+

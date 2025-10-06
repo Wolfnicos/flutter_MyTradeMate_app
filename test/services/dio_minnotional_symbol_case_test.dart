@@ -20,11 +20,12 @@ void main() {
       ],
     };
 
-    expect(DioBinanceClient.minNotionalFromExchangeInfoForTest(payload, 'btcusdt'),
+    expect(
+        DioBinanceClient.minNotionalFromExchangeInfoForTest(payload, 'btcusdt'),
         closeTo(10.0, 1e-12));
-    expect(DioBinanceClient.minNotionalFromExchangeInfoForTest(payload, 'ADAUSDT'),
+    expect(
+        DioBinanceClient.minNotionalFromExchangeInfoForTest(payload, 'ADAUSDT'),
         closeTo(5.0, 1e-12));
   });
 }
-
 

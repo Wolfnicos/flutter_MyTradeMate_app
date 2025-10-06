@@ -1,0 +1,10 @@
+[
+  {"delay_ms": 5},
+  {"tick": {"c": "1000.0"}},
+  {"close": true},
+  {"delay_ms": 50},
+  {"tick": {"c": "1001.0"}},
+  {"delay_ms": 40},
+  {"end": true}
+]
+

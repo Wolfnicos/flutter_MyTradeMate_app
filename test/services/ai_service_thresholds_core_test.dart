@@ -23,7 +23,9 @@ class _FakeClient implements BinanceClientLike {
   Future<double> tickerPrice(String symbol) async => 101.0;
 
   @override
-  Future<List<List<num>>> klines(String symbol, String interval, {int limit = 50}) async => _kl;
+  Future<List<List<num>>> klines(String symbol, String interval,
+          {int limit = 50}) async =>
+      _kl;
 }
 
 class _FixedModels implements ModelsAdapter {
@@ -32,40 +34,46 @@ class _FixedModels implements ModelsAdapter {
   @override
   List<String> get featCols => const ['last'];
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAll(Map<String, double> features) async {
+  Future<({double? probUp, double? nextReturn, double? volatility})> predictAll(
+      Map<String, double> features) async {
     return (probUp: prob, nextReturn: 0.02, volatility: 0.05);
   }
+
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAllFromSequence(List<List<double>> seq) async {
+  Future<({double? probUp, double? nextReturn, double? volatility})>
+      predictAllFromSequence(List<List<double>> seq) async {
     return (probUp: prob, nextReturn: 0.02, volatility: 0.05);
   }
 }
 
 void main() {
   test('BUY branch (p >= 0.55)', () async {
-    final svc = AIService(client: _FakeClient(), models: const _FixedModels(0.85));
+    final svc =
+        AIService(client: _FakeClient(), models: const _FixedModels(0.85));
     final res = await svc.getPrediction('BTCUSDT');
     expect(res.action, 'BUY');
     expect(res.confidence, greaterThan(0));
   });
 
   test('SELL branch (p <= 0.45)', () async {
-    final svc = AIService(client: _FakeClient(), models: const _FixedModels(0.05));
+    final svc =
+        AIService(client: _FakeClient(), models: const _FixedModels(0.05));
     final res = await svc.getPrediction('BTCUSDT');
     expect(res.action, 'SELL');
   });
 
   test('HOLD branch (between thresholds)', () async {
-    final svc = AIService(client: _FakeClient(), models: const _FixedModels(0.50));
+    final svc =
+        AIService(client: _FakeClient(), models: const _FixedModels(0.50));
     final res = await svc.getPrediction('BTCUSDT');
     expect(res.action, 'HOLD');
   });
 
   test('Model returns null → HOLD fallback', () async {
-    final svc = AIService(client: _FakeClient(), models: const _FixedModels(null));
+    final svc =
+        AIService(client: _FakeClient(), models: const _FixedModels(null));
     final res = await svc.getPrediction('BTCUSDT');
     expect(res.action, 'HOLD');
   });
 }
-
 

@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/ai_service.dart';
-import 'package:mytrademate/services/mtm_models.dart';
 
 class _FakeClient implements BinanceClientLike {
   @override
-  Future<List<List<num>>> klines(String symbol, String interval, {int limit = 50}) async {
+  Future<List<List<num>>> klines(String symbol, String interval,
+      {int limit = 50}) async {
     return const [
       [0, 100, 102, 99, 101, 123],
       [1, 101, 103, 100, 102, 234],
@@ -34,14 +34,15 @@ class _FakeModels implements ModelsAdapter {
   }
 
   @override
-  Future<({double? probUp, double? nextReturn, double? volatility})> predictAllFromSequence(
-      List<List<double>> seq) async {
+  Future<({double? probUp, double? nextReturn, double? volatility})>
+      predictAllFromSequence(List<List<double>> seq) async {
     return (probUp: 0.8, nextReturn: 0.02, volatility: 0.05);
   }
 }
 
 void main() {
-  test('getPrediction offline returns BUY with explain-ish fields stable', () async {
+  test('getPrediction offline returns BUY with explain-ish fields stable',
+      () async {
     final svc = AIService(client: _FakeClient(), models: _FakeModels());
 
     final res = await svc.getPrediction(' btc/usd ');
@@ -61,5 +62,4 @@ void main() {
     expect(volLabelForTest(0.12), 'HIGH');
   });
 }
-
 

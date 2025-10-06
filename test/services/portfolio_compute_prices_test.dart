@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/models/portfolio_models.dart';
 
 void main() {
-  test('compute totals with mixed assets uses price map and ignores unknowns', () {
+  test('compute totals with mixed assets uses price map and ignores unknowns',
+      () {
     final h = [
       const Holding('USDT', 100, 1.0),
       const Holding('BTC', 0.01, 0.0), // to be filled by map
@@ -16,5 +17,4 @@ void main() {
     expect(btc.priceUsdt, 60000.0);
   });
 }
-
 

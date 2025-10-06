@@ -7,20 +7,24 @@ import 'package:mytrademate/screens/settings_screen.dart';
 
 void main() {
   final runUi = Platform.environment['RUN_UI'] == '1';
-  testWidgets('Dashboard → Orders → back, Dashboard → Settings → back', (tester) async {
+  testWidgets('Dashboard → Orders → back, Dashboard → Settings → back',
+      (tester) async {
     if (!runUi) return;
     final navKey = GlobalKey<NavigatorState>();
-    await tester.pumpWidget(MaterialApp(navigatorKey: navKey, home: const DashboardScreen(forTest: true)));
+    await tester.pumpWidget(MaterialApp(
+        navigatorKey: navKey, home: const DashboardScreen(forTest: true)));
 
     // Programmatic navigation to avoid tap flakiness in CI viewport
-    navKey.currentState!.push(MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
+    navKey.currentState!
+        .push(MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
     await tester.pumpAndSettle();
     expect(find.byType(OrderHistoryScreen), findsOneWidget);
     navKey.currentState!.pop();
     await tester.pumpAndSettle();
     expect(find.byType(DashboardScreen), findsOneWidget);
 
-    navKey.currentState!.push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    navKey.currentState!
+        .push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
     navKey.currentState!.pop();
@@ -28,5 +32,3 @@ void main() {
     expect(find.byType(DashboardScreen), findsOneWidget);
   });
 }
-
-

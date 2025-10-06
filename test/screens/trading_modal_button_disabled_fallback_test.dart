@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/screens/trading_modal.dart';
 
 class _MiniPlace extends StatefulWidget {
-  const _MiniPlace({super.key});
+  const _MiniPlace();
   @override
   State<_MiniPlace> createState() => _MiniPlaceState();
 }
@@ -39,10 +39,12 @@ class _MiniPlaceState extends State<_MiniPlace> {
 }
 
 void main() {
-  testWidgets('Place button disabled when amount invalid (fallback harness)', (tester) async {
+  testWidgets('Place button disabled when amount invalid (fallback harness)',
+      (tester) async {
     await tester.pumpWidget(const _MiniPlace());
 
-    ElevatedButton btn() => tester.widget<ElevatedButton>(find.byKey(placeOrderBtnKey));
+    ElevatedButton btn() =>
+        tester.widget<ElevatedButton>(find.byKey(placeOrderBtnKey));
     expect(btn().onPressed, isNull);
 
     await tester.enterText(find.byKey(amountFieldKey), '0');
@@ -54,5 +56,4 @@ void main() {
     expect(btn().onPressed, isNotNull);
   });
 }
-
 

@@ -40,7 +40,9 @@ class Order {
         symbol: j['symbol'] as String,
         side: j['side'] as String,
         quoteQty: (j['quoteQty'] as num).toDouble(),
-        executedQty: j['executedQty'] == null ? null : (j['executedQty'] as num).toDouble(),
+        executedQty: j['executedQty'] == null
+            ? null
+            : (j['executedQty'] as num).toDouble(),
         status: j['status'] as String,
         env: (j['env'] as String) == 'live' ? TradeEnv.live : TradeEnv.testnet,
         ts: DateTime.parse(j['ts'] as String),
@@ -80,5 +82,3 @@ class OrderHistoryRepository {
     await prefs.remove(_key(env));
   }
 }
-
-

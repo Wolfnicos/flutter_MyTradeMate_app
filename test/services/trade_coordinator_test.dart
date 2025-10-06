@@ -7,12 +7,17 @@ import 'package:mytrademate/src/core/trading_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAI extends AIService {
-  _FakeAI():super();
+  _FakeAI() : super();
   @override
   Future<AIPrediction> getPrediction(String symbol) async {
     return const AIPrediction(
-      action: 'BUY', confidence: 90, targetPrice: 100,
-      volatility: 'LOW', probUp: 0.9, nextReturn: 0.01, volatilityValue: 0.02,
+      action: 'BUY',
+      confidence: 90,
+      targetPrice: 100,
+      volatility: 'LOW',
+      probUp: 0.9,
+      nextReturn: 0.01,
+      volatilityValue: 0.02,
     );
   }
 }
@@ -20,11 +25,16 @@ class _FakeAI extends AIService {
 class _MemBroker implements MarketExecution {
   OrderParams? last;
   @override
-  Future<String> placeOrder(OrderParams p) async { last = p; return 'ok'; }
+  Future<String> placeOrder(OrderParams p) async {
+    last = p;
+    return 'ok';
+  }
 }
 
 void main() {
-  setUp(() { SharedPreferences.setMockInitialValues({}); });
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
   test('maybeTrade respects consent and persists counters', () async {
     final prefs = await TradingPrefs.load();
@@ -41,7 +51,7 @@ void main() {
       policy: SignalPolicy(),
       broker: broker,
       prefs: prefs,
-      now: () => DateTime.utc(2024,1,1,0,0,0),
+      now: () => DateTime.utc(2024, 1, 1, 0, 0, 0),
     );
 
     await coord.maybeTrade('BTCUSDT');
@@ -52,9 +62,8 @@ void main() {
 
     final lastAt = await prefs.getLastTradeAt('BTCUSDT');
     expect(lastAt, isNotNull);
-    final cnt = await prefs.getTradeCountForDay(DateTime.utc(2024,1,1));
+    final cnt = await prefs.getTradeCountForDay(DateTime.utc(2024, 1, 1));
     expect(cnt, 1);
   });
 }
-
 

@@ -2,7 +2,14 @@ import 'dart:math';
 
 class FeatureBuilder {
   static const int nfeat = 5; // last, ret1, sma5, sma20, rsi14
-  const FeatureBuilder([List<String> featCols = const ['last', 'ret1', 'sma5', 'sma20', 'rsi14']])
+  const FeatureBuilder(
+      [List<String> featCols = const [
+        'last',
+        'ret1',
+        'sma5',
+        'sma20',
+        'rsi14'
+      ]])
       : _featCols = featCols;
 
   final List<String> _featCols;
@@ -30,7 +37,8 @@ class FeatureBuilder {
 
   /// Build a 64xN feature sequence from klines closes (N = number of model features).
   /// We populate known columns: last, ret1, sma5, sma20, rsi14; unknowns become 0.
-  List<List<double>> sequenceFromCloses(List<double> closes, {int length = 64}) {
+  List<List<double>> sequenceFromCloses(List<double> closes,
+      {int length = 64}) {
     if (closes.length < length) {
       // Left-pad with the first value to reach required length
       final first = closes.isEmpty ? 0.0 : closes.first;
@@ -49,11 +57,15 @@ class FeatureBuilder {
 
     double rsi14At(int idx) {
       const p = 14;
-      int start = max(0, idx - p + 1);
+      final int start = max(0, idx - p + 1);
       double gain = 0.0, loss = 0.0;
       for (int i = start + 1; i <= idx; i++) {
         final ch = closes[i] - closes[i - 1];
-        if (ch >= 0) gain += ch; else loss -= ch;
+        if (ch >= 0) {
+          gain += ch;
+        } else {
+          loss -= ch;
+        }
       }
       if (gain == 0 && loss == 0) return 50.0;
       if (loss == 0) return 100.0;
@@ -77,4 +89,3 @@ class FeatureBuilder {
     return seq;
   }
 }
-

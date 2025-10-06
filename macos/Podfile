@@ -1,0 +1,76 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+/// Single, robust price stream for Binance miniTicker.
+/// Usage:
+///   final ps = PriceStream(symbol: 'BTCUSDT', testnet: true);
+///   await ps.start();
+///   ps.prices.listen((p) { ... });
+class PriceStream {
+  final String symbol; // Binance format, e.g. BTCUSDT
+  final bool testnet;
+
+  WebSocketChannel? _channel;
+  bool _running = false;
+
+  final _controller = StreamController<double>.broadcast();
+  Stream<double> get prices => _controller.stream;
+
+  PriceStream({required this.symbol, this.testnet = true});
+
+  static String normalize(String s) => s.replaceAll('/', '').toUpperCase();
+
+  Uri _wsUri() {
+    final s = normalize(symbol).toLowerCase();
+    final host = testnet
+        ? 'wss://testnet.binance.vision'
+        : 'wss://stream.binance.com:9443';
+    // Correct Binance endpoint, no :0 and no trailing '#'
+    return Uri.parse('$host/ws/$s@miniTicker');
+  }
+
+  Future<void> start() async {
+    if (_running) return;
+    _running = true;
+    while (_running) {
+      try {
+        _channel = IOWebSocketChannel.connect(_wsUri());
+        await for (final msg in _channel!.stream) {
+          if (!_running) break;
+          final data = jsonDecode(msg as String);
+          final cRaw = (data is Map) ? data['c'] : null;
+          final price = cRaw == null ? null : double.tryParse(cRaw.toString());
+          if (price != null && !_controller.isClosed) {
+            _controller.add(price);
+          }
+        }
+      } catch (_) {
+        // simple backoff
+        await Future.delayed(const Duration(seconds: 2));
+      } finally {
+        try {
+          await _channel?.sink.close();
+        } catch (_) {}
+        _channel = null;
+      }
+    }
+  }
+
+  Future<void> stop() async {
+    _running = false;
+    try {
+      await _channel?.sink.close();
+    } catch (_) {}
+    _channel = null;
+  }
+
+  void dispose() {
+    _running = false;
+    if (!_controller.isClosed) {
+      _controller.close();
+    }
+  }
+}

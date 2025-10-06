@@ -31,7 +31,8 @@ void main() {
 
     // sub preț → rămâne NEW
     for (final p in [96, 97, 98, 99]) {
-      broker.tick('AAAUSDT', p.toDouble(), high: p.toDouble(), low: p.toDouble());
+      broker.tick('AAAUSDT', p.toDouble(),
+          high: p.toDouble(), low: p.toDouble());
     }
     final st1 = broker.snapshot('AAAUSDT').orderById[order.id]!;
     expect(st1.status, OrderStatus.new_);
@@ -47,5 +48,3 @@ void main() {
     expect(last.qty, 10);
   });
 }
-
-

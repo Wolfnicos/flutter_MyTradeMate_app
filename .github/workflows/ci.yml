@@ -1,55 +1,6 @@
 name: CI
 
 on:
-  push:
-  pull_request:
-
-jobs:
-  build-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.22.x'
-
-      - name: Install lcov (for coverage filtering)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lcov
-
-      - name: Bootstrap
-        run: bash tool/bootstrap.sh
-
-      - name: Analyze
-        run: bash tool/analyze.sh
-
-      - name: Test (cleaned-core coverage)
-        env:
-          MIN_EXPECTED: 50
-          RUN_UI: "0"
-        run: bash tool/test.sh
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage/lcov.cleaned.info
-
-      - name: Build release APK
-        run: bash tool/build.sh
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-name: CI
-
-on:
   pull_request:
   push:
     branches: [ main ]
@@ -89,10 +40,12 @@ jobs:
       - name: Install lcov
         run: sudo apt-get update && sudo apt-get install -y lcov
 
-      - name: Tests with coverage
+      - name: Tests with coverage (global timeout 10s)
         env:
           MIN_EXPECTED: 50
-        run: bash tool/test.sh | tee test.log
+        run: |
+          flutter test --timeout=10s -j 1 --coverage || true
+          bash tool/test.sh | tee test.log
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -117,6 +70,18 @@ jobs:
           tail -50 test.log || true
           echo '--- build.log (tail -50) ---'
           tail -50 build.log || true
+
+  ws-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Flutter via FVM
+        uses: kuhnroyal/flutter-fvm-config-action@v3
+      - name: Pub get
+        run: flutter pub get
+      - name: Run WS-tagged tests (15s timeout)
+        run: flutter test --timeout=15s -j 1 --tags ws
 
   calibration-check:
     runs-on: ubuntu-latest
@@ -149,4 +114,3 @@ jobs:
             MAX=0.05
             awk -v ece="$ECE" -v max="$MAX" 'BEGIN{ if(ece>max){ exit 1 } }' || { echo "ECE $ECE > $MAX"; exit 1; }
           fi
-
