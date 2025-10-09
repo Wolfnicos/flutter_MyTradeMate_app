@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:tflite_flutter/tflite_flutter.dart';
 import '../entities.dart';
 import 'model_utils.dart';
@@ -13,22 +14,15 @@ class DirectionModel {
 
   Future<void> initialize() async {
     if (_initialized) return;
-    
-    // TEMPORARY: Skip TFLite (model gives constant outputs ~0.5)
-    // Use technical fallback which works better
-    print('ℹ️  DirectionModel: Using technical fallback (TFLite disabled)');
-    _initialized = true;
-    
-    /* COMMENTED OUT - TFLite gives constant scalars
     try {
       _interpreter = await Interpreter.fromAsset(_modelPath);
       _initialized = true;
       print('✅ DirectionModel initialized: $_modelPath');
     } catch (e) {
-      print('⚠️  DirectionModel failed to initialize: $e');
-      // Will use fallback
+      print('⚠️  DirectionModel failed to initialize, falling back to technical rules: $e');
+      _interpreter = null; // explicit
+      _initialized = true;
     }
-    */
   }
 
   Future<List<double>> predictProbs(List<Candle> candles) async {
@@ -42,28 +36,52 @@ class DirectionModel {
     }
 
     try {
-      // Extract and normalize features
-      final feats = ModelUtils.featuresFromCandles(candles, 64, 15);
-      final flat = ModelUtils.normalize2D(feats);
-      
-      // Reshape to [1, 64, 15]
-      final input = _reshapeFlat(flat, [1, 64, 15]);
-      
-      // Output is scalar [1, 1] - match exact shape
-      final output = List.generate(1, (_) => List.filled(1, 0.0));
-      
+      // Build input based on model-declared shape
+      final inShape = _interpreter!.getInputTensor(0).shape;
+      final input = ModelUtils.buildInputTensor(candles, inShape);
+      final outShape = _interpreter!.getOutputTensor(0).shape;
+      final output = ModelUtils.emptyOutput(outShape);
+
+      // ignore: avoid_print
+      print('🔍 DirectionModel input shape: $inShape');
+      // ignore: avoid_print
+      try { print('🔍 DirectionModel input sample: ${input[0][0]}'); } catch (_) {}
+
       _interpreter!.run(input, output);
-      
-      final scalar = output[0][0]; // Extract scalar from [[value]]
-      
-      // DEBUG: Log raw scalar (uncomment for debugging)
-      print('🔍 Raw scalar output: ${scalar.toStringAsFixed(6)}');
-      
-      // Convert scalar to probabilities
-      final probs = _scalarToProbs(scalar);
-      print('   Mapped to: Buy=${(probs[0]*100).toStringAsFixed(1)}% Hold=${(probs[1]*100).toStringAsFixed(1)}% Sell=${(probs[2]*100).toStringAsFixed(1)}%');
-      
-      return probs;
+
+      // Decide how to interpret output
+      final totalOut = outShape.fold<int>(1, (a, b) => a * b);
+
+      if (totalOut == 1) {
+        // Scalar → map to [buy, hold, sell]
+        final scalar = ModelUtils.extractScalar(output, outShape);
+        // ignore: avoid_print
+        print('🔍 DirectionModel raw scalar: ${scalar.toStringAsFixed(6)}');
+        final probs = _scalarToProbs(scalar);
+    // ignore: avoid_print
+        print('   probs: [${(probs[0]*100).toStringAsFixed(0)} ${
+            (probs[1]*100).toStringAsFixed(0)} ${(probs[2]*100).toStringAsFixed(0)}]%');
+        return probs;
+      }
+
+      if (totalOut == 3) {
+        // 3-class: assume row vector or [1,3]
+        List<double> logits;
+        if (outShape.length == 1) {
+          logits = (output as List).cast<double>();
+        } else {
+          logits = (output as List<List>).first.cast<double>();
+        }
+        // Softmax
+        final maxLogit = logits.reduce((a, b) => a > b ? a : b);
+        final exps = logits.map((x) => math.exp(x - maxLogit)).toList();
+        final sum = exps.fold<double>(0.0, (a, b) => a + b);
+        final probs = sum == 0.0 ? const [1/3, 1/3, 1/3] : exps.map((x) => x / sum).toList();
+        return probs.cast<double>();
+      }
+
+      // Unknown shape → fallback
+      return _fallback(candles);
     } catch (e) {
       print('⚠️  DirectionModel inference error: $e');
       return _fallback(candles);
@@ -134,24 +152,7 @@ class DirectionModel {
     return [buy / sum, hold / sum, sell / sum];
   }
 
-  List<List<List<double>>> _reshapeFlat(List<double> flat, List<int> shape) {
-    final result = <List<List<double>>>[];
-    int idx = 0;
-
-    for (int b = 0; b < shape[0]; b++) {
-      final batch = <List<double>>[];
-      for (int t = 0; t < shape[1]; t++) {
-        final timestep = <double>[];
-        for (int f = 0; f < shape[2]; f++) {
-          timestep.add(flat[idx++]);
-        }
-        batch.add(timestep);
-      }
-      result.add(batch);
-    }
-
-    return result;
-  }
+  // No longer needed: input reshaping handled via ModelUtils.buildInputTensor
 
   /// Fallback using technical indicators
   List<double> _fallback(List<Candle> candles) {
