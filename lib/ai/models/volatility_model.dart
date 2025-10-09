@@ -49,6 +49,11 @@ class VolatilityModel {
       final outShape = _it!.getOutputTensor(0).shape;
       final output = ModelUtils.emptyOutput(outShape);
       
+      // ignore: avoid_print
+      print('🔍 Input shape: $inShape');
+      // ignore: avoid_print
+      print('🔍 Input sample: ${input[0][0]}');
+
       _it!.run(input, output);
       
       var predictedVol = ModelUtils.extractScalar(output, outShape);
