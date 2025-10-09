@@ -39,14 +39,17 @@ class VolatilityModel {
 
   Future<double> _predictWithTFLite(List<Candle> window) async {
     try {
-      final inShape = _it!.getInputTensor(0).shape;
+      // Build input using declared tensor shape
+      final inTensor = _it!.getInputTensor(0);
+      final inShape = inTensor.shape;
       final input = ModelUtils.buildInputTensor(window, inShape);
       try {
         _it!.resizeInputTensor(0, inShape);
         _it!.allocateTensors();
       } catch (_) {}
       
-      final outShape = _it!.getOutputTensor(0).shape;
+      final outTensor = _it!.getOutputTensor(0);
+      final outShape = outTensor.shape;
       final output = ModelUtils.emptyOutput(outShape);
       
       // ignore: avoid_print
@@ -55,21 +58,33 @@ class VolatilityModel {
       print('🔍 Input sample: ${input[0][0]}');
 
       _it!.run(input, output);
-      
+
+      // Extract scalar and dequantize if needed
       var predictedVol = ModelUtils.extractScalar(output, outShape);
+      try {
+        final qp = outTensor.params;
+        // If the tensor is quantized, scale will typically be != 0 and
+        // zeroPoint may be non-zero. Applying dequantization is harmless
+        // even if values are already float (scale ≈ 1, zero ≈ 0).
+        final scale = qp.scale;
+        final zero = qp.zeroPoint;
+        if (scale != 0.0 && (scale != 1.0 || zero != 0)) {
+          predictedVol = scale * (predictedVol - zero);
+        }
+      } catch (_) {}
       // Raw read for debugging
       // ignore: avoid_print
       print('VOL:raw=$predictedVol');
       
-      // Handle vol=0 or negative (fallback to EWMA)
-      if (predictedVol <= 0.0) {
+      // Handle invalid or non-positive vols (fallback to EWMA)
+      if (!predictedVol.isFinite || predictedVol <= 0.0) {
         debugPrint('⚠️ VolatilityModel returned $predictedVol, using EWMA fallback');
         return _fallback(window);
       }
       
       // Decode based on training format
       // Dacă e în range 0-1, e fracție → convert la anual
-      if (predictedVol < 1.0) {
+      if (predictedVol <= 1.0) {
         // Likely daily vol → annualize
         predictedVol = predictedVol * sqrt(365);
       }
