@@ -4,3 +4,4 @@ String redact(String? s, {int head = 4, int tail = 2}) {
   return '${s.substring(0, head)}•••${s.substring(s.length - tail)}';
 }
 
+

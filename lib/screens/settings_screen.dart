@@ -109,8 +109,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready)
+    if (!_ready) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       appBar: AppBar(title: Text(S.settingsTitle)),
       body: Padding(
@@ -290,8 +291,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               );
                             }
                           : null,
-                      child: Text(S.save),
                       key: AppKeys.settingsSave,
+                      child: Text(S.save),
                     ),
                   ),
                   Semantics(

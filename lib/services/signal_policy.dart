@@ -78,7 +78,9 @@ class SignalPolicy {
     }
     if (st.tradesToday >= cfg.maxTradesPerDay) return null;
     if (st.lastTradeAt != null &&
-        tNow.difference(st.lastTradeAt!) < cfg.cooldown) return null;
+        tNow.difference(st.lastTradeAt!) < cfg.cooldown) {
+      return null;
+    }
 
     // Hysteresis logic
     final wantBuy = probUp >= cfg.buyThreshold;
@@ -116,4 +118,5 @@ class SignalPolicy {
 
   void resetForTest() => _state.clear();
 }
+
 

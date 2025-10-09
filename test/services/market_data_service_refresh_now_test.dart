@@ -7,6 +7,12 @@ import 'package:mytrademate/src/core/trading_prefs.dart' show TradeEnv;
 
 class _SilentSrc implements PriceEventSource {
   @override
+  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
+    final uri = Uri.parse('wss://example.com/ws');
+    return connect(uri);
+  }
+
+  @override
   Stream connect(Uri uri) => const Stream.empty();
   @override
   Future<void> close() async {}

@@ -8,6 +8,12 @@ class FakeSource implements PriceEventSource {
   bool failImmediately = false;
 
   @override
+  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
+    final uri = Uri.parse('wss://example.com/ws');
+    return connect(uri);
+  }
+
+  @override
   Stream connect(Uri uri) {
     connectCount++;
     final c = StreamController<dynamic>();

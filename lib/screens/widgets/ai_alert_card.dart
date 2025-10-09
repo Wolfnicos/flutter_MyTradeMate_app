@@ -130,8 +130,9 @@ class AIAlertCard extends StatelessWidget {
   }
 
   AIAlertVariant _deriveVariant() {
-    if (errorText != null && errorText!.trim().isNotEmpty)
+    if (errorText != null && errorText!.trim().isNotEmpty) {
       return AIAlertVariant.error;
+    }
     if (isLoading) return AIAlertVariant.info;
     if ((recommendationCount ?? 0) > 0) return AIAlertVariant.success;
     return variant ?? AIAlertVariant.info;
@@ -287,4 +288,5 @@ class _Palette {
     required this.buttonText,
   });
 }
+
 

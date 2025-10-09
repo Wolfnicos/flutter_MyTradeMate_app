@@ -13,7 +13,10 @@ import 'services/market_data_service.dart';
 import 'services/dio_binance_client.dart';
 import 'src/core/trading_prefs.dart';
 import 'services/price_rest_client.dart';
-import 'src/core/trading_prefs.dart' show TradeEnv; // if needed by clients
+// if needed by clients
+import 'l10n/strings.dart';
+import 'dart:ui' as ui;
+import 'ai/ai_locator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +25,19 @@ Future<void> main() async {
   AppLogger.init(optInTelemetry: optIn);
   final obs = AppLifecycleObserver();
   WidgetsBinding.instance.addObserver(obs);
+  
+  // Initialize locale for L10n (EN/RO support)
+  final locale = ui.PlatformDispatcher.instance.locale;
+  L10n.setLocale(locale.languageCode);
+  
+  // 🤖 Initialize AI Pipeline (CRITICAL!)
+  try {
+    await AILocator.I.init();
+    debugPrint('✅ AI Pipeline initialized in main()');
+  } catch (e) {
+    debugPrint('⚠️ AI Pipeline init failed (fallback will be used): $e');
+  }
+  
   runApp(const MyTradeMateApp());
 }
 

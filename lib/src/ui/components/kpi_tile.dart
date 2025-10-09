@@ -13,7 +13,7 @@ class KpiTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: ShapeDecoration(
-        color: cs.surfaceContainerHighest.withOpacity(0.4),
+        color: cs.surfaceContainerHighest.withValues(alpha: 102),
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(12))),
       ),
@@ -45,4 +45,5 @@ class KpiTile extends StatelessWidget {
     );
   }
 }
+
 

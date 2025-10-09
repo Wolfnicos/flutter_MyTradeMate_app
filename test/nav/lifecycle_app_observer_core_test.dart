@@ -11,6 +11,12 @@ class _FakeSource implements PriceEventSource {
   int connects = 0;
 
   @override
+  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
+    final uri = Uri.parse('wss://example.com/ws');
+    return connect(uri);
+  }
+
+  @override
   Stream connect(Uri uri) {
     connects++;
     final c = StreamController<dynamic>.broadcast();
@@ -71,4 +77,5 @@ void main() {
     });
   });
 }
+
 

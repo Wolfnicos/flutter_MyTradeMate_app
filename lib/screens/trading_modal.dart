@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import '../src/core/trading_prefs.dart' as tp;
 import '../services/dio_binance_client.dart';
-import '../services/ai_service.dart';
+import 'package:mytrademate/ai/ai_locator.dart';
 import '../src/core/order_history.dart' as oh;
 
 class TradingModal extends StatefulWidget {
@@ -98,14 +98,16 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
       } catch (_) {}
     }
     try {
-      final ai = await AIService().getPrediction(sym);
-      if (mounted) {
+      final pred = await AILocator.I.getPrediction(sym);
+      if (pred != null && mounted) {
+        final action = AILocator.I.decide(pred);
+        final confPct = (pred.confidence() * 100).toStringAsFixed(0);
+        final volPct = (pred.annVol * 100).toStringAsFixed(1);
         setState(() {
-          _aiRecommendation =
-              '${ai.action} • ${ai.confidence.toStringAsFixed(0)}% • ${ai.volatility}';
-          _aiColor = ai.action == 'BUY'
+          _aiRecommendation = '$action • $confPct% • $volPct%';
+          _aiColor = action == 'BUY'
               ? Colors.green
-              : (ai.action == 'SELL' ? Colors.red : Colors.amber);
+              : (action == 'SELL' ? Colors.red : Colors.amber);
         });
       }
     } catch (_) {
@@ -462,7 +464,7 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
             : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: actionColor,
-          disabledBackgroundColor: actionColor.withOpacity(0.4),
+          disabledBackgroundColor: actionColor.withValues(alpha: 102),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),

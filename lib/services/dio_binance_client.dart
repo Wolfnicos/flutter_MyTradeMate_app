@@ -141,7 +141,7 @@ class DioBinanceClient {
 
   String _sign(String message) {
     if (secretKey == null || secretKey!.isEmpty) {
-      throw UserError(
+      throw const UserError(
         AppErrorType.missingCredentials,
         'Exchange keys lipsă. Deschide Settings → Binance API & Testnet Setup.',
         'Signed endpoint requested without secretKey',

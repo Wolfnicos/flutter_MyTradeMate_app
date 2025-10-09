@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mytrademate/services/dio_binance_client.dart';
-import 'package:mytrademate/services/ai_service.dart';
+import 'package:mytrademate/ai/ai_locator.dart';
 import 'package:intl/intl.dart';
 
 class BacktestScreen extends StatefulWidget {
@@ -53,7 +53,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
                     
                     // Symbol selector
                     DropdownButtonFormField<String>(
-                      value: _selectedSymbol,
+                      initialValue: _selectedSymbol,
                       decoration: const InputDecoration(
                         labelText: 'Symbol',
                         border: OutlineInputBorder(),
@@ -68,7 +68,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
                     
                     // Interval selector
                     DropdownButtonFormField<String>(
-                      value: _selectedInterval,
+                      initialValue: _selectedInterval,
                       decoration: const InputDecoration(
                         labelText: 'Interval',
                         border: OutlineInputBorder(),
@@ -182,7 +182,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 25),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.red),
                 ),
@@ -271,7 +271,8 @@ class _BacktestScreenState extends State<BacktestScreen> {
 
     try {
       final client = await DioBinanceClient.createFromPrefs();
-      final aiService = AIService();
+      // Use centralized AI locator
+      final aiService = AILocator.I;
       
       // Fetch historical klines
       final klines = await client.klines(
@@ -305,9 +306,12 @@ class _BacktestScreenState extends State<BacktestScreen> {
         // Get AI prediction (simplified - in real implementation you'd use actual sequence)
         try {
           final prediction = await aiService.getPrediction(_selectedSymbol);
+          if (prediction == null) continue;
+          final action = AILocator.I.decide(prediction);
+          final confPercent = (prediction.confidence() * 100);
           
           // Trading logic
-          if (position == 0 && prediction.action == 'BUY' && prediction.confidence >= 60) {
+          if (position == 0 && action == 'BUY' && confPercent >= 60) {
             // Enter long position
             final investAmount = capital * _positionSize;
             final fee = investAmount * 0.001; // 0.1% fee
@@ -316,7 +320,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
             totalFees += fee;
             entryPrice = closePrice;
             totalTrades++;
-          } else if (position > 0 && (prediction.action == 'SELL' || prediction.confidence < 40)) {
+          } else if (position > 0 && (action == 'SELL' || confPercent < 40)) {
             // Exit position
             final sellAmount = position * closePrice;
             final fee = sellAmount * 0.001;

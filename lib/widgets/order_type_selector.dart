@@ -62,10 +62,10 @@ class _OrderTypeTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+          color: selected ? Colors.blue.withValues(alpha: 25) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? Colors.blue : Colors.grey.withOpacity(0.3),
+            color: selected ? Colors.blue : Colors.grey.withValues(alpha: 77),
             width: selected ? 2 : 1,
           ),
         ),
@@ -111,43 +111,43 @@ class _OrderTypeTile extends StatelessWidget {
   _OrderTypeInfo _getOrderTypeInfo(OrderType type) {
     switch (type) {
       case OrderType.limit:
-        return _OrderTypeInfo(
+        return const _OrderTypeInfo(
           icon: Icons.horizontal_rule,
           title: 'Limit',
           description: 'Buy or Sell at a specific price or better',
         );
       case OrderType.market:
-        return _OrderTypeInfo(
+        return const _OrderTypeInfo(
           icon: Icons.flash_on,
           title: 'Market',
           description: 'Buy or Sell at the best available market price',
         );
       case OrderType.stopLimit:
-        return _OrderTypeInfo(
+        return const _OrderTypeInfo(
           icon: Icons.trending_up,
           title: 'Stop Limit',
           description: 'Triggers a Limit order when Stop price is reached.',
         );
       case OrderType.stopMarket:
-        return _OrderTypeInfo(
+        return const _OrderTypeInfo(
           icon: Icons.stop,
           title: 'Stop Market',
           description: 'Triggers a Market order when Stop price is reached',
         );
       case OrderType.trailingStop:
-        return _OrderTypeInfo(
+        return const _OrderTypeInfo(
           icon: Icons.show_chart,
           title: 'Trailing Stop',
           description: 'Places an order when the price reaches the predefined point',
         );
       case OrderType.oco:
-        return _OrderTypeInfo(
+        return const _OrderTypeInfo(
           icon: Icons.compare_arrows,
           title: 'OCO',
           description: 'Places two orders at once. When either is triggered, the other is canceled',
         );
       case OrderType.algoOrder:
-        return _OrderTypeInfo(
+        return const _OrderTypeInfo(
           icon: Icons.psychology,
           title: 'Algo Order',
           description: 'Execute orders with intelligent algorithmic order strategies',
@@ -167,4 +167,5 @@ class _OrderTypeInfo {
     required this.description,
   });
 }
+
 

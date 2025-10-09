@@ -1,4 +1,4 @@
-platform :ios, '14.0'
+platform :ios, '13.0'  # Minimum for TFLite compatibility
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -8,6 +8,9 @@ project 'Runner', {
   'Profile' => :release,
   'Release' => :release,
 }
+
+# Suppress warnings for cleaner build output
+inhibit_all_warnings!
 
 def flutter_root
   generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
@@ -27,11 +30,12 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 use_frameworks! :linkage => :static
-inhibit_all_warnings!
 
 target 'Runner' do
-
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  
+  # TensorFlow Lite para AI models
+  pod 'TensorFlowLiteSwift', '~> 2.12.0'
   target 'RunnerTests' do
     inherit! :search_paths
   end
@@ -41,9 +45,25 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |c|
-      c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+      # iOS 13+ pentru wide compatibility cu TFLite
+      c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      
+      # Xcode 15/16/26 optimizations
+      c.build_settings['ENABLE_BITCODE'] = 'NO'  # Bitcode deprecated
       c.build_settings['DEAD_CODE_STRIPPING'] = 'YES'
-      # Workaround Xcode 16 header include rule in some pods (e.g., local_auth_darwin)
+      c.build_settings['SWIFT_VERSION'] = '5.0'
+      
+      # Release optimizations
+      if c.name == 'Release' || c.name == 'Profile'
+        c.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Osize'  # Size optimization
+        c.build_settings['GCC_OPTIMIZATION_LEVEL'] = 's'
+      end
+      
+      # Architecture settings
+      c.build_settings['ONLY_ACTIVE_ARCH'] = c.name == 'Debug' ? 'YES' : 'NO'
+      c.build_settings['ARCHS'] = 'arm64'
+      
+      # Xcode 16+ compatibility
       c.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
       c.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
     end

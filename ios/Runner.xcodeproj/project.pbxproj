@@ -63,6 +63,7 @@
 		A0BBF82206FDA9650F99C275 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		B547EF061EFF6A65DB0C621B /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		C369FFE1DB8721EC3619BFCB /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D1B905F62E9685FD002938F3 /* LiquidGlassExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassExtensions.swift; sourceTree = "<group>"; };
 		DD436FA5B59B0DD5E0E8E941 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		E6DD3224148B60FE3A25E954 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -96,6 +97,7 @@
 				86CC12BF24259D1C2122D4E0 /* Pods-RunnerTests.debug.xcconfig */,
 				8BC9F70AB2A65279FDE342F3 /* Pods-RunnerTests.release.xcconfig */,
 				DD436FA5B59B0DD5E0E8E941 /* Pods-RunnerTests.profile.xcconfig */,
+				D1B905F62E9685FD002938F3 /* LiquidGlassExtensions.swift */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -215,7 +217,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1510;
+				LastUpgradeCheck = 2600;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
 					331C8080294A63A400263BE5 = {
@@ -458,6 +460,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
@@ -590,6 +593,7 @@
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -641,6 +645,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";

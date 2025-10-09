@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../services/ai_service.dart';
-import 'package:mytrademate/ui/explain_page.dart';
+import 'package:mytrademate/ai/ai_locator.dart';
+import 'package:mytrademate/ai/entities.dart' as ai;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/explain/explanation_builder.dart';
 import 'package:mytrademate/l10n/strings.dart';
 import 'package:mytrademate/core/errors.dart';
-import 'package:mytrademate/ui/error_ui.dart';
+import 'package:mytrademate/ui/kit/ui_error_banner.dart';
 
 class AIPredictionCard extends StatefulWidget {
   final String symbol;
@@ -68,8 +68,8 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AIPrediction>(
-      future: AIService().getPrediction(widget.symbol),
+    return FutureBuilder<ai.Prediction?>(
+      future: AILocator.I.getPrediction(widget.symbol),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -90,23 +90,23 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
             isPaperMode: isPaperMode,
           );
           final expOut = ExplanationBuilder.build(expIn);
-          final inline = InlineErrorBox(
-            err: mapped,
+          return UiErrorBanner(
+            message: 'AI prediction unavailable',
             onRetry: () => setState(() {}),
           );
-          return Card(
+          /* return Card(
             elevation: 6,
-            color: Theme.of(context).cardColor.withOpacity(0.9),
+            color: Theme.of(context).cardColor.withValues(alpha: 230),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
-              side: BorderSide(color: Colors.orange.withOpacity(0.5), width: 2),
+              side: BorderSide(color: Colors.orange.withValues(alpha: 128), width: 2),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  inline,
+                  // inline,
                   const SizedBox(height: 12),
                   Theme(
                     data: Theme.of(context)
@@ -211,36 +211,44 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                 ],
               ),
             ),
-          );
+          ); */
         }
-        final p = snapshot.data!;
-        final actionColor = p.action == 'BUY'
+        final pred = snapshot.data!;
+        final action = AILocator.I.decide(pred);
+        final actionColor = action == 'BUY'
             ? Colors.green
-            : p.action == 'SELL'
+            : action == 'SELL'
                 ? Colors.red
                 : Colors.amber;
-        final actionIcon = p.action == 'BUY'
+        final actionIcon = action == 'BUY'
             ? Icons.trending_up
-            : (p.action == 'SELL'
+            : (action == 'SELL'
                 ? Icons.trending_down
                 : Icons.pause_circle_outline);
 
         // Build safe explanation input (fallbacks where data not available)
         Direction dir = Direction.flat;
-        if (p.action == 'BUY') {
+        if (action == 'BUY') {
           dir = Direction.up;
-        } else if (p.action == 'SELL') dir = Direction.down;
+        } else if (action == 'SELL') {
+          dir = Direction.down;
+        }
         VolLevel vol = VolLevel.moderate;
-        final vLbl = p.volatility.toUpperCase();
+        final annVol = pred.annVol.abs();
+        final vLbl = annVol >= 0.10
+            ? 'HIGH'
+            : (annVol >= 0.03 ? 'MEDIUM' : 'LOW');
         if (vLbl == 'LOW') {
           vol = VolLevel.low;
-        } else if (vLbl == 'HIGH') vol = VolLevel.high;
+        } else if (vLbl == 'HIGH') {
+          vol = VolLevel.high;
+        }
         const bool isPaperMode =
             bool.fromEnvironment('PAPER_TRADING', defaultValue: false);
         final expIn = ExplanationInput(
           direction: dir,
           volLevel: vol,
-          confidence: p.probUp, // 0..1
+          confidence: pred.pBuy, // 0..1
           topFactors: const <String>[],
           dataGaps: false,
           lastTickAge: Duration.zero,
@@ -249,10 +257,10 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
         final expOut = ExplanationBuilder.build(expIn);
         return Card(
           elevation: 6,
-          color: Theme.of(context).cardColor.withOpacity(0.9),
+          color: Theme.of(context).cardColor.withValues(alpha: 230),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
-            side: BorderSide(color: actionColor.withOpacity(0.5), width: 2),
+            side: BorderSide(color: actionColor.withValues(alpha: 128), width: 2),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -282,7 +290,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                       children: [
                         const Text('Action:', style: TextStyle(color: Colors.white70, fontSize: 12)),
                         const SizedBox(height: 4),
-                        Text(p.action,
+                        Text(action,
                             style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w900,
@@ -294,7 +302,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                       children: [
                         const Text('Confidence', style: TextStyle(color: Colors.white70, fontSize: 12)),
                         const SizedBox(height: 4),
-                        Text('${p.confidence.toStringAsFixed(1)}%',
+                        Text('${(pred.confidence()*100).toStringAsFixed(1)}%',
                             style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w900,
@@ -314,13 +322,11 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                   ),
                   child: Column(
                     children: [
-                      _buildMetricRow('Target Price (24h)', '\$${p.targetPrice.toStringAsFixed(2)}', Icons.price_change),
+                      _buildMetricRow('Expected Return', '${(pred.expReturn * 100).toStringAsFixed(2)}%', Icons.account_balance_wallet),
                       const Divider(height: 16, color: Colors.white12),
-                      _buildMetricRow('Volatility', p.volatility, Icons.show_chart),
+                      _buildMetricRow('Volatility (ann.)', '${(pred.annVol * 100).toStringAsFixed(1)}%', Icons.show_chart),
                       const Divider(height: 16, color: Colors.white12),
-                      _buildMetricRow('Probability Up', '${(p.probUp * 100).toStringAsFixed(1)}%', Icons.trending_up),
-                      const Divider(height: 16, color: Colors.white12),
-                      _buildMetricRow('Expected Return', '${(p.nextReturn * 100).toStringAsFixed(2)}%', Icons.account_balance_wallet),
+                      _buildMetricRow('Probability Up', '${(pred.pBuy * 100).toStringAsFixed(1)}%', Icons.trending_up),
                     ],
                   ),
                 ),
@@ -423,23 +429,8 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                     ],
                   ),
                 ),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () async {
-                      // Build a minimal features sequence; in a fuller version, fetch actual 64×N
-                      final seq = List.generate(
-                          64, (_) => [p.targetPrice, p.confidence, 0.0]);
-                      final data = mapToExplain(widget.symbol, seq, p);
-                      // ignore: use_build_context_synchronously
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => ExplainPage(data: data)));
-                    },
-                    icon: const Icon(Icons.info_outline,
-                        color: Colors.indigoAccent),
-                    label: const Text('Why this prediction? (AI Justification)',
-                        style: TextStyle(color: Colors.indigoAccent)),
-                  ),
-                ),
+                // (Optional) Explain button removed for consistency; can be reintroduced
+                // using a unified ExplainData mapped from ai.Prediction in the future.
               ],
             ),
           ),
@@ -511,17 +502,7 @@ Widget _buildMetricRow(String label, String value, IconData icon) {
   );
 }
 
-String _plainLanguageWhy(AIPrediction p) {
-  final dir = p.action == 'BUY' ? '↑' : (p.action == 'SELL' ? '↓' : '—');
-  final volNote = p.volatility == 'HIGH'
-      ? 'higher volatility'
-      : (p.volatility == 'MEDIUM' ? 'moderate volatility' : 'lower volatility');
-  final conf = p.confidence;
-  // Keep wording cautious and generic
-  return 'We predict $dir price tendency with $volNote in the next period. '
-      'This is based on recent price dynamics and volatility estimates. '
-      'Confidence ${conf.toStringAsFixed(0)}%. Treat as guidance, not advice.';
-}
+// (removed legacy plain-language generator that depended on legacy AIPrediction)
 
 class _WarnLine extends StatelessWidget {
   final String text;

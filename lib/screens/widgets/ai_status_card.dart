@@ -18,16 +18,44 @@ class AIStatusCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Strategy: Dynamic AI',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Strategy: Crypto AI',
+                        style:
+                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text('TensorFlow Lite • 3 Models',
+                        style: TextStyle(fontSize: 11, color: Colors.white54)),
+                  ],
+                ),
                 Switch(
-                    value: active, onChanged: (_) {}, activeColor: Colors.cyan),
+                    value: active, onChanged: (_) {}, activeThumbColor: Colors.cyan),
               ],
             ),
-            const SizedBox(height: 5),
-            const Text('Status: Active. Monitoring Crypto & Stocks.',
-                style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.cyan.withValues(alpha: 38),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.circle, size: 10, color: Colors.greenAccent),
+                  SizedBox(width: 8),
+                  Text('Active • Monitoring 15+ Crypto Pairs',
+                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              '🎯 Direction Model: Predicts BUY/SELL/HOLD signals\n'
+              '💰 Return Model: Estimates next-period returns\n'
+              '📊 Volatility Model: Calculates market risk levels',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            ),
             const Divider(height: 25, color: Colors.white12),
             Center(
               child: TextButton.icon(
@@ -43,4 +71,5 @@ class AIStatusCard extends StatelessWidget {
     );
   }
 }
+
 

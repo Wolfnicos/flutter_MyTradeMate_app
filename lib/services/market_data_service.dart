@@ -263,7 +263,7 @@ class MarketDataServiceImpl implements MarketDataService {
             if (e.out.isClosed || _paused || e.paused || e.disposed) return;
             if (e.lastPrice != null && v == e.lastPrice) return;
             e.lastPrice = v!;
-            e.out.add(v!);
+            e.out.add(v);
           });
         }, onError: (_) {
           if (_paused || e.paused || e.disposed || _stopping) return;

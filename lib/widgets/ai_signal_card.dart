@@ -35,7 +35,7 @@ class AiSignalCard extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: color.withOpacity(0.15),
+              backgroundColor: color.withValues(alpha: 38),
               foregroundColor: color,
               child: Icon(p == null
                   ? Icons.insights_outlined
@@ -82,4 +82,5 @@ class AiSignalCard extends StatelessWidget {
     );
   }
 }
+
 

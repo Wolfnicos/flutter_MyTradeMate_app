@@ -9,3 +9,4 @@ fvm flutter build apk --release
 echo "APK built at build/app/outputs/flutter-apk/app-release.apk"
 
 
+

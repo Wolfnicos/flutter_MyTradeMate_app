@@ -42,7 +42,7 @@ class SettingsSwitchTile extends StatelessWidget {
       leading: Icon(icon, color: Colors.indigoAccent),
       title: Text(title),
       trailing: Switch(
-          value: value, onChanged: onChanged, activeColor: Colors.indigoAccent),
+          value: value, onChanged: onChanged, activeThumbColor: Colors.indigoAccent),
     );
   }
 }

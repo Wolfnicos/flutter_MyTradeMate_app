@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/grid_bot.dart';
-import 'package:intl/intl.dart';
 
 /// Ecran detalii bot (conform screenshot-ului Binance 2025)
 class GridBotDetailsScreen extends StatefulWidget {
@@ -21,7 +20,7 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Text('Detalii bot'),
+        title: const Text('Detalii bot'),
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
@@ -124,7 +123,7 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   // Bollinger Bands indicators
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _BollingerIndicator(label: 'BOLL:(20, 2)', value: ''),
@@ -231,7 +230,7 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.green.withOpacity(0.3), Colors.transparent],
+                colors: [Colors.green.withValues(alpha: 77), Colors.transparent],
               ),
             ),
           ),
@@ -258,7 +257,7 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
           horizontalInterval: bot.gridStep,
           getDrawingHorizontalLine: (value) {
             return FlLine(
-              color: Colors.pink.withOpacity(0.3),
+              color: Colors.pink.withValues(alpha: 77),
               strokeWidth: 1,
               dashArray: [5, 5],
             );
@@ -402,7 +401,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 51),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color, width: 1),
       ),
@@ -495,10 +494,10 @@ class _TimeframeChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? Colors.amber.withOpacity(0.3) : Colors.transparent,
+          color: selected ? Colors.amber.withValues(alpha: 77) : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
-            color: selected ? Colors.amber : Colors.grey.withOpacity(0.3),
+            color: selected ? Colors.amber : Colors.grey.withValues(alpha: 77),
           ),
         ),
         child: Text(
@@ -542,4 +541,5 @@ class _BollingerIndicator extends StatelessWidget {
     );
   }
 }
+
 

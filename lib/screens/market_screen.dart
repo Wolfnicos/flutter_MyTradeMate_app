@@ -22,13 +22,13 @@ class _CoinDef {
 }
 
 class _MarketScreenState extends State<MarketScreen> {
-  // Show a few majors + the two meme tickers. TRUMP/WIF are not on Binance testnet.
+  // Premium 5 cryptocurrencies - LIVE DATA ONLY
   final List<_CoinDef> _coins = const [
     _CoinDef(symbol: 'BTCUSDT', label: 'BTC', supportedOnTestnet: true),
     _CoinDef(symbol: 'ETHUSDT', label: 'ETH', supportedOnTestnet: true),
     _CoinDef(symbol: 'BNBUSDT', label: 'BNB', supportedOnTestnet: true),
+    _CoinDef(symbol: 'WLFIUSDT', label: 'WLFI', supportedOnTestnet: false),
     _CoinDef(symbol: 'TRUMPUSDT', label: 'TRUMP', supportedOnTestnet: false),
-    _CoinDef(symbol: 'WIFUSDT', label: 'WIF', supportedOnTestnet: false),
   ];
 
   final Map<String, StreamSubscription<double>> _subs = {};
@@ -40,8 +40,9 @@ class _MarketScreenState extends State<MarketScreen> {
     super.initState();
     _pm = PriceStreamManager();
     for (final c in _coins) {
-      if (!c.supportedOnTestnet)
+      if (!c.supportedOnTestnet) {
         continue; // don't try to connect if not supported
+      }
       _pm.attach(c.symbol).then((stream) {
         if (!mounted) return;
         _subs[c.symbol] = stream.listen((p) {
@@ -89,7 +90,7 @@ class _MarketScreenState extends State<MarketScreen> {
                 if (notOnTestnet)
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.15),
+                      color: Colors.orange.withValues(alpha: 38),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.orangeAccent),
                     ),

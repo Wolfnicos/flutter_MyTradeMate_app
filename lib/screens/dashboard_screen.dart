@@ -1,18 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'portfolio_screen.dart';
 import 'order_history_screen.dart';
 import 'settings_screen.dart';
 import 'market_details_screen.dart';
+import 'ai_helper_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mytrademate/services/dio_binance_client.dart' as api;
-import 'widgets/ai_alert_card.dart';
 import 'widgets/asset_tile.dart';
 // removed unused: price_stream import
 import '../services/price_stream_manager.dart';
 import '../services/mtm_models.dart';
 import '../src/core/trading_prefs.dart';
 import '../ui/disclaimer_banner.dart';
+import '../l10n/strings.dart';
 
 class DashboardScreen extends StatefulWidget {
   final bool forTest;
@@ -126,8 +126,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 10),
               AssetTile(
                 key: dashboardSettingsKey,
-                symbol: 'WIF/USD',
-                name: 'WIF',
+                symbol: 'WLFI/USD',
+                name: 'WLFI',
                 price: '1.00',
                 change: '+0.0%',
                 isUp: true,
@@ -200,9 +200,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
 
             const SizedBox(height: 25),
-
-            // --- 2. Alertă AI Proeminentă ---
-            const AIAlertCard(),
+            
+            // --- AI Trading Assistant (LIVE) ---
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AIHelperScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.psychology, color: Colors.white),
+                label: Text(
+                  L10n.aiButtonLive,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
 
             const SizedBox(height: 30),
 
@@ -218,8 +247,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: FutureBuilder<List<List<num>>>(
                     future: _klines('BTCUSDT'),
                     builder: (context, snap) {
-                      if (!snap.hasData)
+                      if (!snap.hasData) {
                         return const Center(child: CircularProgressIndicator());
+                      }
                       final data = snap.data!;
                       final spots = <FlSpot>[];
                       for (var i = 0; i < data.length; i++) {
@@ -397,11 +427,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 10),
             FutureBuilder<bool>(
-              future: _supports('WIFUSDT'),
+              future: _supports('WLFIUSDT'),
               builder: (context, s) {
                 if (s.data != true) return const SizedBox();
                 return FutureBuilder<Map<String, dynamic>>(
-                  future: _ticker('WIFUSDT'),
+                  future: _ticker('WLFIUSDT'),
                   builder: (context, t) {
                     final price = t.hasData
                         ? (double.tryParse(
@@ -418,8 +448,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             (double.tryParse(ch) ?? 0) >= 0)
                         : true;
                     return AssetTile(
-                      symbol: 'WIF/USD',
-                      name: 'WIF',
+                      symbol: 'WLFI/USD',
+                      name: 'WLFI',
                       price: price,
                       change: ch == '—' ? ch : '$ch%',
                       isUp: isUp,
@@ -427,7 +457,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) => const MarketDetailsScreen(symbol: 'WIF/USDT')),
+                              builder: (_) => const MarketDetailsScreen(symbol: 'WLFI/USDT')),
                         );
                       },
                     );
@@ -489,7 +519,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       String price, String change, Color iconColor) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: iconColor.withOpacity(0.2),
+        backgroundColor: iconColor.withValues(alpha: 51),
         child: Text(symbol[0],
             style: TextStyle(color: iconColor, fontWeight: FontWeight.bold)),
       ),

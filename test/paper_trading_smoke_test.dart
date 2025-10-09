@@ -68,7 +68,7 @@ void main() {
     expect(pos.qty, 0.0);
 
     // Compute expected PnL with maker fees on both legs
-    final expected = (1000.90 - 1000.00) * 0.01; // zero fees baseline
+    const expected = (1000.90 - 1000.00) * 0.01; // zero fees baseline
     expect(pos.realizedPnl, closeTo(expected, 1e-6));
   });
 }

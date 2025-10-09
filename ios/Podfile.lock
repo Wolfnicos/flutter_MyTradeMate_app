@@ -39,6 +39,7 @@ DEPENDENCIES:
   - local_auth_darwin (from `.symlinks/plugins/local_auth_darwin/darwin`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - TensorFlowLiteSwift (~> 2.12.0)
   - tflite_flutter (from `.symlinks/plugins/tflite_flutter/ios`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
 
@@ -63,7 +64,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  local_auth_darwin: 553ce4f9b16d3fdfeafce9cf042e7c9f77c1c391
+  local_auth_darwin: c3ee6cce0a8d56be34c8ccb66ba31f7f180aaebb
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   TensorFlowLiteC: 20785a69299185a379ba9852b6625f00afd7984a
@@ -71,6 +72,6 @@ SPEC CHECKSUMS:
   tflite_flutter: 64b192e11352fe36943ab6656e1d49207f1a5595
   url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
 
-PODFILE CHECKSUM: da302580e40d784859a0b0705a6fe9ee63888ffe
+PODFILE CHECKSUM: 628420e00abd374d208b5d77f3be428f5596f96f
 
 COCOAPODS: 1.16.2

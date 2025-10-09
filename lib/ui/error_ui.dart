@@ -32,7 +32,7 @@ class InlineErrorBox extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.2),
+        color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 51),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -61,4 +61,5 @@ class InlineErrorBox extends StatelessWidget {
     );
   }
 }
+
 

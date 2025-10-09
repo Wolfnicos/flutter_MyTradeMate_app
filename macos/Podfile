@@ -1,76 +1,44 @@
-import 'dart:async';
-import 'dart:convert';
+platform :osx, '11.0'
 
-import 'package:web_socket_channel/io.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-/// Single, robust price stream for Binance miniTicker.
-/// Usage:
-///   final ps = PriceStream(symbol: 'BTCUSDT', testnet: true);
-///   await ps.start();
-///   ps.prices.listen((p) { ... });
-class PriceStream {
-  final String symbol; // Binance format, e.g. BTCUSDT
-  final bool testnet;
-
-  WebSocketChannel? _channel;
-  bool _running = false;
-
-  final _controller = StreamController<double>.broadcast();
-  Stream<double> get prices => _controller.stream;
-
-  PriceStream({required this.symbol, this.testnet = true});
-
-  static String normalize(String s) => s.replaceAll('/', '').toUpperCase();
-
-  Uri _wsUri() {
-    final s = normalize(symbol).toLowerCase();
-    final host = testnet
-        ? 'wss://testnet.binance.vision'
-        : 'wss://stream.binance.com:9443';
-    // Correct Binance endpoint, no :0 and no trailing '#'
-    return Uri.parse('$host/ws/$s@miniTicker');
-  }
-
-  Future<void> start() async {
-    if (_running) return;
-    _running = true;
-    while (_running) {
-      try {
-        _channel = IOWebSocketChannel.connect(_wsUri());
-        await for (final msg in _channel!.stream) {
-          if (!_running) break;
-          final data = jsonDecode(msg as String);
-          final cRaw = (data is Map) ? data['c'] : null;
-          final price = cRaw == null ? null : double.tryParse(cRaw.toString());
-          if (price != null && !_controller.isClosed) {
-            _controller.add(price);
-          }
-        }
-      } catch (_) {
-        // simple backoff
-        await Future.delayed(const Duration(seconds: 2));
-      } finally {
-        try {
-          await _channel?.sink.close();
-        } catch (_) {}
-        _channel = null;
-      }
-    }
-  }
-
-  Future<void> stop() async {
-    _running = false;
-    try {
-      await _channel?.sink.close();
-    } catch (_) {}
-    _channel = null;
-  }
-
-  void dispose() {
-    _running = false;
-    if (!_controller.isClosed) {
-      _controller.close();
-    }
-  }
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
 }
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'ephemeral', 'Flutter-Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    # Fallback to old location
+    generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  end
+
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure `flutter pub get` is executed first."
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting it and then run `flutter pub get`."
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_macos_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  flutter_install_all_macos_pods File.dirname(File.realpath(__FILE__))
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_macos_build_settings(target)
+  end
+end

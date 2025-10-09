@@ -24,3 +24,4 @@ class DefaultPriceRestClient implements PriceRestClient {
   Future<double> tickerPrice(String symbol) => _client.tickerPrice(symbol);
 }
 
+

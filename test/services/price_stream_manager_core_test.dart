@@ -7,6 +7,12 @@ import 'package:mytrademate/services/price_stream.dart';
 class _FakeSource implements PriceEventSource {
   final _controllers = <StreamController<dynamic>>[];
   @override
+  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
+    final uri = Uri.parse('wss://example.com/ws');
+    return connect(uri);
+  }
+
+  @override
   Stream connect(Uri _) {
     final c = StreamController<dynamic>.broadcast();
     _controllers.add(c);
@@ -89,4 +95,5 @@ void main() {
     });
   });
 }
+
 

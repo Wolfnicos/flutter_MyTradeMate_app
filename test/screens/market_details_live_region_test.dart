@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/screens/market_details_screen.dart';
-import 'package:mytrademate/l10n/strings.dart';
 import 'package:mytrademate/ui/keys.dart';
 import '../_helpers/test_market_data.dart';
 

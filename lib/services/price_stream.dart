@@ -11,11 +11,7 @@ typedef SleepFn = Future<void> Function(Duration);
 /// Interfață injectabilă pentru sursa de evenimente preț (determinist în teste).
 abstract class PriceEventSource {
   Stream<dynamic> connect(Uri uri);
-  // Convenience: build URL from symbol using unified builder
-  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
-    final uri = binanceWsUrl(symbol, testnet: testnet);
-    return connect(uri);
-  }
+  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet});
   Future<void> close();
 }
 
@@ -35,7 +31,7 @@ class RealPriceEventSource implements PriceEventSource {
     _controller = StreamController<dynamic>();
     
     // Construim URL-ul manual ca String pentru control total
-    final scheme = 'wss';
+    const scheme = 'wss';
     final host = uri.host;
     final port = uri.hasPort && uri.port != 0 ? ':${uri.port}' : '';
     final path = uri.path;
@@ -183,7 +179,7 @@ class PriceStream {
           if (_paused) return; // dacă e pauzat, nu reconecta
           if (!_controller.isClosed) {
             _controller.addError(
-                UserError(AppErrorType.network, 'Connection closed. Retrying…', 'ws.onDone'));
+                const UserError(AppErrorType.network, 'Connection closed. Retrying…', 'ws.onDone'));
           }
           await _scheduleReconnectWithBackoff();
         },

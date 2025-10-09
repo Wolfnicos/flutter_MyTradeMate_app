@@ -75,12 +75,12 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: ExpansionTile(
-                title: const Text('Ce este grila Spot'),
-                leading: const Icon(Icons.help_outline, color: Colors.blue),
+              child: const ExpansionTile(
+                title: Text('Ce este grila Spot'),
+                leading: Icon(Icons.help_outline, color: Colors.blue),
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -89,20 +89,20 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                           title: 'Automatizare',
                           subtitle: 'Economisește timp prin automatizarea ordinelor de cumpărare și vânzare.',
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _FeatureTile(
                           icon: Icons.trending_up,
                           title: 'Profit din volatilitate',
                           subtitle: 'Valorifică micile fluctuații de preț.',
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         _FeatureTile(
                           icon: Icons.schedule,
                           title: 'Strategie consecventă',
                           subtitle: 'Menține o abordare de tranzacționare constantă.',
                         ),
-                        const SizedBox(height: 12),
-                        const Text(
+                        SizedBox(height: 12),
+                        Text(
                           '* Deoarece condițiile de piață diferă, acești parametri nu pot garanta obținerea acelorași rezultate.',
                           style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
                         ),
@@ -239,7 +239,7 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
             // Profit estimate
             if (_formKey.currentState?.validate() ?? false)
               Card(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 25),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -346,4 +346,5 @@ class _FeatureTile extends StatelessWidget {
     );
   }
 }
+
 

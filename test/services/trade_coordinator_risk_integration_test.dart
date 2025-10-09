@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mytrademate/services/ai_service.dart';
+import 'package:mytrademate/ai/entities.dart' as ai;
 import 'package:mytrademate/services/brokers.dart';
 import 'package:mytrademate/services/risk_manager.dart';
 import 'package:mytrademate/services/signal_policy.dart';
@@ -23,7 +23,16 @@ Future<TradingPrefs> _makePrefs() async {
 
 void main() {
   test('RiskManager violation blocks order placement', () async {
-    final ai = AIService(enableFake: true);
+    Future<ai.Prediction?> fakeFetcher(String s) async => ai.Prediction(
+          symbol: s,
+          asOf: DateTime.utc(2025, 1, 1),
+          pBuy: 0.7,
+          pHold: 0.2,
+          pSell: 0.1,
+          expReturn: 0.003,
+          annVol: 0.2,
+          relVolume: 1.0,
+        );
     final pol = SignalPolicy(
         cfg: const SignalPolicyConfig(),
         now: DateTime.now,
@@ -37,7 +46,7 @@ void main() {
     const risk = RiskManager(
         RiskConfig(maxPositionQuoteUsdt: 50.0)); // will block 100 quote
     final tc = TradeCoordinator(
-        ai: ai,
+        fetchPrediction: fakeFetcher,
         policy: pol,
         broker: broker,
         prefs: prefs,

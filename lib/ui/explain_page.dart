@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mytrademate/services/ai_service.dart';
+import 'package:mytrademate/ai/explain.dart';
+// Uses ExplainData type from legacy AI service; page remains as-is for explain rendering.
 
 class ExplainPage extends StatelessWidget {
   final ExplainData data;

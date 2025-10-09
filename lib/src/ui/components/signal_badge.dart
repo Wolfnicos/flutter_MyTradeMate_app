@@ -28,12 +28,13 @@ class SignalBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: color.withOpacity(.18),
-        border: Border.all(color: color.withOpacity(.6)),
+        color: color.withValues(alpha: 46),
+        border: Border.all(color: color.withValues(alpha: 153)),
       ),
       child: Text(text,
           style: TextStyle(fontWeight: FontWeight.w700, color: color)),
     );
   }
 }
+
 

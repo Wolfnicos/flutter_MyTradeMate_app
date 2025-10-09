@@ -78,30 +78,53 @@ class _AssetTileState extends State<AssetTile> {
     super.dispose();
   }
 
+  /// Returns icon, color and label for each crypto
+  Map<String, dynamic> _getCryptoInfo(String sym) {
+    final s = sym.toUpperCase();
+    if (s.contains('BTC')) {
+      return {'icon': Icons.currency_bitcoin, 'color': const Color(0xFFF7931A), 'label': 'BTC', 'name': 'Bitcoin'};
+    } else if (s.contains('ETH')) {
+      return {'icon': Icons.diamond, 'color': const Color(0xFF627EEA), 'label': 'ETH', 'name': 'Ethereum'};
+    } else if (s.contains('BNB')) {
+      return {'icon': Icons.toll, 'color': const Color(0xFFF3BA2F), 'label': 'BNB', 'name': 'BNB'};
+    } else if (s.contains('TRUMP')) {
+      return {'icon': Icons.flag, 'color': const Color(0xFFDC143C), 'label': 'TRUMP', 'name': 'TRUMP'};
+    } else if (s.contains('WLFI')) {
+      return {'icon': Icons.token, 'color': const Color(0xFF1E88E5), 'label': 'WLFI', 'name': 'WLFI'};
+    } else {
+      return {'icon': Icons.currency_exchange, 'color': Colors.grey, 'label': 'CRYPTO', 'name': 'Crypto'};
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = widget.isUp ? Colors.green : Colors.red;
     final priceStr =
         _livePrice != null ? _livePrice!.toStringAsFixed(2) : widget.price;
 
-    final leadingSymbol = widget.symbol.contains('/')
-        ? widget.symbol.split('/').first
-        : widget.symbol;
+    final cryptoInfo = _getCryptoInfo(widget.symbol);
+    final IconData cryptoIcon = cryptoInfo['icon'] as IconData;
+    final Color cryptoColor = cryptoInfo['color'] as Color;
+    final String cryptoLabel = cryptoInfo['label'] as String;
+    final String cryptoName = cryptoInfo['name'] as String;
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: color.withOpacity(0.1),
-        child: Text(
-          leadingSymbol,
-          style: TextStyle(
-              color: color, fontWeight: FontWeight.bold, fontSize: 12),
-          maxLines: 1,
+        backgroundColor: cryptoColor.withOpacity(0.2),
+        child: Icon(
+          cryptoIcon,
+          color: cryptoColor,
+          size: 28,
         ),
       ),
-      title: Text(widget.symbol,
-          style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle:
-          Text(widget.name, style: const TextStyle(color: Colors.white70)),
+      title: Text(
+        '$cryptoName ($cryptoLabel)',
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      subtitle: Text(
+        widget.symbol,
+        style: const TextStyle(color: Colors.white60, fontSize: 12),
+      ),
       trailing: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.center,

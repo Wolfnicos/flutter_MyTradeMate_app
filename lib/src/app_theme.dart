@@ -40,7 +40,7 @@ class AppTheme {
   static const gap = SizedBox(height: 12);
   static const gapW = SizedBox(width: 12);
 
-  static Color ok([double o = 1]) => _ok.withOpacity(o);
-  static Color err([double o = 1]) => _err.withOpacity(o);
-  static Color accent([double o = 1]) => _accent.withOpacity(o);
+  static Color ok([double o = 1]) => _ok.withValues(alpha: o);
+  static Color err([double o = 1]) => _err.withValues(alpha: o);
+  static Color accent([double o = 1]) => _accent.withValues(alpha: o);
 }

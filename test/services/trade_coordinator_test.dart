@@ -1,26 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mytrademate/services/ai_service.dart';
+import 'package:mytrademate/ai/entities.dart' as ai;
 import 'package:mytrademate/services/signal_policy.dart';
 import 'package:mytrademate/services/trade_coordinator.dart';
 import 'package:mytrademate/services/brokers.dart';
 import 'package:mytrademate/src/core/trading_prefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-class _FakeAI extends AIService {
-  _FakeAI() : super();
-  @override
-  Future<AIPrediction> getPrediction(String symbol) async {
-    return const AIPrediction(
-      action: 'BUY',
-      confidence: 90,
-      targetPrice: 100,
-      volatility: 'LOW',
-      probUp: 0.9,
-      nextReturn: 0.01,
-      volatilityValue: 0.02,
-    );
-  }
-}
 
 class _MemBroker implements MarketExecution {
   OrderParams? last;
@@ -37,6 +21,16 @@ void main() {
   });
 
   test('maybeTrade respects consent and persists counters', () async {
+    Future<ai.Prediction?> fakeFetcher(String s) async => ai.Prediction(
+          symbol: s,
+          asOf: DateTime.utc(2025, 1, 1),
+          pBuy: 0.7,
+          pHold: 0.2,
+          pSell: 0.1,
+          expReturn: 0.003,
+          annVol: 0.2,
+          relVolume: 1.0,
+        );
     final prefs = await TradingPrefs.load();
     await prefs.setUserConsentTrading(true);
     await prefs.setThresholds(buy: 0.55, sell: 0.45);
@@ -47,7 +41,7 @@ void main() {
 
     final broker = _MemBroker();
     final coord = TradeCoordinator(
-      ai: _FakeAI(),
+      fetchPrediction: fakeFetcher,
       policy: SignalPolicy(),
       broker: broker,
       prefs: prefs,
@@ -66,4 +60,5 @@ void main() {
     expect(cnt, 1);
   });
 }
+
 

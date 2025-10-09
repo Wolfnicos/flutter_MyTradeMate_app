@@ -18,12 +18,13 @@ class StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: color.withOpacity(.12),
-        border: Border.all(color: color.withOpacity(.5)),
+        color: color.withValues(alpha: 31),
+        border: Border.all(color: color.withValues(alpha: 128)),
       ),
       child: Text(text,
           style: TextStyle(fontWeight: FontWeight.w700, color: color)),
     );
   }
 }
+
 

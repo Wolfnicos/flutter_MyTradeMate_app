@@ -1,12 +1,14 @@
-import 'package:mytrademate/services/ai_service.dart';
+import 'package:mytrademate/ai/entities.dart' as ai;
 import 'package:mytrademate/services/signal_policy.dart';
 import 'package:mytrademate/services/brokers.dart';
 import 'package:mytrademate/src/core/trading_prefs.dart';
 import 'package:mytrademate/services/risk_manager.dart';
 import 'package:mytrademate/services/portfolio_pnl.dart';
 
+typedef PredictionFetcher = Future<ai.Prediction?> Function(String symbol);
+
 class TradeCoordinator {
-  final AIService ai;
+  final PredictionFetcher fetchPrediction;
   final SignalPolicy policy;
   final MarketExecution broker;
   final TradingPrefs prefs;
@@ -14,7 +16,7 @@ class TradeCoordinator {
   final RiskManager? risk;
 
   TradeCoordinator({
-    required this.ai,
+    required this.fetchPrediction,
     required this.policy,
     required this.broker,
     required this.prefs,
@@ -23,7 +25,8 @@ class TradeCoordinator {
   }) : now = now ?? DateTime.now;
 
   Future<void> maybeTrade(String symbol) async {
-    final pred = await ai.getPrediction(symbol);
+    final pred = await fetchPrediction(symbol);
+    if (pred == null) return;
 
     // create a policy configured with persisted prefs on-the-fly
     final (buy, sell, hup, hdn) = await prefs.getThresholds();
@@ -48,14 +51,13 @@ class TradeCoordinator {
     );
 
     final intent = pol.evaluate(
-        symbol: symbol, probUp: pred.probUp, confidence: pred.confidence);
+        symbol: symbol, probUp: pred.pBuy, confidence: pred.confidence() * 100);
     if (intent == null) return;
 
     // place as MARKET using quote sizing by converting to quantity by last target price approximation
     // In a real system, fetch real-time price for symbol here.
-    final qty =
-        (intent.quoteAmount / (pred.targetPrice > 0 ? pred.targetPrice : 1.0))
-            .abs();
+    final approxTarget = (1 + pred.expReturn);
+    final qty = (intent.quoteAmount / (approxTarget > 0 ? approxTarget : 1.0)).abs();
 
     // Pre-trade risk checks
     if (risk != null) {

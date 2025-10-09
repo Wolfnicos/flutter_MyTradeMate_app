@@ -122,6 +122,13 @@ class TestFakeEventSource implements PriceEventSource {
   final List<StreamController<dynamic>> _controllers =
       <StreamController<dynamic>>[];
   int connects = 0;
+  
+  @override
+  Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
+    final uri = Uri.parse('wss://example.com/ws');
+    return connect(uri);
+  }
+  
   @override
   Stream connect(Uri _) {
     connects++;
