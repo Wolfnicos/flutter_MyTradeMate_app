@@ -1,122 +1,114 @@
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart' as tfl;
 import '../entities.dart';
 import 'model_utils.dart';
+import 'direction_model.dart';
 
-class TransformerPriceModel {
-  tfl.Interpreter? _interpreter;
+/// TransformerDirectionModel
+///
+/// - TFLite-compatible Transformer encoder classifier
+/// - Input: [1, 64, 15]
+/// - Output: [BUY, HOLD, SELL] probabilities
+/// - Softmax applied on logits if necessary
+/// - Falls back to simple technical rules if model unavailable
+class TransformerDirectionModel extends DirectionModel {
+  tfl.Interpreter? _it;
   bool _tried = false;
 
+  static const String _modelPath = 'assets/models/transformer_direction.tflite';
+
+  @override
   Future<void> initialize() async {
     if (_tried) return;
     _tried = true;
     try {
-      _interpreter = await tfl.Interpreter.fromAsset(
-        'assets/models/price_transformer.tflite',
-      );
-      debugPrint('✅ TransformerPriceModel loaded');
+      _it = await tfl.Interpreter.fromAsset(_modelPath);
+      debugPrint('✅ TransformerDirectionModel loaded: $_modelPath');
     } catch (e) {
-      _interpreter = null;
-      debugPrint('⚠️ TransformerPriceModel not available: $e');
+      _it = null;
+      debugPrint('⚠️ TransformerDirectionModel not available: $e');
     }
   }
 
-  Future<PricePrediction?> predict(List<Candle> candles) async {
-    if (_interpreter == null) {
+  @override
+  Future<List<double>> predictProbs(List<Candle> candles) async {
+    if (!_tried) {
       await initialize();
-      if (_interpreter == null) return null;
+    }
+    if (_it == null) {
+      // Fallback to base DirectionModel behavior (technical rules)
+      return super.predictProbs(candles);
     }
 
     try {
-      // Read shapes from model to avoid mismatches
-      final inTensor = _interpreter!.getInputTensor(0);
-      final inShape = inTensor.shape; // e.g. [1, 64, 15]
+      // Model-declared shapes
+      final inShape = _it!.getInputTensor(0).shape; // expect [1, 64, 15]
+      if (inShape.length != 3 || inShape[0] != 1) {
+        throw StateError('Unsupported input shape: $inShape');
+      }
 
-      // Build [1, T, F] input
-      final input = _buildTransformerInput(candles, inShape);
-
-      // Ensure tensors are allocated for expected shape
+      final input = ModelUtils.buildInputTensor(candles, inShape);
       try {
-        _interpreter!.resizeInputTensor(0, inShape);
-        _interpreter!.allocateTensors();
+        _it!.resizeInputTensor(0, inShape);
+        _it!.allocateTensors();
       } catch (_) {}
 
-      // Prepare output buffer based on model output shape
-      final outTensor = _interpreter!.getOutputTensor(0);
-      final outShape = outTensor.shape; // e.g. [1, H, 4]
-      final output = _emptyOutput3D(outShape);
+      final outShape = _it!.getOutputTensor(0).shape; // expect [1, 3]
+      final output = ModelUtils.emptyOutput(outShape);
 
-      _interpreter!.run(input, output);
+      // Debug small trace
+      // ignore: avoid_print
+      print('🔍 Transformer input shape: $inShape');
+      // ignore: avoid_print
+      try { print('🔍 Transformer input sample: ${input[0][0]}'); } catch (_) {}
 
-      return PricePrediction.fromTensor(output);
+      _it!.run(input, output);
+
+      // Interpret output
+      final totalOut = outShape.fold<int>(1, (a, b) => a * b);
+      if (totalOut == 3) {
+        // logits to probs
+        List<double> logits;
+        if (outShape.length == 1) {
+          logits = (output as List).cast<double>();
+        } else {
+          logits = (output as List<List>).first.cast<double>();
+        }
+        final maxLogit = logits.reduce((a, b) => a > b ? a : b);
+        final exps = logits.map((x) => math.exp(x - maxLogit)).toList();
+        final sum = exps.fold<double>(0.0, (a, b) => a + b);
+        final probs = sum == 0.0
+            ? const [1 / 3, 1 / 3, 1 / 3]
+            : exps.map((x) => x / sum).toList();
+        return probs.cast<double>();
+      }
+
+      if (totalOut == 1) {
+        // Rare: scalar output → map via base model's mapping
+        final scalar = ModelUtils.extractScalar(output, outShape);
+        return super.predictProbs(candles); // will map via fallback rules
+      }
+
+      // Unknown output
+      return super.predictProbs(candles);
     } catch (e, st) {
-      debugPrint('❌ TransformerPriceModel predict error: $e');
+      debugPrint('❌ TransformerDirectionModel predict error: $e');
       debugPrint('Stack: $st');
-      return null;
+      return super.predictProbs(candles);
     }
   }
 
+  @override
   void dispose() {
-    _interpreter?.close();
-    _interpreter = null;
-  }
-
-  List<List<List<double>>> _buildTransformerInput(
-    List<Candle> candles,
-    List<int> inShape,
-  ) {
-    // Expect [1, seq_len, features]
-    final dims = inShape.length;
-    if (dims != 3 || inShape[0] != 1) {
-      throw ArgumentError('Unsupported transformer input shape: $inShape');
-    }
-    final seqLen = inShape[1];
-    final nFeatures = inShape[2];
-
-    if (candles.length < seqLen) {
-      throw ArgumentError('Need at least $seqLen candles');
-    }
-
-    // Build features [seqLen, nFeatures]
-    final feats = ModelUtils.featuresFromCandles(candles, seqLen, nFeatures);
-    final flat = ModelUtils.normalize2D(feats);
-
-    // Reshape to [1, T, F]
-    return [
-      List.generate(seqLen, (t) =>
-          List.generate(nFeatures, (f) => flat[t * nFeatures + f])),
-    ];
-  }
-
-  List<List<List<double>>> _emptyOutput3D(List<int> shape) {
-    if (shape.length != 3) {
-      throw ArgumentError('Unsupported transformer output shape: $shape');
-    }
-    return List.generate(
-      shape[0],
-      (_) => List.generate(
-        shape[1],
-        (_) => List.filled(shape[2], 0.0),
-      ),
-    );
+    _it?.close();
+    _it = null;
   }
 }
 
-class PricePrediction {
-  final List<List<double>> horizon; // [H, 4] = [direction, return, vol, confidence]
-
-  PricePrediction(this.horizon);
-
-  factory PricePrediction.fromTensor(List<List<List<double>>> tensor) {
-    // tensor: [1, H, 4]
-    final h = tensor[0];
-    return PricePrediction(h.map((e) => e.cast<double>()).toList());
-  }
-
-  double get direction => horizon.isEmpty ? 0.0 : horizon.last[0];
-  double get expectedReturn => horizon.isEmpty ? 0.0 : horizon.last[1];
-  double get volatility => horizon.isEmpty ? 0.0 : horizon.last[2];
-  double get confidence => horizon.isEmpty ? 0.0 : horizon.last[3];
-}
+/// ----------------------------
+/// Training script (Python)
+/// Saved under tool/train_transformer.py
+/// ----------------------------
 
 
