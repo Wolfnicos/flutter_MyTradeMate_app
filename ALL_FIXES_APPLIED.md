@@ -354,3 +354,4 @@ flutter run -d "iPhone 17 Pro Max"
 
 **AI va funcționa cu predicții REALE și fără crashes! 🎯✨**
 
+

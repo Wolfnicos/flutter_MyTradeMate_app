@@ -4,7 +4,7 @@ import 'widgets/settings_tile.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'change_password_screen.dart';
 import 'settings_screen.dart';
-import 'package:local_auth/local_auth.dart';
+// local_auth temporarily disabled to fix iOS build
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -235,23 +235,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _toggleBiometric(bool enable) async {
     final sp = await SharedPreferences.getInstance();
     try {
-      if (enable) {
-        final auth = LocalAuthentication();
-        final supported = await auth.isDeviceSupported();
-        final canCheck = await auth.canCheckBiometrics;
-        if (!supported || !canCheck) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Biometrics not available on this device.')));
-          }
-          return;
-        }
-        final ok = await auth.authenticate(
-          localizedReason: 'Enable biometric lock for app start',
-          options: const AuthenticationOptions(biometricOnly: true),
-        );
-        if (!ok) return;
-      }
+      // Biometrics disabled in this build. Persist preference only.
       await sp.setBool('security.biometric', enable);
       if (!mounted) return;
       setState(() => _biometric = enable);

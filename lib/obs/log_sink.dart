@@ -21,7 +21,7 @@ class FileJsonlSink implements LogSink {
   Future<void> write(Map<String, dynamic> json) async {
     if (kIsWeb) return;
     final file = await _fileFut;
-    final line = jsonEncode(json) + '\n';
+    final line = '${jsonEncode(json)}\n';
     await file.writeAsString(line, mode: FileMode.append, flush: true);
   }
 }

@@ -6,6 +6,7 @@ import '../core/logging.dart';
 import '../core/diagnostics.dart';
 import '../l10n/strings.dart';
 import '../ui/keys.dart';
+import '../ui/debug/observability_chip.dart';
 // Sort keys removed for broader Flutter version compatibility
 
 class SettingsScreen extends StatefulWidget {
@@ -265,6 +266,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 key: AppKeys.settingsQuoteSlider,
               ),
               const SizedBox(height: 8),
+              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              const ObservabilityChip(maxItems: 3),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 12,

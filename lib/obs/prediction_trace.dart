@@ -3,6 +3,8 @@ import 'package:crypto/crypto.dart' show sha1;
 import 'log_sink.dart';
 import 'package:mytrademate/ai/ai_config.dart';
 import 'package:mytrademate/ai/entities.dart' as ai;
+import 'package:mytrademate/ai/ai_locator.dart';
+import 'dart:math' as math;
 
 class PredictionTrace {
   final String symbol;
@@ -11,6 +13,8 @@ class PredictionTrace {
   final double pBuy;
   final double expReturn;
   final double annVol;
+  final String action;
+  final double confidence;
   final int seed;
   final int window;
   final String timeframe;
@@ -22,6 +26,8 @@ class PredictionTrace {
     required this.pBuy,
     required this.expReturn,
     required this.annVol,
+    required this.action,
+    required this.confidence,
     required this.seed,
     required this.window,
     required this.timeframe,
@@ -36,6 +42,8 @@ class PredictionTrace {
     'pBuy': pBuy,
     'expReturn': expReturn,
     'annVol': annVol,
+    'action': action,
+    'confidence': confidence,
     'seed': seed,
     'window': window,
     'timeframe': timeframe,
@@ -58,6 +66,9 @@ class PredictionTracer {
     required List<double>? features, // dacă ai features; altfel treci null
     Map<String, dynamic>? fp16Flags, // {'dir': bool, 'ret': bool, 'vol': bool}
   }) async {
+    final finalAction = AILocator.I.isInitialized ? AILocator.I.decide(pred) : pred.action;
+    final confVal = predConfidence(pred);
+    final probsVec = [pred.pSell, pred.pHold, pred.pBuy];
     final trace = PredictionTrace(
       symbol: pred.symbol,
       asOf: pred.asOf,
@@ -65,16 +76,30 @@ class PredictionTracer {
       pBuy: pred.pBuy,
       expReturn: pred.expReturn,
       annVol: pred.annVol,
+      action: finalAction,
+      confidence: confVal,
       seed: AiConfig.seed,
       window: AiConfig.window,
       timeframe: AiConfig.timeframe,
       meta: {
         if (features != null) 'featuresHash': PredictionTrace.featuresHash(features),
         if (fp16Flags != null) 'fp16Fallbacks': fp16Flags,
+        'probs': probsVec,
+        'action': finalAction,
+        'confidence': confVal,
+        'ret_raw': null,
+        'vol_raw': null,
+        'vol_fallback_used': false,
       },
     );
     await sink.write(trace.toJson());
   }
+}
+
+double predConfidence(ai.Prediction p) {
+  // Use multi-class probabilities when available on Prediction
+  final maxProb = [p.pSell, p.pHold, p.pBuy].reduce((a, b) => a > b ? a : b);
+  return maxProb.toDouble();
 }
 
 

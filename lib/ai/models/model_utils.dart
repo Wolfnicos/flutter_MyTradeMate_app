@@ -1,262 +1,272 @@
-import 'package:flutter/foundation.dart';
 import 'dart:math';
 import '../entities.dart';
+import 'stats.dart';
 
-/// ModelUtils - Utility functions pentru TFLite models
-/// Handles dynamic tensor shapes (2D/3D/4D) pentru CONV_2D compatibility
 class ModelUtils {
-  /// Minimum window size pentru predicții
-  static const int kMinWindow = 64;
-
-  /// Extract exact 15 features per timestep (match training!)
-  /// Returns [seqLen, 15] matrix
-  /// 
-  /// Features (15 total):
-  /// 0-2: returns (1, 5, 15 periods)
-  /// 3-4: hl_range, close/open ratio
-  /// 5-6: EMA(12), EMA(26)
-  /// 7-8: MACD, RSI(14)
-  /// 9-10: ATR(14), OBV normalized
-  /// 11-12: volume_rel, volume_zscore
-  /// 13-14: rolling_std_ret, rolling_mean_ret
+  /// Extract features from candles for model input
+  /// Returns: List of [windowSize] timesteps, each with [numFeatures] features
   static List<List<double>> featuresFromCandles(
-    List<Candle> window,
-    int seqLen,
-    int nFeatures,
+    List<Candle> candles,
+    int windowSize,
+    int numFeatures,
   ) {
-    // Take last seqLen candles
-    final start = max(0, window.length - seqLen);
-    final actualLen = min(seqLen, window.length - start);
-    
-    final closes = window.map((c) => c.close).toList();
-    final opens = window.map((c) => c.open).toList();
-    final highs = window.map((c) => c.high).toList();
-    final lows = window.map((c) => c.low).toList();
-    final vols = window.map((c) => c.volume).toList();
-    
-    // Pre-calculate indicators
-    final ema12Values = _calculateEMASequence(closes, 12);
-    final ema26Values = _calculateEMASequence(closes, 26);
-    final rsi14Values = _calculateRSISequence(closes, 14);
-    final atr14Values = _calculateATRSequence(window, 14);
-    
-    // Volume stats
-    double smaVol = 0.0;
-    for (int i = start; i < window.length; i++) {
-      smaVol += vols[i];
+    if (candles.length < windowSize) {
+      throw ArgumentError(
+        'Need at least $windowSize candles, got ${candles.length}',
+      );
     }
-    smaVol /= actualLen;
+
+    // Take the last windowSize candles
+    final window = candles.sublist(candles.length - windowSize);
     
-    // Initialize output [seqLen, nFeatures]
-    final out = List.generate(seqLen, (_) => List.filled(nFeatures, 0.0));
+    final features = <List<double>>[];
     
-    // Fill features for each timestep
-    for (int t = 0; t < actualLen; t++) {
-      final i = start + t;
-      final c = window[i];
+    for (int i = 0; i < windowSize; i++) {
+      final timestepFeatures = _extractTimestepFeatures(window, i);
       
-      // Returns (3 periods)
-      final ret1 = i > 0 ? (closes[i] / closes[i - 1]) - 1.0 : 0.0;
-      final ret5 = i >= 5 ? (closes[i] / closes[i - 5]) - 1.0 : 0.0;
-      final ret15 = i >= 15 ? (closes[i] / closes[i - 15]) - 1.0 : 0.0;
-      
-      // Price patterns
-      final hlRange = c.low > 0 ? (c.high - c.low) / c.low : 0.0;
-      final coRatio = c.open > 0 ? c.close / c.open - 1.0 : 0.0;
-      
-      // Indicators
-      final ema12 = ema12Values[i];
-      final ema26 = ema26Values[i];
-      final macd = ema12 - ema26;
-      final rsi14 = rsi14Values[i];
-      final atr14 = atr14Values[i];
-      
-      // Volume features
-      final obvNorm = i > 0 ? (c.volume - vols[i-1]) / max(c.volume, 1.0) : 0.0;
-      final volRel = smaVol > 0 ? c.volume / smaVol : 1.0;
-      final volZ = smaVol > 0 ? (c.volume - smaVol) / smaVol : 0.0;
-      
-      // Rolling statistics (last 10)
-      final rollingRets = <double>[];
-      for (int j = max(0, i - 10); j < i; j++) {
-        if (j > 0) rollingRets.add((closes[j] / closes[j-1]) - 1.0);
-      }
-      final rollStd = rollingRets.isEmpty ? 0.0 : _std(rollingRets);
-      final rollMean = rollingRets.isEmpty ? 0.0 : rollingRets.reduce((a,b)=>a+b) / rollingRets.length;
-      
-      // Assign features (15 total)
-      out[t][0] = ret1;
-      out[t][1] = ret5;
-      out[t][2] = ret15;
-      out[t][3] = hlRange;
-      out[t][4] = coRatio;
-      out[t][5] = ema12;
-      out[t][6] = ema26;
-      out[t][7] = macd;
-      out[t][8] = rsi14;
-      out[t][9] = atr14;
-      out[t][10] = obvNorm;
-      out[t][11] = volRel;
-      out[t][12] = volZ;
-      out[t][13] = rollStd;
-      out[t][14] = rollMean;
-      
-      // Apply normalization (din stats.dart sau fallback)
-      // TODO: Load real stats from training
-    }
-    
-    return out;
-  }
-  
-  // Helper: Calculate EMA for entire sequence
-  static List<double> _calculateEMASequence(List<double> values, int period) {
-    if (values.length < period) return List.filled(values.length, values.last);
-    
-    final k = 2.0 / (period + 1);
-    final result = List<double>.filled(values.length, 0.0);
-    
-    // Initialize with SMA
-    double emaVal = 0.0;
-    for (int i = 0; i < period; i++) {
-      emaVal += values[i];
-    }
-    emaVal /= period;
-    result[period - 1] = emaVal;
-    
-    // Calculate EMA for rest
-    for (int i = period; i < values.length; i++) {
-      emaVal = values[i] * k + emaVal * (1 - k);
-      result[i] = emaVal;
-    }
-    
-    // Fill early values with first EMA
-    for (int i = 0; i < period - 1; i++) {
-      result[i] = result[period - 1];
-    }
-    
-    return result;
-  }
-  
-  // Helper: Calculate RSI for entire sequence
-  static List<double> _calculateRSISequence(List<double> closes, int period) {
-    if (closes.length < period + 1) return List.filled(closes.length, 50.0);
-    
-    final result = List<double>.filled(closes.length, 50.0);
-    
-    for (int i = period; i < closes.length; i++) {
-      final slice = closes.sublist(max(0, i - period), i + 1);
-      double gain = 0, loss = 0;
-      
-      for (int j = 1; j < slice.length; j++) {
-        final diff = slice[j] - slice[j-1];
-        if (diff > 0) {
-          gain += diff;
-        } else {
-          loss -= diff;
-        }
+      if (timestepFeatures.length != numFeatures) {
+        throw StateError(
+          'Expected $numFeatures features, got ${timestepFeatures.length} at timestep $i',
+        );
       }
       
-      final avgGain = gain / period;
-      final avgLoss = loss / period;
-      final rs = avgLoss == 0 ? 100.0 : avgGain / avgLoss;
-      result[i] = 100.0 - (100.0 / (1.0 + rs));
+      features.add(timestepFeatures);
+    }
+
+    return features;
+  }
+
+  /// Normalize 2D features using training statistics
+  static List<double> normalize2D(List<List<double>> features) {
+    // Delegate to NormalizationStats which handles the entire 2D array
+    return NormalizationStats.normalize2D(features);
+  }
+
+  /// Extract features for a single timestep
+  static List<double> _extractTimestepFeatures(
+    List<Candle> window,
+    int idx,
+  ) {
+    final current = window[idx];
+    final features = <double>[];
+
+    // Feature 0-2: Returns (ret1, ret5, ret15)
+    features.add(_getReturn(window, idx, 1));
+    features.add(_getReturn(window, idx, 5));
+    features.add(_getReturn(window, idx, 15));
+
+    // Feature 3: HL range (normalized by close)
+    final hlRange = (current.high - current.low) / current.close;
+    features.add(hlRange);
+
+    // Feature 4: CO ratio
+    final coRatio = current.close / current.open;
+    features.add(coRatio);
+
+    // Feature 5-6: EMAs (normalized by close for stability)
+    final ema12 = _calculateEMA(window.sublist(0, idx + 1), 12);
+    final ema26 = _calculateEMA(window.sublist(0, idx + 1), 26);
+    features.add(ema12 / current.close); // Relative EMA
+    features.add(ema26 / current.close);
+
+    // Feature 7: MACD (normalized by close)
+    final macd = (ema12 - ema26) / current.close;
+    features.add(macd);
+
+    // Feature 8: RSI (already bounded [0, 100])
+    final rsi = _calculateRSI(window.sublist(0, idx + 1), 14);
+    features.add(rsi);
+
+    // Feature 9: ATR (normalized by close)
+    final atr = _calculateATR(window.sublist(0, idx + 1), 14);
+    features.add(atr / current.close);
+
+    // Feature 10: OBV normalized
+    final obvNorm = _calculateOBVNorm(window.sublist(0, idx + 1));
+    features.add(obvNorm);
+
+    // Feature 11-12: Volume metrics
+    final avgVol = window.map((c) => c.volume).reduce((a, b) => a + b) / window.length;
+    final volumeRel = current.volume / (avgVol + 1e-10); // Avoid division by zero
+    final volumeZ = (current.volume - avgVol) / (avgVol + 1e-10);
+    features.add(volumeRel);
+    features.add(volumeZ);
+
+    // Feature 13-14: Rolling statistics (normalized by close)
+    final closes = window.sublist(0, idx + 1).map((c) => c.close).toList();
+    final rollingStd = _std(closes) / current.close;
+    final rollingMean = _mean(closes) / current.close;
+    features.add(rollingStd);
+    features.add(rollingMean);
+
+    return features;
+  }
+
+  /// Calculate return over N periods
+  static double _getReturn(List<Candle> window, int idx, int periods) {
+    if (idx < periods) {
+      return 0.0; // Not enough history
     }
     
-    return result;
+    final current = window[idx].close;
+    final past = window[idx - periods].close;
+    
+    if (past == 0) return 0.0;
+    
+    return (current - past) / past;
   }
-  
-  // Helper: Calculate ATR for entire sequence
-  static List<double> _calculateATRSequence(List<Candle> candles, int period) {
-    if (candles.length < period + 1) return List.filled(candles.length, 0.0);
-    
-    final result = List<double>.filled(candles.length, 0.0);
-    
-    for (int i = period; i < candles.length; i++) {
-      double atrSum = 0.0;
-      for (int j = max(1, i - period + 1); j <= i; j++) {
-        final tr = candles[j].trueRange(candles[j-1]);
-        atrSum += tr;
+
+  /// Calculate Exponential Moving Average
+  static double _calculateEMA(List<Candle> data, int period) {
+    if (data.isEmpty) return 0.0;
+    if (data.length < period) return data.last.close;
+
+    final alpha = 2.0 / (period + 1);
+    double ema = data[0].close;
+
+    for (int i = 1; i < data.length; i++) {
+      ema = data[i].close * alpha + ema * (1 - alpha);
+    }
+
+    return ema;
+  }
+
+  /// Calculate Relative Strength Index
+  static double _calculateRSI(List<Candle> data, int period) {
+    if (data.length < period + 1) return 50.0; // Neutral RSI
+
+    double gains = 0;
+    double losses = 0;
+
+    for (int i = data.length - period; i < data.length; i++) {
+      if (i == 0) continue;
+      
+      final change = data[i].close - data[i - 1].close;
+      if (change > 0) {
+        gains += change;
+      } else {
+        losses += -change;
       }
-      result[i] = atrSum / period;
     }
+
+    if (losses == 0) return 100.0;
     
-    return result;
+    final avgGain = gains / period;
+    final avgLoss = losses / period;
+    final rs = avgGain / avgLoss;
+    
+    return 100 - (100 / (1 + rs));
   }
-  
-  // Helper: Standard deviation
+
+  /// Calculate Average True Range
+  static double _calculateATR(List<Candle> data, int period) {
+    if (data.length < 2) return data.last.high - data.last.low;
+    if (data.length < period + 1) {
+      return data.last.high - data.last.low;
+    }
+
+    final trs = <double>[];
+    
+    for (int i = 1; i < data.length; i++) {
+      final high = data[i].high;
+      final low = data[i].low;
+      final prevClose = data[i - 1].close;
+
+      final tr = [
+        high - low,
+        (high - prevClose).abs(),
+        (low - prevClose).abs(),
+      ].reduce((a, b) => a > b ? a : b);
+
+      trs.add(tr);
+    }
+
+    final recentTRs = trs.length > period 
+        ? trs.sublist(trs.length - period)
+        : trs;
+    
+    return recentTRs.reduce((a, b) => a + b) / recentTRs.length;
+  }
+
+  /// Calculate normalized On-Balance Volume
+  static double _calculateOBVNorm(List<Candle> data) {
+    if (data.length < 2) return 0.5; // Neutral
+
+    double obv = 0;
+    
+    for (int i = 1; i < data.length; i++) {
+      if (data[i].close > data[i - 1].close) {
+        obv += data[i].volume;
+      } else if (data[i].close < data[i - 1].close) {
+        obv -= data[i].volume;
+      }
+      // If equal, OBV doesn't change
+    }
+
+    // Normalize to [0, 1] range
+    // Max possible OBV would be sum of all volumes
+    final maxObv = data.map((c) => c.volume).reduce((a, b) => a + b);
+    
+    if (maxObv == 0) return 0.5;
+    
+    // Map from [-maxObv, +maxObv] to [0, 1]
+    return (obv / maxObv + 1) / 2;
+  }
+
+  /// Calculate mean of a list
+  static double _mean(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    return values.reduce((a, b) => a + b) / values.length;
+  }
+
+  /// Calculate standard deviation
   static double _std(List<double> values) {
     if (values.isEmpty) return 0.0;
-    final mean = values.reduce((a, b) => a + b) / values.length;
-    final variance = values.map((v) => pow(v - mean, 2)).reduce((a, b) => a + b) / values.length;
+    if (values.length == 1) return 0.0;
+    
+    final mean = _mean(values);
+    final variance = values
+        .map((x) => pow(x - mean, 2))
+        .reduce((a, b) => a + b) / values.length;
+    
     return sqrt(variance);
   }
 
-  /// Build input tensor based on model's expected shape
-  /// Supports:
-  /// - [1, F]           → 2D (aggregated features)
-  /// - [1, T, F]        → 3D (sequence)
-  /// - [1, T, F, 1]     → 4D (Conv2D format)
-  /// - [1, T, F, C]     → 4D (Conv2D multi-channel)
-  static dynamic buildInputTensor(
-    List<Candle> window,
-    List<int> inputShape,
-  ) {
-    final dims = inputShape.length;
+  // ========================================================================
+  // BACKWARDS COMPATIBILITY for ReturnModel and VolatilityModel
+  // ========================================================================
+
+  /// Build input tensor with explicit shape (legacy method)
+  static dynamic buildInputTensor(List<Candle> window, List<int> inShape) {
+    // Extract features using new method
+    final windowSize = inShape[1]; // [1, 64, 15]
+    final numFeatures = inShape[2];
     
-    if (dims < 2 || inputShape[0] != 1) {
-      debugPrint('⚠️ Unexpected input shape $inputShape');
-      throw ArgumentError('Invalid input shape: $inputShape');
+    final feats = featuresFromCandles(window, windowSize, numFeatures);
+    final flat = normalize2D(feats);
+    
+    // Reshape according to inShape
+    if (inShape.length == 3) {
+      // [1, timesteps, features]
+      return _reshapeTo3D(flat, inShape);
+    } else if (inShape.length == 4) {
+      // [1, timesteps, features, channels]
+      return _reshapeTo4D(flat, inShape);
     }
-
-    // Extract dimensions
-    final seqLen = dims >= 3 ? inputShape[1] : min(kMinWindow, window.length);
-    final nFeatures = dims >= 3 ? inputShape[2] : inputShape[1];
-    final nChannels = dims >= 4 ? inputShape[3] : 1;
-
-    // Get features matrix [seqLen, nFeatures]
-    final features = featuresFromCandles(window, seqLen, nFeatures);
-
-    // Build tensor based on dimensions
-    if (dims == 2) {
-      // [1, F] → Average over time
-      final aggregated = List.filled(nFeatures, 0.0);
-      for (int t = 0; t < features.length; t++) {
-        for (int f = 0; f < nFeatures; f++) {
-          aggregated[f] += features[t][f];
-        }
-      }
-      for (int f = 0; f < nFeatures; f++) {
-        aggregated[f] /= features.length;
-      }
-      return [aggregated];
-    } else if (dims == 3) {
-      // [1, T, F]
-      return [features];
-    } else if (dims == 4 && nChannels == 1) {
-      // [1, T, F, 1] → Add channel dimension
-      return [
-        features.map((row) => row.map((val) => [val]).toList()).toList()
-      ];
-    } else {
-      // [1, T, F, C] → Replicate features across channels
-      return [
-        features.map((row) =>
-          row.map((val) => List.filled(nChannels, val)).toList()
-        ).toList()
-      ];
-    }
+    
+    throw ArgumentError('Unsupported input shape: $inShape');
   }
 
-  /// Create empty output tensor based on shape
+  /// Create empty output tensor of given shape
   static dynamic emptyOutput(List<int> outShape) {
-    if (outShape.length == 2) {
-      // [1, N]
+    if (outShape.length == 1) {
+      return List.filled(outShape[0], 0.0);
+    } else if (outShape.length == 2) {
       return List.generate(
         outShape[0],
         (_) => List.filled(outShape[1], 0.0),
       );
     } else if (outShape.length == 3) {
-      // [1, T, N]
       return List.generate(
         outShape[0],
         (_) => List.generate(
@@ -264,59 +274,73 @@ class ModelUtils {
           (_) => List.filled(outShape[2], 0.0),
         ),
       );
-    } else if (outShape.length == 4) {
-      // [1, T, N, C]
-      return List.generate(
-        outShape[0],
-        (_) => List.generate(
-          outShape[1],
-          (_) => List.generate(
-            outShape[2],
-            (_) => List.filled(outShape[3], 0.0),
-          ),
-        ),
-      );
-    } else {
-      throw ArgumentError('Unsupported output shape: $outShape');
     }
+    
+    throw ArgumentError('Unsupported output shape: $outShape');
   }
 
-  /// Extract scalar from potentially nested output
+  /// Extract scalar value from output tensor
   static double extractScalar(dynamic output, List<int> outShape) {
-    if (outShape.length == 2) {
-      return (output[0][0] as num).toDouble();
+    if (outShape.length == 1) {
+      // [1] -> output[0]
+      return (output as List<double>)[0];
+    } else if (outShape.length == 2) {
+      // [1, 1] -> output[0][0]
+      return (output as List<List<double>>)[0][0];
     } else if (outShape.length == 3) {
-      return (output[0][0][0] as num).toDouble();
-    } else if (outShape.length == 4) {
-      return (output[0][0][0][0] as num).toDouble();
+      // [1, 1, 1] -> output[0][0][0]
+      return (output as List<List<List<double>>>)[0][0][0];
     }
-    return 0.0;
+    
+    throw ArgumentError('Cannot extract scalar from shape: $outShape');
   }
 
-  /// Extract probabilities from classification output
-  static List<double> extractProbs(dynamic output, List<int> outShape, int numClasses) {
-    List<double> probs;
-    
-    if (outShape.length == 2 && outShape[1] >= numClasses) {
-      // [1, N] → output[0]
-      probs = (output[0] as List).cast<num>().take(numClasses).map((e) => e.toDouble()).toList();
-    } else if (outShape.length == 3) {
-      // [1, 1, N] → output[0][0]
-      probs = (output[0][0] as List).cast<num>().take(numClasses).map((e) => e.toDouble()).toList();
-    } else if (outShape.length == 4) {
-      // [1, 1, N, 1] → output[0][0][:, 0]
-      probs = (output[0][0] as List).map((row) => (row[0] as num).toDouble()).take(numClasses).toList();
-    } else {
-      return List.filled(numClasses, 1.0 / numClasses); // Uniform fallback
+  static List<List<List<double>>> _reshapeTo3D(
+    List<double> flat,
+    List<int> shape,
+  ) {
+    final result = <List<List<double>>>[];
+    int idx = 0;
+
+    for (int b = 0; b < shape[0]; b++) {
+      final batch = <List<double>>[];
+      for (int t = 0; t < shape[1]; t++) {
+        final timestep = <double>[];
+        for (int f = 0; f < shape[2]; f++) {
+          timestep.add(idx < flat.length ? flat[idx++] : 0.0);
+        }
+        batch.add(timestep);
+      }
+      result.add(batch);
     }
-    
-    // Normalize to sum = 1 (softmax normalization)
-    final sum = probs.fold(0.0, (a, b) => a + b);
-    if (sum > 0) {
-      probs = probs.map((p) => p / sum).toList();
+
+    return result;
+  }
+
+  static List<List<List<List<double>>>> _reshapeTo4D(
+    List<double> flat,
+    List<int> shape,
+  ) {
+    final result = <List<List<List<double>>>>[];
+    int idx = 0;
+
+    for (int b = 0; b < shape[0]; b++) {
+      final batch = <List<List<double>>>[];
+      for (int t = 0; t < shape[1]; t++) {
+        final timestep = <List<double>>[];
+        for (int f = 0; f < shape[2]; f++) {
+          final channel = <double>[];
+          for (int c = 0; c < shape[3]; c++) {
+            channel.add(idx < flat.length ? flat[idx++] : 0.0);
+          }
+          timestep.add(channel);
+        }
+        batch.add(timestep);
+      }
+      result.add(batch);
     }
-    
-    return probs;
+
+    return result;
   }
 }
 

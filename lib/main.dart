@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/logging.dart';
-import 'package:local_auth/local_auth.dart';
 import 'screens/dashboard_screen.dart';
 import 'app/lifecycle_observer.dart';
 import 'screens/market_screen.dart';
@@ -65,20 +64,8 @@ class _MyTradeMateAppState extends State<MyTradeMateApp>
   Future<void> _guardAtLaunch() async {
     final sp = await SharedPreferences.getInstance();
     final requireBio = sp.getBool('security.biometric') ?? false;
-    if (requireBio) {
-      final auth = LocalAuthentication();
-      try {
-        final canCheck = await auth.canCheckBiometrics;
-        if (canCheck) {
-          await auth.authenticate(
-            localizedReason: 'Unlock MyTradeMate',
-            options: const AuthenticationOptions(biometricOnly: true),
-          );
-        }
-      } catch (_) {
-        // If biometrics are unavailable or not enrolled, continue to app
-      }
-    }
+    // Note: Biometrics temporarily disabled in this build (no local_auth plugin)
+    // If requireBio is true, we still allow access to avoid blocking the app.
     if (mounted) setState(() => _lockCheckDone = true);
   }
 

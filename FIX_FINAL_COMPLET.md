@@ -574,3 +574,4 @@ flutter run -d "iPhone 17 Pro Max"
 
 Acum vei vedea predicții AI **LOGICE și CONSISTENTE**! 😊
 
+

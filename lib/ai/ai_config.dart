@@ -4,9 +4,10 @@ class AiConfig {
   static const int seed = 42;
 
   /// Decision thresholds (shared by ALL screens)
-  static const double upThresh = 0.003;      // +0.3%
-  static const double downThresh = -0.003;   // -0.3%
-  static const double confThresh = 0.60;     // 60%
+  static const double upThresh = 0.003;      // +0.3% ✅
+  static const double downThresh = -0.003;   // -0.3% ✅
+  static const double confThresh = 0.25;     // 25% ← cheie!
+  static const double volCap = 0.50;         // 50%
 
   /// Canonical feature policy (match PredictionRepo)
   static const String timeframe = '5m';
@@ -21,6 +22,9 @@ class AiConfig {
 
   /// Optional: numerical invariants
   static const double maxFloatDrift = 1e-6; // FP16→F32 tolerance
+
+  /// Model revision (for observability)
+  static const String modelRev = 'r12';
 
   /// Force quote currency pentru Binance (USDT default)
   static const String kDefaultQuote = 'USDT';

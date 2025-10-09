@@ -287,3 +287,4 @@ Pentru întrebări sau probleme, consultă:
 - 📋 `docs/ProjectBoard.md` - Roadmap și features
 - 🐛 `docs/RedTeam.md` - Security & testing
 
+

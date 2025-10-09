@@ -41,6 +41,10 @@ class VolatilityModel {
     try {
       final inShape = _it!.getInputTensor(0).shape;
       final input = ModelUtils.buildInputTensor(window, inShape);
+      try {
+        _it!.resizeInputTensor(0, inShape);
+        _it!.allocateTensors();
+      } catch (_) {}
       
       final outShape = _it!.getOutputTensor(0).shape;
       final output = ModelUtils.emptyOutput(outShape);
@@ -48,6 +52,9 @@ class VolatilityModel {
       _it!.run(input, output);
       
       var predictedVol = ModelUtils.extractScalar(output, outShape);
+      // Raw read for debugging
+      // ignore: avoid_print
+      print('VOL:raw=$predictedVol');
       
       // Handle vol=0 or negative (fallback to EWMA)
       if (predictedVol <= 0.0) {
@@ -61,6 +68,8 @@ class VolatilityModel {
         // Likely daily vol → annualize
         predictedVol = predictedVol * sqrt(365);
       }
+      // ignore: avoid_print
+      print('VOL:ann=$predictedVol');
       
       debugPrint('✅ VolatilityModel TFLite: vol=${(predictedVol*100).toStringAsFixed(1)}%');
       

@@ -145,6 +145,8 @@ extension AILocatorExt on AILocator {
     }
     final pred = await repo.getFor(uiSymbol);
     if (pred != null) {
+      // Derive final action using current thresholds before tracing
+      final finalAction = decide(pred);
       // init sink once
       _sink ??= kIsWeb
           ? InMemorySink()
@@ -156,7 +158,7 @@ extension AILocatorExt on AILocator {
       try {
         await tracer.log(
           pred: pred,
-          modelRev: 'unknown',
+          modelRev: AiConfig.modelRev,
           features: null,
           fp16Flags: null,
         );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:mytrademate/services/dio_binance_client.dart' as api;
 
@@ -108,7 +109,10 @@ class _AssetTileState extends State<AssetTile> {
     final String cryptoLabel = cryptoInfo['label'] as String;
     final String cryptoName = cryptoInfo['name'] as String;
 
-    return ListTile(
+    return Semantics(
+      label:
+          'Asset ${widget.symbol}, price $priceStr, change ${widget.change}',
+      child: ListTile(
       leading: CircleAvatar(
         backgroundColor: cryptoColor.withOpacity(0.2),
         child: Icon(
@@ -135,7 +139,11 @@ class _AssetTileState extends State<AssetTile> {
           Text(widget.change, style: TextStyle(color: color, fontSize: 14)),
         ],
       ),
-      onTap: widget.onTap,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          widget.onTap?.call();
+        },
+      ),
     );
   }
 }

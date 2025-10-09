@@ -5,6 +5,8 @@ import 'package:mytrademate/src/core/trading_prefs.dart';
 import 'package:mytrademate/services/price_cache.dart';
 import 'package:mytrademate/models/portfolio_models.dart';
 import 'dart:convert';
+import 'package:mytrademate/ui/kit/ui_market_skeleton.dart';
+import 'package:mytrademate/ui/kit/ui_market_error.dart';
 
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({super.key});
@@ -191,12 +193,12 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Portfolio')),
       body: _future == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const UiMarketSkeleton(count: 8)
           : FutureBuilder<PortfolioSnapshot>(
               future: _future,
               builder: (ctx, s) {
                 if (s.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const UiMarketSkeleton(count: 8);
                 }
                 if (_blocked) {
                   return Center(
@@ -210,7 +212,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   );
                 }
                 if (s.hasError) {
-                  return Center(child: Text('Error: ${s.error}'));
+                  return UiMarketError(
+                    message: 'Market data unavailable',
+                    onRetry: () => setState(() => _future = _load()),
+                  );
                 }
                 final snap = s.data!;
                 final pnlColor = snap.dailyPnl >= 0 ? Colors.green : Colors.red;

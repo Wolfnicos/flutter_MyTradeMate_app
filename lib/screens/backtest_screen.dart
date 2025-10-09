@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:mytrademate/services/dio_binance_client.dart';
+import 'package:mytrademate/services/ohlcv_service.dart';
 import 'package:mytrademate/ai/ai_locator.dart';
+import 'package:mytrademate/ai/ai_config.dart';
 import 'package:intl/intl.dart';
 
 class BacktestScreen extends StatefulWidget {
@@ -11,7 +12,7 @@ class BacktestScreen extends StatefulWidget {
 }
 
 class _BacktestScreenState extends State<BacktestScreen> {
-  final List<String> _symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'];
+  final List<String> _symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'WLFIUSDT', 'TRUMPUSDT'];
   String _selectedSymbol = 'BTCUSDT';
   String _selectedInterval = '1h';
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
@@ -22,6 +23,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
   bool _isRunning = false;
   BacktestResult? _result;
   String? _error;
+  OHLCVService? _ohlcv;
 
   @override
   Widget build(BuildContext context) {
@@ -73,9 +75,14 @@ class _BacktestScreenState extends State<BacktestScreen> {
                         labelText: 'Interval',
                         border: OutlineInputBorder(),
                       ),
-                      items: ['5m', '15m', '1h', '4h', '1d'].map((s) => 
-                        DropdownMenuItem(value: s, child: Text(s))
-                      ).toList(),
+                      items: ['5m', '15m', '1h', '4h', '1d']
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (v) => setState(() => _selectedInterval = v!),
                     ),
                     const SizedBox(height: 16),
@@ -129,7 +136,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
                       ),
                       keyboardType: TextInputType.number,
                       controller: TextEditingController(
-                        text: _initialCapital.toString()
+                        text: _initialCapital.toString(),
                       ),
                       onChanged: (v) {
                         final val = double.tryParse(v);
@@ -146,7 +153,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
                       ),
                       keyboardType: TextInputType.number,
                       controller: TextEditingController(
-                        text: _positionSize.toString()
+                        text: _positionSize.toString(),
                       ),
                       onChanged: (v) {
                         final val = double.tryParse(v);
@@ -270,18 +277,18 @@ class _BacktestScreenState extends State<BacktestScreen> {
     });
 
     try {
-      final client = await DioBinanceClient.createFromPrefs();
       // Use centralized AI locator
       final aiService = AILocator.I;
+      _ohlcv ??= await OHLCVService.createFromPrefs();
       
-      // Fetch historical klines
-      final klines = await client.klines(
+      // Fetch historical candles (normalized + mapped to Candle)
+      final candles = await _ohlcv!.fetchCandles(
         _selectedSymbol,
-        _selectedInterval,
+        interval: _selectedInterval,
         limit: 1000,
       );
       
-      if (klines.isEmpty) {
+      if (candles.isEmpty) {
         throw Exception('No historical data available');
       }
       
@@ -299,19 +306,24 @@ class _BacktestScreenState extends State<BacktestScreen> {
       double minCapital = _initialCapital;
       final List<double> returns = [];
       
-      for (int i = 64; i < klines.length; i++) {
-        final candle = klines[i];
-        final closePrice = candle[4].toDouble();
+      // Window size from config (matches engine expectations)
+      const int kWindow = 64;
+      final double enterConf = AiConfig.confThresh * 100.0;
+      final double exitConf = AiConfig.confThresh * 100.0; // symmetric logic
+      
+      for (int i = kWindow; i < candles.length; i++) {
+        final closePrice = candles[i].close;
         
-        // Get AI prediction (simplified - in real implementation you'd use actual sequence)
+        // Build rolling window and get AI prediction for this timestep
         try {
-          final prediction = await aiService.getPrediction(_selectedSymbol);
+          final window = candles.sublist(i - kWindow, i + 1);
+          final prediction = await aiService.engine.predict(_selectedSymbol, window);
           if (prediction == null) continue;
-          final action = AILocator.I.decide(prediction);
+          final action = aiService.decide(prediction);
           final confPercent = (prediction.confidence() * 100);
           
           // Trading logic
-          if (position == 0 && action == 'BUY' && confPercent >= 60) {
+          if (position == 0 && action == 'BUY' && confPercent >= enterConf) {
             // Enter long position
             final investAmount = capital * _positionSize;
             final fee = investAmount * 0.001; // 0.1% fee
@@ -320,7 +332,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
             totalFees += fee;
             entryPrice = closePrice;
             totalTrades++;
-          } else if (position > 0 && (action == 'SELL' || confPercent < 40)) {
+          } else if (position > 0 && (action == 'SELL' || confPercent < exitConf)) {
             // Exit position
             final sellAmount = position * closePrice;
             final fee = sellAmount * 0.001;
@@ -345,8 +357,8 @@ class _BacktestScreenState extends State<BacktestScreen> {
           if (currentCapital < minCapital) minCapital = currentCapital;
           
           // Track returns
-          if (i > 64) {
-            final prevClose = klines[i - 1][4].toDouble();
+          if (i > kWindow) {
+            final prevClose = candles[i - 1].close;
             final ret = (closePrice - prevClose) / prevClose;
             returns.add(ret);
           }
@@ -358,7 +370,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
       
       // Close any remaining position
       if (position > 0) {
-        final lastPrice = klines.last[4].toDouble();
+        final lastPrice = candles.last.close;
         final sellAmount = position * lastPrice;
         final fee = sellAmount * 0.001;
         capital += (sellAmount - fee);

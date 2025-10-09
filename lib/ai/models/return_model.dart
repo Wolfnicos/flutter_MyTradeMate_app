@@ -41,6 +41,10 @@ class ReturnModel {
     try {
       final inShape = _it!.getInputTensor(0).shape;
       final input = ModelUtils.buildInputTensor(window, inShape);
+      try {
+        _it!.resizeInputTensor(0, inShape);
+        _it!.allocateTensors();
+      } catch (_) {}
       
       final outShape = _it!.getOutputTensor(0).shape;
       final output = ModelUtils.emptyOutput(outShape);
@@ -48,6 +52,9 @@ class ReturnModel {
       _it!.run(input, output);
       
       var predictedReturn = ModelUtils.extractScalar(output, outShape);
+      // Raw read for debugging
+      // ignore: avoid_print
+      print('RET:raw=$predictedReturn');
       
       // Decode based on training format
       // Dacă e log-return: convert înapoi
@@ -59,6 +66,8 @@ class ReturnModel {
         predictedReturn = predictedReturn / 10000.0;
         debugPrint('📊 Converted basis points: ${predictedReturn * 100}%');
       }
+      // ignore: avoid_print
+      print('RET:pct=$predictedReturn');
       
       debugPrint('✅ ReturnModel TFLite: return=${(predictedReturn*100).toStringAsFixed(2)}%');
       

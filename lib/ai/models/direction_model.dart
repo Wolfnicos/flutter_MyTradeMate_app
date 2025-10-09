@@ -1,151 +1,269 @@
-import 'package:tflite_flutter/tflite_flutter.dart' as tfl;
-import 'package:flutter/foundation.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 import '../entities.dart';
-import '../indicators.dart';
 import 'model_utils.dart';
-import 'dart:math';
 
-/// DirectionModel - Predict BUY/HOLD/SELL probabilities
-/// Uses TFLite model if available, falls back to rule-based
 class DirectionModel {
-  tfl.Interpreter? _it;
-  bool _tried = false;
+  Interpreter? _interpreter;
+  bool _initialized = false;
+  
+  // Use F32 for best accuracy (or switch to fp16 for performance)
+  // Model path reserved for future use when re-enabling TFLite
+  // ignore: unused_field
+  static const String _modelPath = 'assets/models/direction_f32_builtin.tflite';
 
-  /// Lazy load TFLite model (only once)
-  Future<void> _init() async {
-    if (_tried) return;
-    _tried = true;
+  Future<void> initialize() async {
+    if (_initialized) return;
     
+    // TEMPORARY: Skip TFLite (model gives constant outputs ~0.5)
+    // Use technical fallback which works better
+    print('ℹ️  DirectionModel: Using technical fallback (TFLite disabled)');
+    _initialized = true;
+    
+    /* COMMENTED OUT - TFLite gives constant scalars
     try {
-      _it = await tfl.Interpreter.fromAsset(
-        'assets/models/direction_f32_builtin.tflite',
-      );
-      debugPrint('✅ DirectionModel TFLite loaded');
+      _interpreter = await Interpreter.fromAsset(_modelPath);
+      _initialized = true;
+      print('✅ DirectionModel initialized: $_modelPath');
     } catch (e) {
-      _it = null;
-      debugPrint('⚠️ DirectionModel using fallback (TFLite not available)');
+      print('⚠️  DirectionModel failed to initialize: $e');
+      // Will use fallback
     }
+    */
   }
 
-  /// Predict probabilities [pBuy, pHold, pSell]
-  Future<List<double>> predictProbs(List<Candle> window) async {
-    await _init();
-    
-    if (_it != null) {
-      return _predictWithTFLite(window);
-    } else {
-      return _fallback(window);
+  Future<List<double>> predictProbs(List<Candle> candles) async {
+    if (!_initialized) {
+      await initialize();
     }
-  }
 
-  /// TFLite prediction with dynamic shape handling
-  Future<List<double>> _predictWithTFLite(List<Candle> window) async {
+    // If model failed to load, use fallback
+    if (_interpreter == null) {
+      return _fallback(candles);
+    }
+
     try {
-      // Read actual input shape from model
-      final inTensor = _it!.getInputTensor(0);
-      final inputShape = inTensor.shape; // e.g. [1, 64, 6, 1] for CONV_2D
+      // Extract and normalize features
+      final feats = ModelUtils.featuresFromCandles(candles, 64, 15);
+      final flat = ModelUtils.normalize2D(feats);
       
-      debugPrint('📐 DirectionModel input shape: $inputShape');
+      // Reshape to [1, 64, 15]
+      final input = _reshapeFlat(flat, [1, 64, 15]);
       
-      // Build input tensor based on shape
-      final input = ModelUtils.buildInputTensor(window, inputShape);
+      // Output is scalar [1, 1] - match exact shape
+      final output = List.generate(1, (_) => List.filled(1, 0.0));
       
-      // Read output shape
-      final outTensor = _it!.getOutputTensor(0);
-      final outShape = outTensor.shape; // e.g. [1, 3]
+      _interpreter!.run(input, output);
       
-      // Create empty output
-      final output = ModelUtils.emptyOutput(outShape);
+      final scalar = output[0][0]; // Extract scalar from [[value]]
       
-      // Run inference
-      _it!.run(input, output);
+      // DEBUG: Log raw scalar (uncomment for debugging)
+      print('🔍 Raw scalar output: ${scalar.toStringAsFixed(6)}');
       
-      // Extract probabilities
-      var probs = ModelUtils.extractProbs(output, outShape, 3);
-      
-      // Apply softmax if output are logits (not already probabilities)
-      // Check: dacă sum e departe de 1.0, apply softmax
-      final sum = probs.fold(0.0, (a, b) => a + b);
-      if ((sum - 1.0).abs() > 0.1 || probs.any((p) => p < 0 || p > 1)) {
-        probs = _softmax(probs);
-        debugPrint('📊 Applied softmax to logits');
-      }
-      
-      debugPrint('✅ DirectionModel TFLite: probs=${probs.map((p) => (p*100).toStringAsFixed(0)).join(",")}');
+      // Convert scalar to probabilities
+      final probs = _scalarToProbs(scalar);
+      print('   Mapped to: Buy=${(probs[0]*100).toStringAsFixed(1)}% Hold=${(probs[1]*100).toStringAsFixed(1)}% Sell=${(probs[2]*100).toStringAsFixed(1)}%');
       
       return probs;
-    } catch (e, st) {
-      debugPrint('⚠️ DirectionModel TFLite failed: $e');
-      if (kDebugMode) debugPrint('Stack: $st');
-      return _fallback(window);
+    } catch (e) {
+      print('⚠️  DirectionModel inference error: $e');
+      return _fallback(candles);
     }
   }
 
-  /// Rule-based fallback usando indicatori
-  List<double> _fallback(List<Candle> window) {
-    final closes = window.map((c) => c.close).toList();
+  /// Convert scalar [0, 1] to [buy, hold, sell] probabilities
+  /// 
+  /// Interpretation:
+  /// - 0.0 - 0.35: Strong SELL
+  /// - 0.35 - 0.45: Weak SELL / HOLD
+  /// - 0.45 - 0.55: HOLD (neutral zone)
+  /// - 0.55 - 0.65: Weak BUY / HOLD
+  /// - 0.65 - 1.0: Strong BUY
+  List<double> _scalarToProbs(double scalar) {
+    // Clamp to valid range
+    scalar = scalar.clamp(0.0, 1.0);
     
-    // Calculate indicators
-    final rsi14 = rsi(closes, period: 14);
-    final ema12 = ema(closes, 12);
-    final ema26 = ema(closes, 26);
-    final macdData = macdValues(closes);
-    final volume = relativeVolume(window, period: 20);
+    double buy, hold, sell;
     
-    double pBuy = 0.33;
-    double pHold = 0.34;
-    double pSell = 0.33;
-    
-    // Rule 1: EMA Cross + RSI
-    if (ema12 > ema26 && rsi14 < 70 && rsi14 > 50) {
-      // Bullish: fast > slow, not overbought
-      pBuy = 0.55;
-      pHold = 0.30;
-      pSell = 0.15;
-    } else if (ema12 < ema26 && rsi14 > 30 && rsi14 < 50) {
-      // Bearish: fast < slow, not oversold
-      pSell = 0.55;
-      pHold = 0.30;
-      pBuy = 0.15;
+    if (scalar < 0.35) {
+      // Strong SELL zone
+      final sellStrength = (0.35 - scalar) / 0.35; // [0, 1]
+      sell = 0.35 + sellStrength * 0.55; // [0.35, 0.90]
+      hold = 0.25 - sellStrength * 0.15; // [0.10, 0.25]
+      buy = 1.0 - sell - hold;
+    } else if (scalar < 0.45) {
+      // Weak SELL to HOLD transition
+      final position = (scalar - 0.35) / 0.1; // [0, 1]
+      sell = 0.35 - position * 0.15; // [0.35, 0.20]
+      hold = 0.25 + position * 0.25; // [0.25, 0.50]
+      buy = 1.0 - sell - hold;
+    } else if (scalar < 0.55) {
+      // HOLD zone (centered around 0.5)
+      final centerDist = (scalar - 0.5).abs();
+      hold = 0.50 + (0.05 - centerDist) * 2; // Peak at 0.5
+      hold = hold.clamp(0.40, 0.60);
+      final remainder = 1.0 - hold;
+      
+      if (scalar < 0.5) {
+        sell = remainder * 0.6;
+        buy = remainder * 0.4;
+      } else {
+        buy = remainder * 0.6;
+        sell = remainder * 0.4;
+      }
+    } else if (scalar < 0.65) {
+      // Weak BUY to HOLD transition
+      final position = (scalar - 0.55) / 0.1; // [0, 1]
+      buy = 0.35 - position * 0.15; // Start building BUY
+      hold = 0.50 - position * 0.25; // [0.50, 0.25]
+      sell = 1.0 - buy - hold;
+      
+      // Flip: we want buy to increase
+      final temp = buy;
+      buy = sell;
+      sell = temp;
+    } else {
+      // Strong BUY zone
+      final buyStrength = (scalar - 0.65) / 0.35; // [0, 1]
+      buy = 0.35 + buyStrength * 0.55; // [0.35, 0.90]
+      hold = 0.25 - buyStrength * 0.15; // [0.25, 0.10]
+      sell = 1.0 - buy - hold;
     }
     
-    // Rule 2: Strong RSI signals
-    if (rsi14 < 30 && volume > 1.2) {
-      // Oversold with high volume → likely bounce
-      pBuy = max(pBuy, 0.60);
-      pSell = min(pSell, 0.15);
-    } else if (rsi14 > 70 && volume > 1.2) {
-      // Overbought with high volume → likely correction
-      pSell = max(pSell, 0.60);
-      pBuy = min(pBuy, 0.15);
-    }
-    
-    // Rule 3: MACD confirmation
-    if (macdData.macd > 0 && macdData.histogram > 0) {
-      // Bullish MACD
-      pBuy *= 1.15;
-    } else if (macdData.macd < 0 && macdData.histogram < 0) {
-      // Bearish MACD
-      pSell *= 1.15;
-    }
-    
-    // Normalize to sum = 1
-    final sum = pBuy + pHold + pSell;
-    return [pBuy / sum, pHold / sum, pSell / sum];
+    // Normalize to ensure sum = 1.0
+    final sum = buy + hold + sell;
+    return [buy / sum, hold / sum, sell / sum];
   }
 
-  /// Softmax function (convert logits → probabilities)
-  List<double> _softmax(List<double> logits) {
-    final maxLogit = logits.reduce((a, b) => a > b ? a : b);
-    final exps = logits.map((v) => exp(v - maxLogit)).toList();
-    final sumExp = exps.fold(0.0, (a, b) => a + b);
-    return exps.map((e) => e / sumExp).toList();
+  List<List<List<double>>> _reshapeFlat(List<double> flat, List<int> shape) {
+    final result = <List<List<double>>>[];
+    int idx = 0;
+
+    for (int b = 0; b < shape[0]; b++) {
+      final batch = <List<double>>[];
+      for (int t = 0; t < shape[1]; t++) {
+        final timestep = <double>[];
+        for (int f = 0; f < shape[2]; f++) {
+          timestep.add(flat[idx++]);
+        }
+        batch.add(timestep);
+      }
+      result.add(batch);
+    }
+
+    return result;
   }
 
-  /// Dispose interpreter
+  /// Fallback using technical indicators
+  List<double> _fallback(List<Candle> candles) {
+    if (candles.length < 26) {
+      return [0.30, 0.40, 0.30]; // Neutral with slight HOLD bias
+    }
+
+    final recent = candles.sublist(candles.length - 26);
+    final closes = recent.map((c) => c.close).toList();
+
+    // EMA crossover
+    final ema12 = _ema(closes, 12);
+    final ema26 = _ema(closes, 26);
+    final emaDiff = (ema12 - ema26) / ema26;
+
+    // RSI
+    final rsi = _rsi(recent, 14);
+
+    // Volume
+    final avgVol = recent.map((c) => c.volume).reduce((a, b) => a + b) / recent.length;
+    final recentVol = recent.sublist(recent.length - 3).map((c) => c.volume).reduce((a, b) => a + b) / 3;
+    final volumeRatio = recentVol / avgVol;
+
+    // Price momentum
+    final priceChange = (closes.last - closes.first) / closes.first;
+
+    // Bullish signals
+    if (emaDiff > 0.002 && rsi > 50 && rsi < 75 && volumeRatio > 0.9) {
+      final strength = ((rsi - 50) / 25).clamp(0.0, 1.0);
+      final volBoost = ((volumeRatio - 0.9) / 1.0).clamp(0.0, 0.2);
+      
+      final buy = 0.40 + strength * 0.30 + volBoost;
+      final hold = 0.35 - strength * 0.15;
+      final sell = 1.0 - buy - hold;
+      
+      return [buy, hold, sell];
+    }
+
+    // Bearish signals
+    if (emaDiff < -0.002 && rsi > 25 && rsi < 50 && volumeRatio > 0.9) {
+      final strength = ((50 - rsi) / 25).clamp(0.0, 1.0);
+      final volBoost = ((volumeRatio - 0.9) / 1.0).clamp(0.0, 0.2);
+      
+      final sell = 0.40 + strength * 0.30 + volBoost;
+      final hold = 0.35 - strength * 0.15;
+      final buy = 1.0 - sell - hold;
+      
+      return [buy, hold, sell];
+    }
+
+    // Strong momentum override
+    if (priceChange.abs() > 0.03) {
+      if (priceChange > 0 && rsi < 70) {
+        return [0.55, 0.30, 0.15];
+      } else if (priceChange < 0 && rsi > 30) {
+        return [0.15, 0.30, 0.55];
+      }
+    }
+
+    // Neutral/HOLD (slightly favor based on RSI)
+    if (rsi > 55) {
+      return [0.35, 0.40, 0.25];
+    } else if (rsi < 45) {
+      return [0.25, 0.40, 0.35];
+    }
+    
+    return [0.30, 0.40, 0.30];
+  }
+
+  double _ema(List<double> prices, int period) {
+    if (prices.isEmpty) return 0.0;
+    if (prices.length < period) return prices.last;
+
+    final alpha = 2.0 / (period + 1);
+    double ema = prices[0];
+
+    for (int i = 1; i < prices.length; i++) {
+      ema = prices[i] * alpha + ema * (1 - alpha);
+    }
+
+    return ema;
+  }
+
+  double _rsi(List<Candle> candles, int period) {
+    if (candles.length < period + 1) return 50.0;
+
+    double gains = 0;
+    double losses = 0;
+
+    for (int i = candles.length - period; i < candles.length; i++) {
+      if (i == 0) continue;
+      final change = candles[i].close - candles[i - 1].close;
+      if (change > 0) {
+        gains += change;
+      } else {
+        losses += -change;
+      }
+    }
+
+    if (losses == 0) return 100.0;
+
+    final avgGain = gains / period;
+    final avgLoss = losses / period;
+    final rs = avgGain / avgLoss;
+
+    return 100 - (100 / (1 + rs));
+  }
+
   void dispose() {
-    _it?.close();
-    _it = null;
+    _interpreter?.close();
+    _interpreter = null;
+    _initialized = false;
   }
 }
 

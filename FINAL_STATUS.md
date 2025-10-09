@@ -270,3 +270,4 @@ flutter test test/ai/indicators_test.dart
 
 **Run `./fix_ios_build.sh` pentru a rezolva iOS! 🔧**
 
+

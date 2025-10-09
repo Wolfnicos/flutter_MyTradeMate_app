@@ -133,9 +133,9 @@ class StrategySettings {
   final int seed;            // global seed
 
   const StrategySettings({
-    this.upThresh = 0.003,
-    this.downThresh = -0.003,
-    this.confThresh = 0.6,
+    this.upThresh = 0.01,
+    this.downThresh = -0.01,
+    this.confThresh = 0.40,
     this.volCap = 0.85,
     this.fee = 0.001,
     this.slippage = 0.0005,

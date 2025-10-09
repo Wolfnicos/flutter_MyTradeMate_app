@@ -187,3 +187,4 @@ Indicators calculateIndicators(List<Candle> candles) {
   );
 }
 
+

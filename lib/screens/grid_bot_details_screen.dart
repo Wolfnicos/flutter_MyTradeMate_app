@@ -543,3 +543,4 @@ class _BollingerIndicator extends StatelessWidget {
 }
 
 
+
