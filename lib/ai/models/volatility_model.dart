@@ -2,6 +2,7 @@ import 'package:tflite_flutter/tflite_flutter.dart' as tfl;
 import 'package:flutter/foundation.dart';
 import 'dart:math';
 import '../entities.dart';
+import '../ai_config.dart';
 import '../indicators.dart';
 import 'model_utils.dart';
 
@@ -10,6 +11,9 @@ import 'model_utils.dart';
 class VolatilityModel {
   tfl.Interpreter? _it;
   bool _tried = false;
+  double? _lastAnnVol; // last stable annualized volatility
+  int _fallbackWarns = 0; // rate-limit warning logs
+  int _zeroHits = 0; // consecutive zero raw hits
 
   Future<void> _init() async {
     if (_tried) return;
@@ -30,7 +34,7 @@ class VolatilityModel {
   Future<double> predictVolatility(List<Candle> window) async {
     await _init();
     
-    if (_it != null) {
+    if (_it != null && AiConfig.useVolModel) {
       return _predictWithTFLite(window);
     } else {
       return _fallback(window);
@@ -52,10 +56,10 @@ class VolatilityModel {
       final outShape = outTensor.shape;
       final output = ModelUtils.emptyOutput(outShape);
       
-      // ignore: avoid_print
-      print('🔍 Input shape: $inShape');
-      // ignore: avoid_print
-      print('🔍 Input sample: ${input[0][0]}');
+      if (AiConfig.kDebugMode) {
+        debugPrint('🔍 Input shape: $inShape');
+        debugPrint('🔍 Input sample: ${input[0][0]}');
+      }
 
       _it!.run(input, output);
 
@@ -72,15 +76,28 @@ class VolatilityModel {
           predictedVol = scale * (predictedVol - zero);
         }
       } catch (_) {}
-      // Raw read for debugging
-      // ignore: avoid_print
-      print('VOL:raw=$predictedVol');
-      
-      // Handle invalid or non-positive vols (fallback to EWMA)
-      if (!predictedVol.isFinite || predictedVol <= 0.0) {
-        debugPrint('⚠️ VolatilityModel returned $predictedVol, using EWMA fallback');
-        return _fallback(window);
+      if (AiConfig.kDebugMode) {
+        debugPrint('VOL:raw=$predictedVol');
       }
+      
+      // If model outputs 0 or junk often, blend with EWMA for stability
+      double ewma = _fallback(window);
+      if (!predictedVol.isFinite || predictedVol <= 0.0) {
+        if (_fallbackWarns < 3 && AiConfig.kDebugMode) {
+          _fallbackWarns++;
+          debugPrint('⚠️ VolatilityModel returned $predictedVol, using EWMA fallback');
+        }
+        _zeroHits++;
+        if (_zeroHits >= AiConfig.volZeroDisableHits) {
+          // Disable TFLite path temporarily until restart
+          _it?.close();
+          _it = null;
+          if (AiConfig.kDebugMode) debugPrint('🛑 Disabled TFLite vol after repeated zeros');
+        }
+        _lastAnnVol = ewma;
+        return ewma;
+      }
+      _zeroHits = 0;
       
       // Decode based on training format
       // Dacă e în range 0-1, e fracție → convert la anual
@@ -88,16 +105,21 @@ class VolatilityModel {
         // Likely daily vol → annualize
         predictedVol = predictedVol * sqrt(365);
       }
-      // ignore: avoid_print
-      print('VOL:ann=$predictedVol');
+      if (AiConfig.kDebugMode) {
+        debugPrint('VOL:ann=$predictedVol');
+        debugPrint('✅ VolatilityModel TFLite: vol=${(predictedVol*100).toStringAsFixed(1)}%');
+      }
       
-      debugPrint('✅ VolatilityModel TFLite: vol=${(predictedVol*100).toStringAsFixed(1)}%');
+      // Blend model with EWMA (70% model, 30% ewma) and previous value for stability
+      double blended = 0.7 * predictedVol + 0.3 * ewma;
+      if (_lastAnnVol != null) {
+        blended = 0.5 * blended + 0.5 * _lastAnnVol!;
+      }
       
       // Clamp la valori realiste (1% - 300% anualizat)
-      final clamped = predictedVol.clamp(0.01, 3.0);
-      
-      // Final safety: dacă e încă 0, use EWMA
-      return clamped > 0.0 ? clamped : max(0.01, _fallback(window));
+      final clamped = blended.clamp(0.01, 3.0);
+      _lastAnnVol = clamped;
+      return clamped;
     } catch (e) {
       debugPrint('⚠️ VolatilityModel TFLite failed: $e');
       return _fallback(window);
@@ -129,7 +151,9 @@ class VolatilityModel {
     }
     
     // Clamp la valori realiste
-    return vol.clamp(0.01, 3.0);
+    final clamped = vol.clamp(0.01, 3.0);
+    _lastAnnVol = clamped;
+    return clamped;
   }
 
   void dispose() {

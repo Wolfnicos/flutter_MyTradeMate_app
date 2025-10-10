@@ -21,13 +21,15 @@ class ModelUtils {
     
     final features = <List<double>>[];
     
+    final useExtended = numFeatures >= 25;
     for (int i = 0; i < windowSize; i++) {
-      final timestepFeatures = _extractTimestepFeatures(window, i);
-      
+      var timestepFeatures = useExtended
+          ? _extractTimestepFeaturesExtended(window, i)
+          : _extractTimestepFeatures(window, i);
+
+      // Be tolerant to model-declared feature size; pad/trim to fit
       if (timestepFeatures.length != numFeatures) {
-        throw StateError(
-          'Expected $numFeatures features, got ${timestepFeatures.length} at timestep $i',
-        );
+        timestepFeatures = _coerceFeaturesLength(timestepFeatures, numFeatures);
       }
       
       features.add(timestepFeatures);
@@ -36,10 +38,28 @@ class ModelUtils {
     return features;
   }
 
+  /// Ensure features list matches the expected length by padding with zeros
+  /// or trimming extra values.
+  static List<double> _coerceFeaturesLength(List<double> feats, int targetLen) {
+    if (feats.length == targetLen) return feats;
+    if (feats.length < targetLen) {
+      return [...feats, ...List.filled(targetLen - feats.length, 0.0)];
+    }
+    return feats.sublist(0, targetLen);
+  }
+
   /// Normalize 2D features using training statistics
   static List<double> normalize2D(List<List<double>> features) {
-    // Delegate to NormalizationStats which handles the entire 2D array
-    return NormalizationStats.normalize2D(features);
+    // Coerce each timestep to the expected stats feature length before normalizing
+    final expectedLen = NormalizationStats.means.length;
+    final adjusted = <List<double>>[];
+    for (var t in features) {
+      if (t.length != expectedLen) {
+        t = _coerceFeaturesLength(t, expectedLen);
+      }
+      adjusted.add(t);
+    }
+    return NormalizationStats.normalize2D(adjusted);
   }
 
   /// Extract features for a single timestep
@@ -102,6 +122,60 @@ class ModelUtils {
     return features;
   }
 
+  /// Extended features set (adds 10 extra signals on top of the base 15)
+  /// Total = 25 features
+  static List<double> _extractTimestepFeaturesExtended(
+    List<Candle> window,
+    int idx,
+  ) {
+    final base = _extractTimestepFeatures(window, idx);
+ 
+    // Helper arrays for ranged computations
+    final highsAll = window.map((c) => c.high).toList();
+    final lowsAll = window.map((c) => c.low).toList();
+    final closesAll = window.map((c) => c.close).toList();
+ 
+    // 1) Bollinger Bands (period 20): upper, lower, %B
+    final bb = _bollinger(closesAll, idx, period: 20, mult: 2.0);
+    base.addAll([bb.upperRatio, bb.lowerRatio, bb.percentB]);
+
+    // 2) Stochastic Oscillator %K, %D (period 14, D=3 SMA)
+    final sto = _stochastic(highsAll, lowsAll, closesAll, idx, kPeriod: 14, dPeriod: 3);
+    base.addAll([sto.k, sto.d]);
+
+    // 3) Williams %R (period 14) scaled to [-1, 0]
+    final wr = _williamsR(highsAll, lowsAll, closesAll, idx, period: 14);
+    base.add(wr);
+
+    // 4) ADX 14 (approximate DI+/DI- and smooth)
+    final adx = _adx(window, idx, period: 14);
+    base.add(adx);
+
+    // 5) Ichimoku: tenkan/kijun ratio, spanA-spanB distance/close, cloud position sign
+    final ichi = _ichimoku(window, idx);
+    base.addAll([ichi.tenkanKijun, ichi.spanDist, ichi.cloudPos]);
+
+    // 6) Volume Profile proxy over last 20: vwap/close, vahDist, valDist
+    final vp = _volumeProfileProxy(window, idx, lookback: 20);
+    base.addAll([vp.vwapRatio, vp.vahDist, vp.valDist]);
+
+    // 7) Order flow proxy: body/trueRange * volume normalized [-1..1]
+    final of = _orderFlowProxy(window, idx, lookback: 20);
+    base.add(of);
+
+    // 8) Multi-timeframe returns: 1h (12×5m), 4h (48×5m)
+    base.add(_multiTfReturn(closesAll, idx, periods: 12));
+    base.add(_multiTfReturn(closesAll, idx, periods: 48));
+
+    // 9) Market regime (trend=1 / range=0) based pe ADX > 25
+    base.add(adx > 25 ? 1.0 : 0.0);
+
+    // 10) BTC dominance correlation placeholder (not available) => 0.0
+    base.add(0.0);
+
+    return base;
+  }
+
   /// Calculate return over N periods
   static double _getReturn(List<Candle> window, int idx, int periods) {
     if (idx < periods) {
@@ -144,7 +218,7 @@ class ModelUtils {
       final change = data[i].close - data[i - 1].close;
       if (change > 0) {
         gains += change;
-      } else {
+        } else {
         losses += -change;
       }
     }
@@ -232,29 +306,243 @@ class ModelUtils {
     return sqrt(variance);
   }
 
+  // ---------------- Extended indicators helpers -----------------
+  static ({double upperRatio, double lowerRatio, double percentB}) _bollinger(
+    List<double> closes,
+    int idx, {
+    int period = 20,
+    double mult = 2.0,
+  }) {
+    final end = idx + 1;
+    final start = (end - period) < 0 ? 0 : (end - period);
+    final slice = closes.sublist(start, end);
+    final m = _mean(slice);
+    final s = _std(slice);
+    final upper = m + mult * s;
+    final lower = m - mult * s;
+    final close = closes[idx];
+    final denom = (upper - lower).abs() < 1e-12 ? 1e-12 : (upper - lower);
+    final pB = (close - lower) / denom;
+    return (
+      upperRatio: close / (upper == 0 ? 1.0 : upper),
+      lowerRatio: close / (lower == 0 ? 1.0 : lower),
+      percentB: pB.clamp(-3.0, 3.0),
+    );
+  }
+
+  static ({double k, double d}) _stochastic(
+    List<double> highs,
+    List<double> lows,
+    List<double> closes,
+    int idx, {
+    int kPeriod = 14,
+    int dPeriod = 3,
+  }) {
+    final end = idx + 1;
+    final start = (end - kPeriod) < 0 ? 0 : (end - kPeriod);
+    final h = highs.sublist(start, end).reduce((a, b) => a > b ? a : b);
+    final l = lows.sublist(start, end).reduce((a, b) => a < b ? a : b);
+    final c = closes[idx];
+    final denom = (h - l).abs() < 1e-12 ? 1e-12 : (h - l);
+    final k = ((c - l) / denom) * 100.0;
+    // D as SMA of last dPeriod of K
+    final ks = <double>[];
+    for (int j = 0; j < dPeriod; j++) {
+      final ii = idx - j;
+      if (ii < 0) break;
+      final ee = ii + 1;
+      final ss = (ee - kPeriod) < 0 ? 0 : (ee - kPeriod);
+      final hh = highs.sublist(ss, ee).reduce((a, b) => a > b ? a : b);
+      final ll = lows.sublist(ss, ee).reduce((a, b) => a < b ? a : b);
+      final cc = closes[ii];
+      final den = (hh - ll).abs() < 1e-12 ? 1e-12 : (hh - ll);
+      ks.add(((cc - ll) / den) * 100.0);
+    }
+    final d = ks.isEmpty ? k : _mean(ks);
+    return (k: k.clamp(0.0, 100.0), d: d.clamp(0.0, 100.0));
+  }
+
+  static double _williamsR(
+    List<double> highs,
+    List<double> lows,
+    List<double> closes,
+    int idx, {
+    int period = 14,
+  }) {
+    final end = idx + 1;
+    final start = (end - period) < 0 ? 0 : (end - period);
+    final h = highs.sublist(start, end).reduce((a, b) => a > b ? a : b);
+    final l = lows.sublist(start, end).reduce((a, b) => a < b ? a : b);
+    final c = closes[idx];
+    final denom = (h - l).abs() < 1e-12 ? 1e-12 : (h - l);
+    final wr = -100.0 * (h - c) / denom; // [-100..0]
+    return (wr / 100.0).clamp(-1.0, 0.0); // scale to [-1..0]
+  }
+
+  static double _adx(List<Candle> data, int idx, {int period = 14}) {
+    // Simplified ADX over up to [idx-period*2 .. idx]
+    if (idx < 2) return 0.0;
+    final end = idx + 1;
+    final start = (end - (period + 1)) < 1 ? 1 : (end - (period + 1));
+    double trSum = 0.0, plusDmSum = 0.0, minusDmSum = 0.0;
+    for (int i = start; i < end; i++) {
+      final high = data[i].high;
+      final low = data[i].low;
+      final prevClose = data[i - 1].close;
+      final prevHigh = data[i - 1].high;
+      final prevLow = data[i - 1].low;
+      final tr = [
+        high - low,
+        (high - prevClose).abs(),
+        (low - prevClose).abs(),
+      ].reduce((a, b) => a > b ? a : b);
+      final upMove = high - prevHigh;
+      final downMove = prevLow - low;
+      final plusDm = (upMove > downMove && upMove > 0) ? upMove : 0.0;
+      final minusDm = (downMove > upMove && downMove > 0) ? downMove : 0.0;
+      trSum += tr;
+      plusDmSum += plusDm;
+      minusDmSum += minusDm;
+    }
+    if (trSum == 0) return 0.0;
+    final plusDi = 100.0 * (plusDmSum / trSum);
+    final minusDi = 100.0 * (minusDmSum / trSum);
+    final den = (plusDi + minusDi).abs() < 1e-12 ? 1e-12 : (plusDi + minusDi);
+    final dx = 100.0 * ((plusDi - minusDi).abs() / den);
+    return dx; // treat as ADX proxy at current step
+  }
+
+  static ({double tenkanKijun, double spanDist, double cloudPos}) _ichimoku(
+    List<Candle> data,
+    int idx,
+  ) {
+    double _mid(int period) {
+      final end = idx + 1;
+      final start = (end - period) < 0 ? 0 : (end - period);
+      final highs = data.sublist(start, end).map((c) => c.high);
+      final lows = data.sublist(start, end).map((c) => c.low);
+      final h = highs.reduce((a, b) => a > b ? a : b);
+      final l = lows.reduce((a, b) => a < b ? a : b);
+      return (h + l) / 2.0;
+    }
+
+    final tenkan = _mid(9);
+    final kijun = _mid(26);
+    final spanA = (tenkan + kijun) / 2.0;
+    final spanB = _mid(52);
+    final close = data[idx].close;
+    final spanMax = spanA > spanB ? spanA : spanB;
+    final spanMin = spanA > spanB ? spanB : spanA;
+    final tenkanKijun = kijun == 0 ? 1.0 : (tenkan / kijun);
+    final spanDist = (spanMax - spanMin) / (close == 0 ? 1.0 : close);
+    final cloudPos = close >= spanMax ? 1.0 : (close <= spanMin ? -1.0 : 0.0);
+    return (tenkanKijun: tenkanKijun, spanDist: spanDist, cloudPos: cloudPos);
+  }
+
+  static ({double vwapRatio, double vahDist, double valDist}) _volumeProfileProxy(
+    List<Candle> data,
+    int idx, {
+    int lookback = 20,
+  }) {
+    final end = idx + 1;
+    final start = (end - lookback) < 0 ? 0 : (end - lookback);
+    double volSum = 0.0, pvSum = 0.0;
+    final prices = <double>[];
+    for (int i = start; i < end; i++) {
+      final c = data[i];
+      volSum += c.volume;
+      pvSum += c.close * c.volume;
+      prices.add(c.close);
+    }
+    final vwap = volSum == 0 ? data[idx].close : pvSum / volSum;
+    final mean = _mean(prices);
+    final sd = _std(prices);
+    final vah = mean + sd; // proxy
+    final val = mean - sd; // proxy
+    final close = data[idx].close;
+    final vwapRatio = close / (vwap == 0 ? 1.0 : vwap);
+    final vahDist = (close - vah) / (close == 0 ? 1.0 : close);
+    final valDist = (close - val) / (close == 0 ? 1.0 : close);
+    return (vwapRatio: vwapRatio, vahDist: vahDist, valDist: valDist);
+  }
+
+  static double _orderFlowProxy(
+    List<Candle> data,
+    int idx, {
+    int lookback = 20,
+  }) {
+    final c = data[idx];
+    final tr = (c.high - c.low).abs() < 1e-12 ? 1e-12 : (c.high - c.low);
+    final body = (c.close - c.open) / tr; // [-inf..inf] but bounded by clamp below
+    final avgVol = data
+            .sublist((idx + 1 - lookback) < 0 ? 0 : (idx + 1 - lookback), idx + 1)
+            .map((e) => e.volume)
+            .fold<double>(0.0, (a, b) => a + b) /
+        (lookback < 1 ? 1 : (idx + 1 < lookback ? (idx + 1) : lookback));
+    final relVol = avgVol == 0 ? 0.0 : (c.volume / avgVol);
+    return (body * relVol).clamp(-3.0, 3.0);
+  }
+
+  static double _multiTfReturn(List<double> closes, int idx, {required int periods}) {
+    if (idx < periods) return 0.0;
+    final past = closes[idx - periods];
+    final cur = closes[idx];
+    if (past == 0) return 0.0;
+    return (cur - past) / past;
+  }
+
   // ========================================================================
   // BACKWARDS COMPATIBILITY for ReturnModel and VolatilityModel
   // ========================================================================
 
-  /// Build input tensor with explicit shape (legacy method)
+  /// Build input tensor matching the model-declared shape, handling swapped axes.
   static dynamic buildInputTensor(List<Candle> window, List<int> inShape) {
-    // Extract features using new method
-    final windowSize = inShape[1]; // [1, 64, 15]
-    final numFeatures = inShape[2];
-    
-    final feats = featuresFromCandles(window, windowSize, numFeatures);
-    final flat = normalize2D(feats);
-    
-    // Reshape according to inShape
-    if (inShape.length == 3) {
-      // [1, timesteps, features]
-      return _reshapeTo3D(flat, inShape);
-    } else if (inShape.length == 4) {
-      // [1, timesteps, features, channels]
-      return _reshapeTo4D(flat, inShape);
+    if (inShape.length < 3) {
+      throw ArgumentError('Unsupported input shape: $inShape');
     }
-    
-    throw ArgumentError('Unsupported input shape: $inShape');
+
+    // Model may declare either [1, 64, 15] (time, features) or [1, 15, 64] (features, time)
+    final dimA = inShape[1];
+    final dimB = inShape[2];
+
+    // Determine intended time/feature dims (we expect 64x15)
+    final timeDim = (dimA == 64 || dimB == 64) ? 64 : dimA; // fallback to dimA if unknown
+    final featDim = (dimA == 15 || dimB == 15) ? 15 : dimB; // fallback to dimB if unknown
+
+    // Extract canonical [timeDim, featDim] features and normalize to stats length
+    final featsTF = featuresFromCandles(window, timeDim, featDim);
+    final flatCanonical = normalize2D(featsTF); // produces timeDim * 15 flat
+
+    if (inShape.length == 3) {
+      // If shape matches [1, time, feat], reshape directly
+      if (dimA == timeDim && dimB == featDim) {
+        return _reshapeTo3D(flatCanonical, [1, timeDim, featDim]);
+      }
+      // If shape is [1, feat, time], first reshape [1,time,feat] then transpose to [1,feat,time]
+      if (dimA == featDim && dimB == timeDim) {
+        final asTimeFeat = _reshapeTo3D(flatCanonical, [1, timeDim, featDim]);
+        return _transposeTimeFeat3D(asTimeFeat); // [1, feat, time]
+      }
+    } else if (inShape.length == 4) {
+      // Channels-last variant: either [1,time,feat,1] or [1,feat,time,1]
+      final channels = inShape[3];
+      if (channels != 1) {
+        // Only support single channel
+        throw ArgumentError('Unsupported channels in input shape: $inShape');
+      }
+      if (dimA == timeDim && dimB == featDim) {
+        final t3 = _reshapeTo3D(flatCanonical, [1, timeDim, featDim]);
+        return _expandChannels(t3, channels);
+      }
+      if (dimA == featDim && dimB == timeDim) {
+        final t3 = _reshapeTo3D(flatCanonical, [1, timeDim, featDim]);
+        final ft3 = _transposeTimeFeat3D(t3);
+        return _expandChannels(ft3, channels);
+      }
+    }
+
+    // Fallback: shape as declared (will pad zeros if needed)
+    return _reshapeTo3D(flatCanonical, [1, dimA, dimB]);
   }
 
   /// Create empty output tensor of given shape
@@ -341,6 +629,44 @@ class ModelUtils {
     }
 
     return result;
+  }
+
+  /// Transpose [1, time, feat] -> [1, feat, time]
+  static List<List<List<double>>> _transposeTimeFeat3D(
+    List<List<List<double>>> x,
+  ) {
+    // x[0] shape: [time][feat]
+    final time = x[0].length;
+    final feat = x[0][0].length;
+    final out = <List<List<double>>>[List.generate(feat, (_) => List.filled(time, 0.0))];
+    for (int t = 0; t < time; t++) {
+      for (int f = 0; f < feat; f++) {
+        out[0][f][t] = x[0][t][f];
+      }
+    }
+    return out;
+  }
+
+  /// Expand [1, A, B] -> [1, A, B, C] with identical channel copies (C=1 used)
+  static List<List<List<List<double>>>> _expandChannels(
+    List<List<List<double>>> x,
+    int channels,
+  ) {
+    final a = x[0].length;
+    final b = x[0][0].length;
+    final out = <List<List<List<double>>>>[];
+    final batch = <List<List<double>>>[];
+    for (int i = 0; i < a; i++) {
+      final row = <List<double>>[];
+      for (int j = 0; j < b; j++) {
+        final ch = List<double>.filled(channels, 0.0);
+        ch[0] = x[0][i][j];
+        row.add(ch);
+      }
+      batch.add(row);
+    }
+    out.add(batch);
+    return out;
   }
 }
 

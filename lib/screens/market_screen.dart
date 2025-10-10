@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mytrademate/services/price_stream_manager.dart';
+import 'market_details_screen.dart';
+import '../services/dio_binance_client.dart' as api;
+import '../widgets/premium_widgets.dart';
 
 class MarketScreen extends StatefulWidget {
   const MarketScreen({super.key});
@@ -33,24 +36,56 @@ class _MarketScreenState extends State<MarketScreen> {
 
   final Map<String, StreamSubscription<double>> _subs = {};
   final Map<String, double> _lastPrice = {};
+  final Map<String, String> _errors = {};
+  final Map<String, double> _chg = {};
   late final PriceStreamManager _pm;
 
   @override
   void initState() {
     super.initState();
     _pm = PriceStreamManager();
+    _prefetchTickers();
     for (final c in _coins) {
       if (!c.supportedOnTestnet) {
         continue; // don't try to connect if not supported
       }
       _pm.attach(c.symbol).then((stream) {
         if (!mounted) return;
-        _subs[c.symbol] = stream.listen((p) {
-          if (!mounted) return;
-          setState(() => _lastPrice[c.symbol] = p);
-        });
+        _subs[c.symbol] = stream.listen(
+          (p) {
+            if (!mounted) return;
+            setState(() {
+              _errors.remove(c.symbol);
+              _lastPrice[c.symbol] = p;
+            });
+          },
+          onError: (_) {
+            if (!mounted) return;
+            setState(() => _errors[c.symbol] = 'Live stream disabled');
+          },
+          onDone: () {
+            if (!mounted) return;
+            setState(() => _errors[c.symbol] = 'Live stream disabled');
+          },
+          cancelOnError: true,
+        );
       });
     }
+  }
+
+  Future<void> _prefetchTickers() async {
+    try {
+      final client = await api.DioBinanceClient.createFromPrefs();
+      for (final c in _coins) {
+        try {
+          final t = await client.ticker24h(c.symbol);
+          final raw = t['priceChangePercent'];
+          final v = raw is num ? raw.toDouble() : double.tryParse('$raw') ?? 0.0;
+          if (!mounted) continue;
+          setState(() => _chg[c.symbol] = v);
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   @override
@@ -70,54 +105,28 @@ class _MarketScreenState extends State<MarketScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Market'),
-      ),
+      appBar: AppBar(title: const Text('Markets'), backgroundColor: Colors.transparent),
       body: ListView.separated(
-        itemCount: _coins.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final c = _coins[index];
-          final price = _lastPrice[c.symbol];
-          final notOnTestnet = !c.supportedOnTestnet;
-          return ListTile(
-            leading: CircleAvatar(child: Text(c.label.substring(0, 1))),
-            title: Row(
-              children: [
-                Text(c.label,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(width: 8),
-                if (notOnTestnet)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 38),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orangeAccent),
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    child: const Text(
-                      'Not on testnet',
-                      style: TextStyle(fontSize: 11, color: Colors.orange),
-                    ),
-                  ),
-              ],
-            ),
-            subtitle: Text(notOnTestnet
-                ? 'Live stream disabled'
-                : (price == null
-                    ? 'Loading…'
-                    : 'Last: ${price.toStringAsFixed(2)}')),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: notOnTestnet
-                ? null
-                : () {
-                    // If you have a details page route, push it here. Safe no-op otherwise.
-                    // Navigator.of(context).pushNamed('/market/details', arguments: c.symbol);
-                  },
-          );
-        },
-      ),
+          padding: const EdgeInsets.all(16),
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemCount: _coins.length,
+          itemBuilder: (context, index) {
+            final c = _coins[index];
+            final price = _lastPrice[c.symbol] ?? 0.0;
+            final ch = _chg[c.symbol] ?? 0.0;
+            return AssetListTile(
+              symbol: '${c.label}/USDT',
+              name: c.symbol,
+              price: price,
+              changePercent: ch,
+              icon: Text(c.label.substring(0, 1), style: const TextStyle(color: kText)),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => MarketDetailsScreen(symbol: c.symbol)),
+                );
+              },
+            );
+          }),
     );
   }
 }

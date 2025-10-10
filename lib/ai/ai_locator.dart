@@ -13,6 +13,9 @@ import 'package:mytrademate/obs/prediction_trace.dart';
 import 'package:mytrademate/obs/log_sink.dart';
 import 'dart:io' show File; // for FileJsonlSink path
 import 'package:path_provider/path_provider.dart' as pp;
+import 'ensemble/ensemble_predictor.dart';
+import 'ensemble/model_weights.dart';
+import 'ensemble/performance_tracker.dart';
 
 /// AILocator - Singleton global pentru acces la SignalEngine
 /// Inițializează toate modelele ML și le face disponibile în toată aplicația
@@ -30,6 +33,7 @@ class AILocator {
   bool _initialized = false;
   bool _initInProgress = false;
   LogSink? _sink; // initialized lazily
+  EnsemblePredictor? _ensemble;
   
   /// Cache pentru predicții (evită apeluri duplicate)
   late final PredictionCache cache;
@@ -54,6 +58,7 @@ class AILocator {
 
   /// Check dacă e inițializat
   bool get isInitialized => _initialized;
+  EnsemblePredictor? get ensemble => _ensemble;
 
   /// Initialize ML pipeline (call în main() DUPĂ WidgetsFlutterBinding.ensureInitialized())
   Future<void> init({StrategySettings? settings}) async {
@@ -96,6 +101,15 @@ class AILocator {
           history: AiConfig.history,
           seed: AiConfig.seed,
         ),
+      );
+
+      // Create EnsemblePredictor (optional)
+      _ensemble = EnsemblePredictor(
+        dirModel: dirModel,
+        retModel: retModel,
+        volModel: volModel,
+        weights: ModelWeights(),
+        tracker: PerformanceTracker(),
       );
 
       // Create PredictionRepo (centralized access point!)

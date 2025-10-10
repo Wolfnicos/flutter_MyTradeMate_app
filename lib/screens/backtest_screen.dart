@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mytrademate/services/ohlcv_service.dart';
 import 'package:mytrademate/ai/ai_locator.dart';
-import 'package:mytrademate/ai/ai_config.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:mytrademate/backtesting/backtester.dart';
+import 'package:mytrademate/backtesting/backtest_result.dart' as bt;
 
 class BacktestScreen extends StatefulWidget {
   const BacktestScreen({super.key});
@@ -14,194 +16,246 @@ class BacktestScreen extends StatefulWidget {
 class _BacktestScreenState extends State<BacktestScreen> {
   final List<String> _symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'WLFIUSDT', 'TRUMPUSDT'];
   String _selectedSymbol = 'BTCUSDT';
-  String _selectedInterval = '1h';
+  String _selectedInterval = '5m';
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
   double _initialCapital = 10000.0;
   double _positionSize = 0.1; // 10% of capital per trade
+  bool _useEnsemble = true;
   
   bool _isRunning = false;
   BacktestResult? _result;
+  bt.BacktestResult? _rawResult;
   String? _error;
   OHLCVService? _ohlcv;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Backtesting & Simulation'),
-        backgroundColor: Colors.transparent,
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Backtesting & Simulation'),
+          backgroundColor: Colors.transparent,
+          bottom: const TabBar(tabs: [
+            Tab(text: 'Summary'),
+            Tab(text: 'Trades'),
+            Tab(text: 'Equity'),
+            Tab(text: 'Settings'),
+          ]),
+        ),
+        body: TabBarView(children: [
+          _buildSummaryTab(),
+          _buildTradesTab(),
+          _buildEquityTab(),
+          _buildSettingsTab(),
+        ]),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Configuration Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Configurare Backtest',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Symbol selector
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedSymbol,
-                      decoration: const InputDecoration(
-                        labelText: 'Symbol',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _symbols.map((s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(s),
-                      )).toList(),
-                      onChanged: (v) => setState(() => _selectedSymbol = v!),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Interval selector
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedInterval,
-                      decoration: const InputDecoration(
-                        labelText: 'Interval',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: ['5m', '15m', '1h', '4h', '1d']
-                          .map(
-                            (s) => DropdownMenuItem(
-                              value: s,
-                              child: Text(s),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _selectedInterval = v!),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Date range
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ListTile(
-                            title: const Text('Start'),
-                            subtitle: Text(DateFormat('yyyy-MM-dd').format(_startDate)),
-                            onTap: () async {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: _startDate,
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime.now(),
-                              );
-                              if (date != null) {
-                                setState(() => _startDate = date);
-                              }
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: ListTile(
-                            title: const Text('End'),
-                            subtitle: Text(DateFormat('yyyy-MM-dd').format(_endDate)),
-                            onTap: () async {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: _endDate,
-                                firstDate: _startDate,
-                                lastDate: DateTime.now(),
-                              );
-                              if (date != null) {
-                                setState(() => _endDate = date);
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Initial capital
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Initial Capital (USDT)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      controller: TextEditingController(
-                        text: _initialCapital.toString(),
-                      ),
-                      onChanged: (v) {
-                        final val = double.tryParse(v);
-                        if (val != null) _initialCapital = val;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Position size
-                    TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Position Size (fraction, e.g. 0.1 = 10%)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      controller: TextEditingController(
-                        text: _positionSize.toString(),
-                      ),
-                      onChanged: (v) {
-                        final val = double.tryParse(v);
-                        if (val != null) _positionSize = val.clamp(0.01, 1.0);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Run Button
-            ElevatedButton.icon(
-              onPressed: _isRunning ? null : _runBacktest,
-              icon: _isRunning 
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
+    );
+  }
+
+  Widget _buildSummaryTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_result != null) _buildResultsCard(),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _isRunning ? null : _runBacktest,
+            icon: _isRunning
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.play_arrow),
-              label: Text(_isRunning ? 'Running...' : 'Run Backtest'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
+            label: Text(_isRunning ? 'Running...' : 'Run Backtest'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              textStyle: const TextStyle(fontSize: 18),
             ),
-            
-            if (_error != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 25),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red),
-                ),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red),
               ),
-            ],
-            
-            if (_result != null) ...[
-              const SizedBox(height: 24),
-              _buildResultsCard(),
-            ],
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTradesTab() {
+    if (_rawResult == null || _rawResult!.trades.isEmpty) {
+      return const Center(child: Text('No trades yet. Run a backtest.'));
+    }
+    final trades = _rawResult!.trades;
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemBuilder: (_, i) {
+        final t = trades[i];
+        final pnlColor = t.pnl >= 0 ? Colors.green : Colors.red;
+        return ListTile(
+          dense: true,
+          title: Text('${t.action}  @ ${t.price.toStringAsFixed(2)}'),
+          subtitle: Text(DateFormat('yyyy-MM-dd HH:mm').format(t.time)),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(t.pnl.toStringAsFixed(2), style: TextStyle(color: pnlColor)),
+              Text('Fee ${t.fee.toStringAsFixed(4)}'),
+            ],
+          ),
+        );
+      },
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemCount: trades.length,
+    );
+  }
+
+  Widget _buildEquityTab() {
+    if (_rawResult == null || _rawResult!.equity.isEmpty) {
+      return const Center(child: Text('No equity curve yet. Run a backtest.'));
+    }
+    final eq = _rawResult!.equity;
+    final spots = <FlSpot>[];
+    for (int i = 0; i < eq.length; i++) {
+      spots.add(FlSpot(i.toDouble(), eq[i]));
+    }
+
+    final equityBar = LineChartBarData(
+      spots: spots,
+      isCurved: true,
+      color: Colors.tealAccent,
+      barWidth: 2.2,
+      dotData: const FlDotData(show: false),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: LineChart(
+        LineChartData(
+          gridData: const FlGridData(show: false),
+          titlesData: const FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [equityBar],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Configurare Backtest', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedSymbol,
+                decoration: const InputDecoration(labelText: 'Symbol', border: OutlineInputBorder()),
+                items: _symbols.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                onChanged: (v) => setState(() => _selectedSymbol = v!),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedInterval,
+                decoration: const InputDecoration(labelText: 'Interval', border: OutlineInputBorder()),
+                items: ['5m', '15m', '1h', '4h', '1d'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                onChanged: (v) => setState(() => _selectedInterval = v!),
+              ),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(
+                  child: ListTile(
+                    title: const Text('Start'),
+                    subtitle: Text(DateFormat('yyyy-MM-dd').format(_startDate)),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _startDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (date != null) setState(() => _startDate = date);
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: ListTile(
+                    title: const Text('End'),
+                    subtitle: Text(DateFormat('yyyy-MM-dd').format(_endDate)),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _endDate,
+                        firstDate: _startDate,
+                        lastDate: DateTime.now(),
+                      );
+                      if (date != null) setState(() => _endDate = date);
+                    },
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              SwitchListTile.adaptive(
+                title: const Text('Use Ensemble'),
+                value: _useEnsemble,
+                onChanged: (v) => setState(() => _useEnsemble = v),
+                contentPadding: EdgeInsets.zero,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Initial Capital (USDT)', border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                controller: TextEditingController(text: _initialCapital.toString()),
+                onChanged: (v) { final val = double.tryParse(v); if (val != null) _initialCapital = val; },
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Position Size (fraction, e.g. 0.1 = 10%)', border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                controller: TextEditingController(text: _positionSize.toString()),
+                onChanged: (v) { final val = double.tryParse(v); if (val != null) _positionSize = val.clamp(0.01, 1.0); },
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _isRunning ? null : _runBacktest,
+                icon: _isRunning
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.play_arrow),
+                label: Text(_isRunning ? 'Running...' : 'Run Backtest'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  textStyle: const TextStyle(fontSize: 18),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red),
+                  ),
+                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -277,143 +331,38 @@ class _BacktestScreenState extends State<BacktestScreen> {
     });
 
     try {
-      // Use centralized AI locator
-      final aiService = AILocator.I;
       _ohlcv ??= await OHLCVService.createFromPrefs();
       
-      // Fetch historical candles (normalized + mapped to Candle)
-      final candles = await _ohlcv!.fetchCandles(
-        _selectedSymbol,
-        interval: _selectedInterval,
-        limit: 1000,
+      final backtester = Backtester(
+        engine: AILocator.I.engine,
+        ohlcv: _ohlcv!,
       );
       
-      if (candles.isEmpty) {
-        throw Exception('No historical data available');
-      }
-      
-      // Run backtest simulation
-      double capital = _initialCapital;
-      double position = 0.0; // BTC/ETH/etc amount held
-      double entryPrice = 0.0;
-      int totalTrades = 0;
-      int winningTrades = 0;
-      int losingTrades = 0;
-      double totalWinAmount = 0.0;
-      double totalLossAmount = 0.0;
-      double totalFees = 0.0;
-      double maxCapital = _initialCapital;
-      double minCapital = _initialCapital;
-      final List<double> returns = [];
-      
-      // Window size from config (matches engine expectations)
-      const int kWindow = 64;
-      final double enterConf = AiConfig.confThresh * 100.0;
-      final double exitConf = AiConfig.confThresh * 100.0; // symmetric logic
-      
-      for (int i = kWindow; i < candles.length; i++) {
-        final closePrice = candles[i].close;
-        
-        // Build rolling window and get AI prediction for this timestep
-        try {
-          final window = candles.sublist(i - kWindow, i + 1);
-          final prediction = await aiService.engine.predict(_selectedSymbol, window);
-          if (prediction == null) continue;
-          final action = aiService.decide(prediction);
-          final confPercent = (prediction.confidence() * 100);
-          
-          // Trading logic
-          if (position == 0 && action == 'BUY' && confPercent >= enterConf) {
-            // Enter long position
-            final investAmount = capital * _positionSize;
-            final fee = investAmount * 0.001; // 0.1% fee
-            position = (investAmount - fee) / closePrice;
-            capital -= investAmount;
-            totalFees += fee;
-            entryPrice = closePrice;
-            totalTrades++;
-          } else if (position > 0 && (action == 'SELL' || confPercent < exitConf)) {
-            // Exit position
-            final sellAmount = position * closePrice;
-            final fee = sellAmount * 0.001;
-            capital += (sellAmount - fee);
-            totalFees += fee;
-            
-            final pnl = sellAmount - (position * entryPrice);
-            if (pnl > 0) {
-              winningTrades++;
-              totalWinAmount += pnl;
-            } else {
-              losingTrades++;
-              totalLossAmount += pnl.abs();
-            }
-            
-            position = 0.0;
-          }
-          
-          // Track drawdown
-          final currentCapital = capital + (position * closePrice);
-          if (currentCapital > maxCapital) maxCapital = currentCapital;
-          if (currentCapital < minCapital) minCapital = currentCapital;
-          
-          // Track returns
-          if (i > kWindow) {
-            final prevClose = candles[i - 1].close;
-            final ret = (closePrice - prevClose) / prevClose;
-            returns.add(ret);
-          }
-        } catch (e) {
-          // Skip this candle if prediction fails
-          continue;
-        }
-      }
-      
-      // Close any remaining position
-      if (position > 0) {
-        final lastPrice = candles.last.close;
-        final sellAmount = position * lastPrice;
-        final fee = sellAmount * 0.001;
-        capital += (sellAmount - fee);
-        totalFees += fee;
-        
-        final pnl = sellAmount - (position * entryPrice);
-        if (pnl > 0) {
-          winningTrades++;
-          totalWinAmount += pnl;
-        } else {
-          losingTrades++;
-          totalLossAmount += pnl.abs();
-        }
-      }
-      
-      final finalCapital = capital;
-      final totalPnl = finalCapital - _initialCapital;
-      final returnPercent = (totalPnl / _initialCapital) * 100;
-      final maxDrawdown = ((maxCapital - minCapital) / maxCapital) * 100;
-      
-      // Calculate Sharpe ratio (simplified)
-      double sharpeRatio = 0.0;
-      if (returns.isNotEmpty) {
-        final avgReturn = returns.reduce((a, b) => a + b) / returns.length;
-        final variance = returns.map((r) => (r - avgReturn) * (r - avgReturn)).reduce((a, b) => a + b) / returns.length;
-        final stdDev = variance > 0 ? variance : 0.01;
-        sharpeRatio = avgReturn / stdDev;
-      }
+      final result = await backtester.run(
+        symbol: _selectedSymbol,
+        interval: _selectedInterval,
+        initialCapital: _initialCapital,
+        window: 64,
+        horizon: 1,
+        positionSize: _positionSize,
+        ensemble: _useEnsemble ? AILocator.I.ensemble : null,
+      );
       
       setState(() {
+        _rawResult = result;
         _result = BacktestResult(
-          initialCapital: _initialCapital,
-          finalCapital: finalCapital,
-          totalPnl: totalPnl,
-          returnPercent: returnPercent,
-          totalTrades: totalTrades,
-          winningTrades: winningTrades,
-          losingTrades: losingTrades,
-          avgWin: winningTrades > 0 ? totalWinAmount / winningTrades : 0.0,
-          avgLoss: losingTrades > 0 ? totalLossAmount / losingTrades : 0.0,
-          maxDrawdown: maxDrawdown,
-          sharpeRatio: sharpeRatio,
-          totalFees: totalFees,
+          initialCapital: result.initialCapital,
+          finalCapital: result.finalCapital,
+          totalPnl: result.finalCapital - result.initialCapital,
+          returnPercent: result.totalReturn,
+          totalTrades: result.numTrades,
+          winningTrades: result.winningTrades,
+          losingTrades: result.losingTrades,
+          avgWin: result.avgWin,
+          avgLoss: result.avgLoss,
+          maxDrawdown: result.maxDrawdown,
+          sharpeRatio: result.sharpe,
+          totalFees: result.feesPaid,
         );
         _isRunning = false;
       });

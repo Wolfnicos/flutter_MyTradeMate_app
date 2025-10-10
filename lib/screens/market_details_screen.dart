@@ -43,6 +43,7 @@ class MarketDetailsScreen extends StatefulWidget {
 class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
   late Future<List<List<num>>> _klinesFuture;
   late Future<bool> _supportFuture;
+  Future<Map<String, dynamic>>? _tickerFuture;
   @visibleForTesting
   final chartLoadingKey = const Key('market.chart.loading');
   bool _reloading = false;
@@ -50,6 +51,11 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
   double? _lastPrice;
   late final PaperBroker _broker;
   UserError? _wsError;
+  String _interval = '1h'; // default timeframe
+  double? _crossX; // crosshair x position
+  List<List<num>>? _cachedKlines; // keep last chart during reloads
+  bool _showVol = false;
+  bool _showEma = false;
 
   @override
   void initState() {
@@ -112,12 +118,22 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
               () =>
                   List.generate(10, (i) => [0, 0, 0, 0, 10000 + i.toDouble()]));
           _supportFuture = Future.value(true);
+          _tickerFuture = Future.value(<String, dynamic>{});
         } else {
-          _klinesFuture = _fetchKlines(widget.symbol);
+          _klinesFuture = _fetchKlinesInterval(widget.symbol, _interval)
+              .then((d) {
+            _cachedKlines = d;
+            return d;
+          });
           _supportFuture = _isSymbolSupported(widget.symbol);
+          _tickerFuture = _fetchTicker24h(widget.symbol);
         }
       });
-      await Future.wait([_klinesFuture, _supportFuture]);
+      await Future.wait([
+        _klinesFuture,
+        _supportFuture,
+        if (_tickerFuture != null) _tickerFuture!,
+      ]);
     }
   }
 
@@ -164,11 +180,18 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
     final symbol = widget.symbol;
     // Format symbol consistently (e.g. "BTC/USDT" not "BTCUSDT")
     final displaySymbol = _formatSymbolForDisplay(symbol);
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(displaySymbol, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          displaySymbol,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: colors.onSurface,
+          ),
+        ),
         backgroundColor: Colors.transparent,
+        iconTheme: IconThemeData(color: colors.onSurface),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -181,7 +204,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (_reloading) const LinearProgressIndicator(),
+          // no explicit loading indicators to keep UI clean
           // Support banner
           FutureBuilder<bool>(
             future: _supportFuture,
@@ -213,7 +236,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Spot price (live)
+          // Spot price (live) + 24h stats
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -236,14 +259,61 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                               .start(widget.symbol);
                         },
                       )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(S.lastPrice, style: const TextStyle(fontSize: 14), key: AppKeys.marketPriceStreamStatus),
-                          Text(
-                            _lastPrice != null ? _lastPrice!.toStringAsFixed(2) : '—',
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w600),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(S.lastPrice,
+                                  style: const TextStyle(fontSize: 14),
+                                  key: AppKeys.marketPriceStreamStatus),
+                              Text(
+                                _lastPrice != null
+                                    ? _lastPrice!.toStringAsFixed(2)
+                                    : '—',
+                                style: const TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          FutureBuilder<Map<String, dynamic>>(
+                            future: _tickerFuture,
+                            builder: (context, snap) {
+                              if (!snap.hasData) return const SizedBox.shrink();
+                              final t = snap.data!;
+                              double parseD(v) =>
+                                  (v is num) ? v.toDouble() : double.tryParse('$v') ?? 0;
+                              final ch = parseD(t['priceChangePercent']);
+                              final high = parseD(t['highPrice']);
+                              final low = parseD(t['lowPrice']);
+                              final vol = parseD(t['volume']);
+                              final chColor = ch >= 0
+                                  ? Colors.greenAccent
+                                  : Colors.redAccent;
+                              TextStyle small([Color? c]) => TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: c);
+                              return Wrap(
+                                spacing: 16,
+                                runSpacing: 6,
+                                children: [
+                                  Row(children: [
+                                    const Text('24h', style: TextStyle(fontSize: 12)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${ch.toStringAsFixed(2)}%',
+                                      style: small(chColor),
+                                    ),
+                                  ]),
+                                  Text('High: ${high.toStringAsFixed(2)}', style: small()),
+                                  Text('Low: ${low.toStringAsFixed(2)}', style: small()),
+                                  Text('Vol: ${vol.toStringAsFixed(0)}', style: small()),
+                                ],
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -251,74 +321,71 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
             ),
           ),
 
+          const SizedBox(height: 10),
+          // Timeframe switcher
+          _TimeframeChips(
+            value: _interval,
+            onChanged: (v) {
+              if (v == _interval) return;
+              setState(() => _interval = v);
+              _loadData();
+            },
+          ),
+          const SizedBox(height: 8),
+
+          // Overlays toggles
+          Wrap(
+            spacing: 8,
+            children: [
+              FilterChip(
+                label: const Text('Volume'),
+                selected: _showVol,
+                onSelected: (s) => setState(() => _showVol = s),
+              ),
+              FilterChip(
+                label: const Text('EMA20/50'),
+                selected: _showEma,
+                onSelected: (s) => setState(() => _showEma = s),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
           // Chart card
           SizedBox(
-            height: 220,
+            height: 260,
             child: Card(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: FutureBuilder<List<List<num>>>(
                   future: _klinesFuture,
                   builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          key: ValueKey('market.chart.loading'),
-                          child: CircularProgressIndicator());
+                    // Keep last good chart; hide spinners completely
+                    List<List<num>>? data;
+                    if (snap.connectionState == ConnectionState.done && !snap.hasError) {
+                      data = snap.data;
+                    } else {
+                      data = _cachedKlines;
                     }
-                    if (snap.hasError) {
-                      return Center(
-                        child: Text(
-                          '${S.chartErrorPrefix}\n${snap.error}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      );
-                    }
-                    final data = snap.data;
                     if (data == null || data.isEmpty) {
-                      return Center(child: Text(S.chartNoData));
+                      return const SizedBox();
                     }
-                    final spots = <FlSpot>[];
-                    for (var i = 0; i < data.length; i++) {
-                      final v = data[i][4];
-                      final close = v.toDouble();
-                      spots.add(FlSpot(i.toDouble(), close));
-                    }
-                    double minY =
-                        spots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
-                    double maxY =
-                        spots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
-                    if (minY == maxY) {
-                      // avoid zero range
-                      final pad = minY.abs() * 0.01 + 1.0;
-                      minY -= pad;
-                      maxY += pad;
-                    }
-                    return LineChart(
-                      LineChartData(
-                        minY: minY,
-                        maxY: maxY,
-                        gridData: const FlGridData(show: false),
-                        titlesData: const FlTitlesData(show: false),
-                        borderData: FlBorderData(show: false),
-                        lineBarsData: [
-                          LineChartBarData(
-                            isCurved: true,
-                            color: Colors.cyanAccent,
-                            barWidth: 2,
-                            spots: spots,
-                            dotData: const FlDotData(show: false),
-                            belowBarData: BarAreaData(
-                              show: true,
-                              gradient: const LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Colors.cyanAccent, Colors.transparent],
-                                stops: [0.0, 1.0],
-                              ),
-                            ),
-                          ),
-                        ],
+                    final cs = Theme.of(context).colorScheme;
+                    return InteractiveViewer(
+                      minScale: 1,
+                      maxScale: 10,
+                      boundaryMargin: const EdgeInsets.all(80),
+                      child: CustomPaint(
+                        painter: CandlesPainter(
+                          data,
+                          up: cs.tertiary,
+                          down: cs.error,
+                          crossX: null, // crosshair disabled while zoom enabled
+                          theme: cs,
+                          showVolume: _showVol,
+                          showEma: _showEma,
+                        ),
+                        size: const Size(double.infinity, double.infinity),
                       ),
                     );
                   },
@@ -456,6 +523,181 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
   }
 }
 
+class _TimeframeChips extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+  const _TimeframeChips({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = const ['5m', '15m', '1h', '4h', '1d'];
+    final cs = Theme.of(context).colorScheme;
+    return Wrap(
+      spacing: 8,
+      children: [
+        for (final it in items)
+          ChoiceChip(
+            label: Text(it),
+            selected: value == it,
+            onSelected: (s) => onChanged(it),
+            selectedColor: cs.primary.withOpacity(0.2),
+            labelStyle: TextStyle(
+              color: value == it ? cs.primary : cs.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+            backgroundColor: cs.surfaceVariant.withOpacity(0.2),
+          ),
+      ],
+    );
+  }
+}
+
+class CandlesPainter extends CustomPainter {
+  final List<List<num>> klines; // [openTime, open, high, low, close, volume,...]
+  final Color up;
+  final Color down;
+  final double? crossX;
+  final ColorScheme theme;
+  final bool showVolume;
+  final bool showEma;
+  CandlesPainter(this.klines, {required this.up, required this.down, required this.crossX, required this.theme, this.showVolume = false, this.showEma = false});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (klines.isEmpty) return;
+    final n = klines.length;
+    final doubles = klines.map((e) => e.map((v) => v.toDouble()).toList()).toList();
+    final highs = doubles.map((e) => e[2]).toList();
+    final lows = doubles.map((e) => e[3]).toList();
+    final closes = doubles.map((e) => e[4]).toList();
+    final volumes = doubles.map((e) => (e.length > 5 ? e[5] : 0).toDouble()).toList();
+    double minY = lows.reduce((a, b) => a < b ? a : b);
+    double maxY = highs.reduce((a, b) => a > b ? a : b);
+    if (minY == maxY) {
+      final pad = minY.abs() * 0.01 + 1.0;
+      minY -= pad;
+      maxY += pad;
+    }
+    final range = maxY - minY;
+    double y(double v) => size.height - ((v - minY) / range) * size.height;
+
+    final candleW = size.width / n;
+    final wickPaint = Paint()
+      ..strokeWidth = candleW < 3 ? 0.8 : 1.1
+      ..isAntiAlias = true
+      ..strokeCap = StrokeCap.round;
+    // subtle grid like TradingView
+    final grid = Paint()
+      ..color = theme.surfaceVariant.withOpacity(0.08)
+      ..strokeWidth = 1;
+    for (int i = 1; i < 4; i++) {
+      final x = size.width * i / 4;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
+    }
+    for (int i = 1; i < 4; i++) {
+      final yy = size.height * i / 4;
+      canvas.drawLine(Offset(0, yy), Offset(size.width, yy), grid);
+    }
+    for (int i = 0; i < n; i++) {
+      final o = doubles[i][1];
+      final h = doubles[i][2];
+      final l = doubles[i][3];
+      final c = doubles[i][4];
+      final bullish = c >= o;
+      final color = bullish ? up : down;
+      wickPaint.color = color.withOpacity(0.95);
+      final cx = (i + 0.5) * candleW;
+      // wicks
+      canvas.drawLine(Offset(cx, y(l)), Offset(cx, y(h)), wickPaint);
+      // body
+      final half = (candleW * 0.45).clamp(0.9, 3.2);
+      final center = i * candleW + candleW * 0.5;
+      final bodyLeft = center - half;
+      final bodyRight = center + half;
+      double top = y(bullish ? c : o);
+      double bottom = y(bullish ? o : c);
+      // min body height for visibility on tiny TFs
+      if ((bottom - top).abs() < 1.2) {
+        final mid = (top + bottom) / 2;
+        top = mid - 0.6;
+        bottom = mid + 0.6;
+      }
+      final r = RRect.fromLTRBR(bodyLeft, top, bodyRight, bottom, const Radius.circular(2));
+      final bodyPaint = Paint()
+        ..color = color.withOpacity(0.9)
+        ..isAntiAlias = true;
+      canvas.drawRRect(r, bodyPaint);
+    }
+
+    // crosshair (vertical)
+    if (crossX != null) {
+      final p = Paint()
+        ..color = theme.primary.withOpacity(0.45)
+        ..strokeWidth = 1.0
+        ..strokeCap = StrokeCap.round;
+      final x = crossX!.clamp(0.0, size.width);
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), p);
+    }
+
+    // Volume bars at bottom (20% height)
+    if (showVolume) {
+      final volMax = volumes.isEmpty ? 0.0 : volumes.reduce((a, b) => a > b ? a : b);
+      final volH = size.height * 0.2;
+      final top = size.height - volH;
+      final p = Paint()..strokeWidth = (candleW * 0.5).clamp(1.0, 4.0);
+      for (int i = 0; i < n; i++) {
+        final bullish = doubles[i][4] >= doubles[i][1];
+        p.color = (bullish ? up : down).withOpacity(0.6);
+        final ratio = volMax == 0 ? 0 : volumes[i] / volMax;
+        final h = volH * ratio;
+        final x = (i + 0.5) * candleW;
+        canvas.drawLine(Offset(x, top + volH), Offset(x, top + volH - h), p);
+      }
+    }
+
+    // EMA overlays
+    if (showEma) {
+      List<double> ema(List<double> src, int period) {
+        final alpha = 2.0 / (period + 1);
+        double prev = src.first;
+        final out = <double>[];
+        for (final v in src) {
+          prev = alpha * v + (1 - alpha) * prev;
+          out.add(prev);
+        }
+        return out;
+      }
+      final ema20 = ema(closes, 20);
+      final ema50 = ema(closes, 50);
+      final p20 = Paint()..color = theme.tertiary.withOpacity(0.9)..strokeWidth = 1.5..isAntiAlias = true;
+      final p50 = Paint()..color = theme.secondary.withOpacity(0.9)..strokeWidth = 1.5..isAntiAlias = true;
+      double lx = 0, ly = 0;
+      for (int i = 0; i < n; i++) {
+        final x = (i + 0.5) * candleW;
+        final y20 = y(ema20[i]);
+        final y50 = y(ema50[i]);
+        if (i > 0) {
+          canvas.drawLine(Offset(lx, ly), Offset(x, y20), p20);
+        }
+        lx = x; ly = y20;
+      }
+      lx = 0; ly = 0;
+      for (int i = 0; i < n; i++) {
+        final x = (i + 0.5) * candleW;
+        final v = y(ema50[i]);
+        if (i > 0) {
+          canvas.drawLine(Offset(lx, ly), Offset(x, v), p50);
+        }
+        lx = x; ly = v;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CandlesPainter oldDelegate) {
+    return oldDelegate.klines != klines || oldDelegate.crossX != crossX;
+  }
+}
  
 
 Future<List<List<num>>> _fetchKlines(String symbol) async {
@@ -474,6 +716,23 @@ Future<List<List<num>>> _fetchKlines(String symbol) async {
   }
 }
 
+Future<List<List<num>>> _fetchKlinesInterval(String symbol, String interval) async {
+  final client = await DioBinanceClient.createFromPrefs();
+  final sym = _toBinanceSymbol(symbol);
+  try {
+    return await client.klines(sym, interval, limit: interval == '5m' ? 240 : 120);
+  } catch (e) {
+    // conservative fallback
+    return _fetchKlines(symbol);
+  }
+}
+
+Future<Map<String, dynamic>> _fetchTicker24h(String symbol) async {
+  final client = await DioBinanceClient.createFromPrefs();
+  final sym = _toBinanceSymbol(symbol);
+  return client.ticker24h(sym);
+}
+
 Future<bool> _isSymbolSupported(String symbol) async {
   try {
     final client = await DioBinanceClient.createFromPrefs();
@@ -488,13 +747,19 @@ Future<bool> _isSymbolSupported(String symbol) async {
 
 String _toBinanceSymbol(String s) {
   final up = s.toUpperCase();
+  // If already a slash format (e.g., BTC/USD or BTC/USDT)
   if (up.contains('/')) {
     final parts = up.split('/');
     final base = parts[0];
-    final quote = parts[1] == 'USD' ? 'USDT' : parts[1];
-    return base + quote;
+    final quote = parts[1];
+    final q = quote == 'USD' ? 'USDT' : quote;
+    return base + q;
   }
-  return up.replaceAll('USD', 'USDT');
+  // If it already ends with USDT, keep it
+  if (up.endsWith('USDT')) return up;
+  // If it ends with USD (but not USDT), convert to USDT
+  if (up.endsWith('USD')) return up.substring(0, up.length - 3) + 'USDT';
+  return up;
 }
 
 String _formatSymbolForDisplay(String s) {

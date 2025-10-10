@@ -4,14 +4,14 @@ class AiConfig {
   static const int seed = 42;
 
   /// Decision thresholds (shared by ALL screens)
-  static const double upThresh = 0.003;      // +0.3% ✅
-  static const double downThresh = -0.003;   // -0.3% ✅
-  static const double confThresh = 0.25;     // 25% ← cheie!
-  static const double volCap = 0.50;         // 50%
+  static const double upThresh = 0.002;      // +0.2%
+  static const double downThresh = -0.002;   // -0.2%
+  static const double confThresh = 0.20;     // 20%
+  static const double volCap = 1.00;         // 100% (relax cap to avoid over-filtering trades)
 
   /// Canonical feature policy (match PredictionRepo)
   static const String timeframe = '5m';
-  static const int history = 100; // candles fetched
+  static const int history = 1000; // candles fetched (increase for better context)
   static const int window = 64;   // rolling features window
 
   /// Cache TTL - cât timp păstrăm predicțiile în cache
@@ -19,6 +19,8 @@ class AiConfig {
   
   /// Debug mode - mai multe logs
   static const bool kDebugMode = true;
+  static const bool useVolModel = true; // allow disabling TFLite vol if unstable
+  static const int volZeroDisableHits = 3; // consecutive zero hits to disable
 
   /// Optional: numerical invariants
   static const double maxFloatDrift = 1e-6; // FP16→F32 tolerance

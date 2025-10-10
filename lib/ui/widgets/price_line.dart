@@ -12,6 +12,7 @@ class PriceLine extends StatelessWidget {
     ];
     final minY = points.reduce((a, b) => a < b ? a : b);
     final maxY = points.reduce((a, b) => a > b ? a : b);
+    final cs = Theme.of(context).colorScheme;
     return LineChart(
       LineChartData(
         gridData: const FlGridData(show: false),
@@ -26,13 +27,13 @@ class PriceLine extends StatelessWidget {
             isCurved: true,
             dotData: const FlDotData(show: false),
             barWidth: 2,
-            color: Colors.white70,
+            color: cs.primary,
             belowBarData: BarAreaData(
               show: true,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.white24, Colors.transparent],
+                colors: [cs.primary.withOpacity(0.2), Colors.transparent],
               ),
             ),
           ),

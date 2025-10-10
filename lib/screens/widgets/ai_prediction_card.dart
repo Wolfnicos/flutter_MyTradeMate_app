@@ -215,11 +215,12 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
         }
         final pred = snapshot.data!;
         final action = AILocator.I.decide(pred);
+        final cs = Theme.of(context).colorScheme;
         final actionColor = action == 'BUY'
-            ? Colors.green
+            ? (cs.tertiary)
             : action == 'SELL'
-                ? Colors.red
-                : Colors.amber;
+                ? (cs.error)
+                : (cs.secondary);
         final actionIcon = action == 'BUY'
             ? Icons.trending_up
             : (action == 'SELL'

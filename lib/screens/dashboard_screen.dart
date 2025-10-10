@@ -7,12 +7,15 @@ import 'ai_helper_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mytrademate/services/dio_binance_client.dart' as api;
 import 'widgets/asset_tile.dart';
+import '../widgets/premium_widgets.dart';
 // removed unused: price_stream import
 import '../services/price_stream_manager.dart';
 import '../services/mtm_models.dart';
 import '../src/core/trading_prefs.dart';
 import '../ui/disclaimer_banner.dart';
 import '../l10n/strings.dart';
+import '../ai/entities.dart' as ai;
+import '../ai/ai_locator.dart';
 
 class DashboardScreen extends StatefulWidget {
   final bool forTest;
@@ -37,6 +40,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final Map<String, double> _lastPrices = {};
   double? _lastPrice; // BTCUSDT display
   bool _showDisclaimer = false;
+  String _selectedSymbol = 'BTCUSDT';
+  ai.Prediction? _dashPred;
 
   @override
   void initState() {
@@ -66,14 +71,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final m = await MtmModels.instance();
           await m.selfTest();
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('AI models loaded ✅')),
-          );
+          // Silent success; avoid UI snackbar on dashboard
+          debugPrint('AI models loaded successfully');
+          await _loadDashPrediction();
         } catch (e) {
           debugPrint('AI selfTest failed: $e');
         }
       });
     }
+  }
+
+  Future<void> _loadDashPrediction() async {
+    try {
+      final pred = await AILocator.I.repo.getFor(_selectedSymbol);
+      if (!mounted) return;
+      setState(() => _dashPred = pred);
+    } catch (_) {}
   }
 
   Future<void> _ackDisclaimer() async {
@@ -164,42 +177,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             if (_showDisclaimer)
               FirstRunDisclaimerBanner(onAcknowledge: _ackDisclaimer),
-            // --- 1. Header Portofoliu ---
-            const Text('Portfolio Total',
-                style: TextStyle(color: Colors.white70, fontSize: 16)),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Flexible(
-                  child: Text(
-                    _lastPrice == null
-                        ? '—'
-                        : '\$${_lastPrice!.toStringAsFixed(2)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+            // --- Header ---
+            Text('AI Predictions', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                child: ModernCard(
+                  accentColor: kNeon,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Confidence', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                          if (_dashPred != null)
+                            ActionBadge(action: AILocator.I.decide(_dashPred!)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      NeonProgressBar(value: (_dashPred?.confidencePercent ?? 0) / 100.0),
+                      const SizedBox(height: 6),
+                      Text(_dashPred == null ? '—' : '${_dashPred!.confidencePercent.toStringAsFixed(1)}%',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 2),
+                      Text('${_selectedSymbol} spot', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                FutureBuilder<Map<String, dynamic>>(
-                  future: _ticker('BTCUSDT'),
-                  builder: (context, s) {
-                    if (!s.hasData) return const SizedBox();
-                    final ch =
-                        (s.data!['priceChangePercent'] ?? '0').toString();
-                    final isUp = !ch.startsWith('-');
-                    final color = isUp ? Colors.green : Colors.red;
-                    return Text('$ch%', style: TextStyle(color: color));
-                  },
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 25),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            // Removed quick action buttons per request
             
             // --- AI Trading Assistant (LIVE) ---
             Center(
@@ -310,11 +319,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   price: price,
                   change: ch == '—' ? ch : '$ch%',
                   isUp: isUp,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const MarketDetailsScreen(symbol: 'BTC/USDT')),
-                    );
+                  onTap: () async {
+                    setState(() => _selectedSymbol = 'BTCUSDT');
+                    await _loadDashPrediction();
                   },
                 );
               },
@@ -343,11 +350,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   price: price,
                   change: ch == '—' ? ch : '$ch%',
                   isUp: isUp,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const MarketDetailsScreen(symbol: 'ETH/USDT')),
-                    );
+                  onTap: () async {
+                    setState(() => _selectedSymbol = 'ETHUSDT');
+                    await _loadDashPrediction();
                   },
                 );
               },
@@ -376,11 +381,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   price: price,
                   change: ch == '—' ? ch : '$ch%',
                   isUp: isUp,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const MarketDetailsScreen(symbol: 'BNB/USDT')),
-                    );
+                  onTap: () async {
+                    setState(() => _selectedSymbol = 'BNBUSDT');
+                    await _loadDashPrediction();
                   },
                 );
               },
@@ -413,12 +416,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       price: price,
                       change: ch == '—' ? ch : '$ch%',
                       isUp: isUp,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const MarketDetailsScreen(
-                                  symbol: 'TRUMP/USDT')),
-                        );
+                      onTap: () async {
+                        setState(() => _selectedSymbol = 'TRUMPUSDT');
+                        await _loadDashPrediction();
                       },
                     );
                   },
@@ -454,11 +454,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       change: ch == '—' ? ch : '$ch%',
                       isUp: isUp,
                       key: dashboardSettingsKey,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const MarketDetailsScreen(symbol: 'WLFI/USDT')),
-                        );
+                      onTap: () async {
+                        setState(() => _selectedSymbol = 'WLFIUSDT');
+                        await _loadDashPrediction();
                       },
                     );
                   },

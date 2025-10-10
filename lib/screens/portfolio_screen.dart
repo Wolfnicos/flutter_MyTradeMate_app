@@ -5,6 +5,7 @@ import 'package:mytrademate/src/core/trading_prefs.dart';
 import 'package:mytrademate/services/price_cache.dart';
 import 'package:mytrademate/models/portfolio_models.dart';
 import 'dart:convert';
+import '../widgets/premium_widgets.dart';
 import 'package:mytrademate/ui/kit/ui_market_skeleton.dart';
 import 'package:mytrademate/ui/kit/ui_market_error.dart';
 
@@ -224,40 +225,54 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Total (USDT)',
-                              style: TextStyle(fontSize: 14)),
-                          Text(
-                            snap.totalUsdt.toStringAsFixed(2),
-                            style: const TextStyle(
-                                fontSize: 28, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            (snap.dailyPnl >= 0 ? '+' : '') +
-                                snap.dailyPnl.toStringAsFixed(2),
-                            style: TextStyle(fontSize: 16, color: pnlColor),
-                          ),
-                        ],
+                      child: ModernCard(
+                        hasGlow: true,
+                        accentColor: pnlColor,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Total (USDT)', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                            const SizedBox(height: 6),
+                            Text(snap.totalUsdt.toStringAsFixed(2), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            Text((snap.dailyPnl >= 0 ? '+' : '') + snap.dailyPnl.toStringAsFixed(2), style: TextStyle(fontSize: 16, color: pnlColor)),
+                          ],
+                        ),
                       ),
                     ),
-                    const Divider(height: 1),
                     Expanded(
-                      child: ListView.separated(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: snap.holdings.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (_, i) {
                           final h = snap.holdings[i];
                           final value = h.qty * h.priceUsdt;
                           final approx = h.priceUsdt == 0.0 ? '~ ' : '';
-                          return ListTile(
-                            title: Text(h.asset),
-                            subtitle: Text(
-                                '${h.qty} @ ${h.priceUsdt.toStringAsFixed(4)} USDT'),
-                            trailing:
-                                Text('$approx${value.toStringAsFixed(2)} USDT'),
+                          final isUsdt = h.asset.toUpperCase() == 'USDT';
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: ModernCard(
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: Colors.white10,
+                                    child: Text(h.asset[0], style: const TextStyle(color: Colors.white)),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(h.asset, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        const SizedBox(height: 4),
+                                        Text('${h.qty} @ ${h.priceUsdt.toStringAsFixed(4)} USDT', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                                      ],
+                                    ),
+                                  ),
+                                  Text('$approx${value.toStringAsFixed(2)} USDT', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
                           );
                         },
                       ),

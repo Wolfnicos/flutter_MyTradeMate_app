@@ -36,11 +36,30 @@ class DirectionModel {
     }
 
     try {
-      // Build input based on model-declared shape
-      final inShape = _interpreter!.getInputTensor(0).shape;
+      // Build input based on model-declared shape (handles [1,15,64] vs [1,64,15])
+      final inTensor = _interpreter!.getInputTensor(0);
+      final inShape = inTensor.shape;
       final input = ModelUtils.buildInputTensor(candles, inShape);
-      final outShape = _interpreter!.getOutputTensor(0).shape;
-      final output = ModelUtils.emptyOutput(outShape);
+      final outTensor = _interpreter!.getOutputTensor(0);
+      final outShape = outTensor.shape;
+
+      // Allocate output buffer; use ints for quantized tensors
+      dynamic output;
+      // Quantized tensor types in tflite_flutter are typically reported as kTfLiteUInt8/kTfLiteInt8
+      final isQuantized = outTensor.type.toString().contains('Int') || outTensor.type.toString().contains('UInt');
+      if (isQuantized) {
+        if (outShape.length == 1) {
+          output = List.filled(outShape[0], 0);
+        } else if (outShape.length == 2) {
+          output = List.generate(outShape[0], (_) => List.filled(outShape[1], 0));
+        } else if (outShape.length == 3) {
+          output = List.generate(outShape[0], (_) => List.generate(outShape[1], (_) => List.filled(outShape[2], 0)));
+        } else {
+          output = ModelUtils.emptyOutput(outShape);
+        }
+      } else {
+        output = ModelUtils.emptyOutput(outShape);
+      }
 
       // ignore: avoid_print
       print('🔍 DirectionModel input shape: $inShape');
@@ -54,7 +73,21 @@ class DirectionModel {
 
       if (totalOut == 1) {
         // Scalar → map to [buy, hold, sell]
-        final scalar = ModelUtils.extractScalar(output, outShape);
+        double scalar;
+        if (output is List<int>) {
+          // Dequantize scalar
+          final qp = outTensor.params;
+          final scale = qp.scale;
+          final zero = qp.zeroPoint;
+          scalar = scale * (output[0] - zero);
+        } else if (output is List<List<int>>) {
+          final qp = outTensor.params;
+          final scale = qp.scale;
+          final zero = qp.zeroPoint;
+          scalar = scale * (output[0][0] - zero);
+        } else {
+          scalar = ModelUtils.extractScalar(output, outShape);
+        }
         // ignore: avoid_print
         print('🔍 DirectionModel raw scalar: ${scalar.toStringAsFixed(6)}');
         final probs = _scalarToProbs(scalar);
@@ -67,7 +100,17 @@ class DirectionModel {
       if (totalOut == 3) {
         // 3-class: assume row vector or [1,3]
         List<double> logits;
-        if (outShape.length == 1) {
+        if (output is List<int>) {
+          final qp = outTensor.params;
+          final scale = qp.scale;
+          final zero = qp.zeroPoint;
+          logits = output.map((q) => scale * (q - zero)).toList();
+        } else if (output is List<List<int>>) {
+          final qp = outTensor.params;
+          final scale = qp.scale;
+          final zero = qp.zeroPoint;
+          logits = output.first.map((q) => scale * (q - zero)).cast<double>().toList();
+        } else if (outShape.length == 1) {
           logits = (output as List).cast<double>();
         } else {
           logits = (output as List<List>).first.cast<double>();

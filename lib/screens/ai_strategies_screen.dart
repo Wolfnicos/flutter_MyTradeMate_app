@@ -5,6 +5,16 @@ import '../ai/ai_locator.dart';
 import '../ai/entities.dart' as ai;
 import 'widgets/ai_status_card.dart';
 import 'backtest_screen.dart';
+import 'strategy_settings_screen.dart';
+import 'prediction_detail_screen.dart';
+import '../widgets/premium_widgets.dart';
+
+class MarketInsight {
+  final String type;
+  final String title;
+  final String description;
+  MarketInsight(this.type, this.title, this.description);
+}
 
 class AIStrategiesScreen extends StatefulWidget {
   const AIStrategiesScreen({super.key});
@@ -148,17 +158,120 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                   Icons.info_outline,
                 ),
               ],
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StrategySettingsScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.settings, color: Colors.blue),
+                  label: const Text(
+                    'Modify Strategy Settings',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.blue),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               Text('Predicții curente',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              ..._symbols
-                  .map((s) => _buildPredictionTile(context, s, _aiPreds[s])),
+              GridView.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 0.85,
+                children: _symbols.map((s) {
+                  final p = _aiPreds[s];
+                  final card = p == null
+                      ? const ModernCard(
+                          child: Center(
+                            child: Text('No data', style: TextStyle(color: kText2)),
+                          ),
+                          hasGlow: false,
+                        )
+                      : _buildPredictionCard(context, s, p);
+                  return GestureDetector(
+                    onTap: p == null
+                        ? null
+                        : () async {
+                            final repo = AILocator.I.repo;
+                            final fresh = await repo.getOrFetch(symbol: s, interval: '5m');
+                            if (!mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PredictionDetailScreen(symbol: s, prediction: fresh ?? p),
+                              ),
+                            );
+                          },
+                    child: card,
+                  );
+                }).toList(),
+              ),
               const SizedBox(height: 8),
-              Text('Insights & Alerts',
+              Text('Market Insights',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              ..._buildInsights(context),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.lightbulb, color: Colors.amber),
+                              SizedBox(width: 8),
+                              Text('Market Insights', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          Text('Real-time', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ...(_getMarketInsights().map((insight) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  insight.type == 'bullish' ? Icons.trending_up : Icons.trending_down,
+                                  color: insight.type == 'bullish' ? Colors.green : Colors.red,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(insight.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 4),
+                                      Text(insight.description, style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ))),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               Text('Advanced Tools',
                   style: Theme.of(context).textTheme.titleLarge),
@@ -187,11 +300,12 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
 
     // Get action from NEW AI prediction
     final action = AILocator.I.decide(p);
+    final cs = Theme.of(context).colorScheme;
     final actionColor = action == 'BUY'
-        ? Colors.greenAccent
+        ? cs.tertiary
         : (action == 'SELL'
-            ? Colors.redAccent
-            : Colors.amberAccent);
+            ? cs.error
+            : cs.secondary);
 
     final actionIcon = action == 'BUY'
         ? Icons.trending_up
@@ -296,6 +410,63 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     );
   }
 
+  Widget _buildPredictionCard(BuildContext context, String symbol, ai.Prediction p) {
+    final action = AILocator.I.decide(p);
+    final cs = Theme.of(context).colorScheme;
+    final Color accent = action == 'BUY' ? cs.tertiary : (action == 'SELL' ? cs.error : cs.secondary);
+    final conf = p.confidencePercent / 100.0;
+    final exp = p.expReturnPercent;
+    final vol = p.annVolPercent;
+
+    IconData icon = Icons.pause_circle_outline;
+    if (action == 'BUY') icon = Icons.trending_up; else if (action == 'SELL') icon = Icons.trending_down;
+
+    return ModernCard(
+      accentColor: accent,
+      hasGlow: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(backgroundColor: Colors.white12, child: Icon(icon, color: accent)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(symbol.replaceAll('USDT', '/USDT'),
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: kText)),
+              ),
+              ActionBadge(action: action),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text('Confidence', style: TextStyle(color: kText2, fontSize: 12)),
+          const SizedBox(height: 6),
+          NeonProgressBar(value: conf, color: accent),
+          const SizedBox(height: 6),
+          Text('${(conf * 100).toStringAsFixed(1)}%',
+              style: const TextStyle(color: kText, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Exp. Return', style: TextStyle(color: kText2, fontSize: 12)),
+                const SizedBox(height: 4),
+                Text('${exp.toStringAsFixed(2)}%', style: const TextStyle(color: kText, fontWeight: FontWeight.w700)),
+              ]),
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Volatility', style: TextStyle(color: kText2, fontSize: 12)),
+                const SizedBox(height: 4),
+                Text('${vol.toStringAsFixed(1)}%', style: const TextStyle(color: kText, fontWeight: FontWeight.w700)),
+              ]),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDetailRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -368,6 +539,48 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
 
     return items;
   }
+
+  // --- Insights helpers ---
+  List<MarketInsight> _getMarketInsights() {
+    final predictions = _symbols
+        .map((s) => _aiPreds[s])
+        .where((p) => p != null)
+        .cast<ai.Prediction>()
+        .toList();
+    if (predictions.isEmpty) return [];
+
+    final actions = predictions.map((p) => AILocator.I.decide(p)).toList();
+    final buyCount = actions.where((a) => a == 'BUY').length;
+    final sellCount = actions.where((a) => a == 'SELL').length;
+    final avgConf = predictions
+            .fold<double>(0.0, (sum, p) => sum + p.confidencePercent) /
+        predictions.length;
+
+    final insights = <MarketInsight>[];
+
+    if (buyCount > sellCount) {
+      insights.add(MarketInsight(
+          'bullish',
+          'Bullish Market Sentiment',
+          '$buyCount out of ${predictions.length} signals are BUY - Market shows positive momentum'));
+    } else if (sellCount > buyCount) {
+      insights.add(MarketInsight(
+          'bearish',
+          'Bearish Market Sentiment',
+          '$sellCount out of ${predictions.length} signals are SELL - Consider caution'));
+    }
+
+    if (avgConf >= 40) {
+      insights.add(MarketInsight(
+          'bullish',
+          'High Confidence Signals',
+          'Average confidence ${avgConf.toStringAsFixed(1)}% - Strong predictive patterns detected'));
+    }
+
+    return insights;
+  }
+
+  
 
   Widget _buildAIAlert(BuildContext context, String title, String subtitle,
       Color color, IconData icon) {
