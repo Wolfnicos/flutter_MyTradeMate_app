@@ -13,8 +13,8 @@ class TradeSimulator {
     this.feeRate = 0.0007,
     this.slippageRate = 0.0003,
     this.maxRiskPerTrade = 0.02,
-    this.stopLossPercent = 0.02,
-    this.takeProfitPercent = 0.03,
+    this.stopLossPercent = 0.015, // 1.5%
+    this.takeProfitPercent = 0.025, // 2.5%
   });
 
   /// Simulate BUY: returns (newCapital, positionQty, entryPrice, feePaid)
@@ -58,31 +58,32 @@ class TradeSimulator {
     debugPrint('🎯 TRADE START: $action @ \$${entryPrice.toStringAsFixed(2)}, posVal=\$${positionValue.toStringAsFixed(2)}');
     for (int i = 0; i < futureCandles.length; i++) {
       final candle = futureCandles[i];
-      final priceChange = (candle.close - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
+      final highChange = (candle.high - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
+      final lowChange = (candle.low - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
       if (action == 'BUY') {
-        if (priceChange <= -stopLossPercent) {
+        if (lowChange <= -stopLossPercent) {
           final loss = positionValue * stopLossPercent;
           final pnl = -loss - (positionValue * fees);
-          debugPrint('  ❌ SL HIT at candle $i: priceChange=${(priceChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+          debugPrint('  ❌ SL HIT at candle $i: low=${(lowChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
           return pnl;
         }
-        if (priceChange >= takeProfitPercent) {
+        if (highChange >= takeProfitPercent) {
           final profit = positionValue * takeProfitPercent;
           final pnl = profit - (positionValue * fees);
-          debugPrint('  ✅ TP HIT at candle $i: priceChange=${(priceChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+          debugPrint('  ✅ TP HIT at candle $i: high=${(highChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
           return pnl;
         }
       } else if (action == 'SELL') {
-        if (priceChange >= stopLossPercent) {
+        if (highChange >= stopLossPercent) {
           final loss = positionValue * stopLossPercent;
           final pnl = -loss - (positionValue * fees);
-          debugPrint('  ❌ SL HIT at candle $i: priceChange=${(priceChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+          debugPrint('  ❌ SL HIT at candle $i: high=${(highChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
           return pnl;
         }
-        if (priceChange <= -takeProfitPercent) {
+        if (lowChange <= -takeProfitPercent) {
           final profit = positionValue * takeProfitPercent;
           final pnl = profit - (positionValue * fees);
-          debugPrint('  ✅ TP HIT at candle $i: priceChange=${(priceChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+          debugPrint('  ✅ TP HIT at candle $i: low=${(lowChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
           return pnl;
         }
       }
