@@ -26,6 +26,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
   double _positionSize = 0.1; // 10% of capital per trade
   bool _useEnsemble = true;
   String _strategy = 'ensemble'; // ensemble | hybrid1..hybrid5
+  String _selectedStrategy = 'Hybrid 1: EMA+RSI+Cloud';
   
   bool _isRunning = false;
   BacktestResult? _result;
@@ -378,30 +379,20 @@ class _BacktestScreenState extends State<BacktestScreen> {
     try {
       _ohlcv ??= await OHLCVService.createFromPrefs();
       bt.BacktestResult result;
-      if (_strategy == 'ensemble') {
-        final backtester = Backtester(
-          engine: AILocator.I.engine,
-          ohlcv: _ohlcv!,
-        );
-        result = await backtester.run(
-          symbol: _selectedSymbol,
-          interval: _selectedInterval,
-          initialCapital: _initialCapital,
-          window: 64,
-          horizon: 1,
-          positionSize: _positionSize,
-          ensemble: _useEnsemble ? AILocator.I.ensemble : null,
-        );
-      } else {
-        final hy = HybridBacktester(ohlcv: _ohlcv!);
-        result = await hy.run(
-          symbol: _selectedSymbol,
-          strategy: _strategy,
-          initialCapital: _initialCapital,
-          positionSize: _positionSize,
-          window: 64,
-        );
-      }
+      final backtester = Backtester(
+        engine: AILocator.I.engine,
+        ohlcv: _ohlcv!,
+        strategyName: _useEnsemble || _strategy == 'ensemble' ? null : _selectedStrategy,
+      );
+      result = await backtester.run(
+        symbol: _selectedSymbol,
+        interval: _selectedInterval,
+        initialCapital: _initialCapital,
+        window: 64,
+        horizon: 1,
+        positionSize: _positionSize,
+        ensemble: _useEnsemble ? AILocator.I.ensemble : null,
+      );
       
       setState(() {
         _rawResult = result;
