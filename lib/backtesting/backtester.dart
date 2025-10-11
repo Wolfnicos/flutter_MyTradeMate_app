@@ -6,6 +6,7 @@ import '../ai/entities.dart';
 import '../services/ohlcv_service.dart';
 import '../ai/ensemble/ensemble_predictor.dart';
 import '../ai/ai_config.dart';
+import '../ai/indicators.dart';
 // backtest_config.dart unused for now; options passed inline
 import 'backtest_result.dart';
 import 'metrics_calculator.dart';
@@ -16,11 +17,13 @@ class Backtester {
   final ISignalEngine engine;
   final OHLCVService ohlcv;
   final TradeSimulator sim;
+  final String? strategyName; // Optional: use simple hybrid-on-single-TF
 
   const Backtester({
     required this.engine,
     required this.ohlcv,
     this.sim = const TradeSimulator(),
+    this.strategyName,
   });
 
   /// Runs a backtest using the engine and OHLCV service.
@@ -75,6 +78,8 @@ class Backtester {
     final equity = <double>[];
     final tradeLog = <TradeRecord>[];
 
+    // Determine if we should apply a simple hybrid strategy on this TF
+    final useHybridStrategy = strategyName != null && strategyName!.toLowerCase().startsWith('hybrid');
     // Use a simple, predictable ensemble policy – UI/engine control aggressiveness
 
     for (int i = window; i < candles.length; i++) {
@@ -87,7 +92,39 @@ class Backtester {
         double expReturn = 0.0; // fraction
         double volatility = 0.0; // ann vol fraction
 
-        if (ensemble != null) {
+        if (useHybridStrategy) {
+          // Compute simple hybrid 1-like logic on single timeframe
+          final closes = look.map((c) => c.close).toList();
+          final e12 = ema(closes, 12);
+          final e26 = ema(closes, 26);
+          final r = rsi(closes, period: 14);
+          final cloud = ichimokuCloudSignal(look);
+
+          final emaBull = e12.isFinite && e26.isFinite && e12 > e26;
+          final emaBear = e12.isFinite && e26.isFinite && e12 < e26;
+          final rsiBull = r.isFinite && r > 50 && r < 70;
+          final rsiBear = r.isFinite && r < 50 && r > 30;
+          final cloudBull = cloud == 1;
+          final cloudBear = cloud == -1;
+
+          final bullSignals = [emaBull, rsiBull, cloudBull].where((x) => x).length;
+          final bearSignals = [emaBear, rsiBear, cloudBear].where((x) => x).length;
+
+          if (bullSignals >= 2) {
+            action = 'BUY';
+            confidence = bullSignals / 3.0;
+          } else if (bearSignals >= 2) {
+            action = 'SELL';
+            confidence = bearSignals / 3.0;
+          } else {
+            action = 'HOLD';
+            confidence = 0.0;
+          }
+
+          if (i % 100 == 0) {
+            debugPrint('[$i/${candles.length - horizon}] ${strategyName ?? 'Hybrid'}: $action @ ${(confidence * 100).toStringAsFixed(1)}%');
+          }
+        } else if (ensemble != null) {
           final er = await ensemble.predict(look);
           final pBuy = er.probs[0];
           final pSell = er.probs[2];
