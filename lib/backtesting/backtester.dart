@@ -84,11 +84,15 @@ class Backtester {
       try {
         String action;
         double confidence;
+        double expReturn = 0.0; // fraction
+        double volatility = 0.0; // ann vol fraction
 
         if (ensemble != null) {
           final er = await ensemble.predict(look);
           final pBuy = er.probs[0];
           final pSell = er.probs[2];
+          expReturn = er.expReturn;
+          volatility = er.annVol;
 
           // Direction-first: ignore HOLD; compare only BUY vs SELL
           if (pBuy > pSell) {
@@ -112,6 +116,8 @@ class Backtester {
           if (pred == null) continue;
           action = AILocator.I.decide(pred);
           confidence = pred.confidence();
+          expReturn = pred.expReturn;
+          volatility = pred.annVol;
 
           // Outcome estimation pentru tracker (doar când avem pred de la engine)
           if (ensemble != null && i + horizon < candles.length) {
@@ -131,6 +137,26 @@ class Backtester {
         // Confidence threshold from global config
         final confThreshold = AiConfig.confThresh;
         if (confidence < confThreshold) {
+          final curEquity = capital + positionQty * close;
+          times.add(candles[i].time);
+          equity.add(curEquity);
+          continue;
+        }
+
+        // Additional gating: expected return and volatility
+        if (expReturn.abs() < AiConfig.minExpReturn) {
+          if (kDebugMode) {
+            debugPrint('[$i] Skipped: return too small ${(expReturn * 100).toStringAsFixed(2)}%');
+          }
+          final curEquity = capital + positionQty * close;
+          times.add(candles[i].time);
+          equity.add(curEquity);
+          continue;
+        }
+        if (volatility > AiConfig.maxVolatility) {
+          if (kDebugMode) {
+            debugPrint('[$i] Skipped: volatility too high ${(volatility * 100).toStringAsFixed(1)}%');
+          }
           final curEquity = capital + positionQty * close;
           times.add(candles[i].time);
           equity.add(curEquity);
