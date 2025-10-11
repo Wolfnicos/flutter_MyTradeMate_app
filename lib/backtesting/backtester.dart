@@ -165,8 +165,8 @@ class Backtester {
           }
         }
 
-        // Confidence threshold from global config
-        final confThreshold = AiConfig.confThresh;
+        // Confidence threshold (temporary override)
+        const double confThreshold = 0.20;
         if (confidence < confThreshold) {
           final curEquity = capital + positionQty * close;
           times.add(candles[i].time);
