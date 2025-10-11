@@ -4,6 +4,7 @@ import '../ai/engine_interface.dart';
 import '../services/ohlcv_service.dart';
 import 'backtester.dart' as v1;
 import 'backtest_result.dart' as bt;
+import '../ai/ensemble/ensemble_predictor.dart';
 
 class BacktestReport {
   final double initialCapital;
@@ -57,6 +58,7 @@ class BacktesterV2 {
     int window = 64,
     int horizon = 1,
     double positionSize = 0.1,
+    EnsemblePredictor? ensemble,
   }) async {
     debugPrint('🚀 BacktesterV2 for $symbol@$interval strategy=$strategyName');
     final core = v1.Backtester(
@@ -71,7 +73,7 @@ class BacktesterV2 {
       window: window,
       horizon: horizon,
       positionSize: positionSize,
-      ensemble: AILocator.I.ensemble,
+      ensemble: ensemble ?? AILocator.I.ensemble,
     );
 
     // Adapt v1 result → BacktestReport shape

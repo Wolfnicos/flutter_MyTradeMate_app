@@ -8,6 +8,7 @@ import 'package:mytrademate/backtesting/backtest_result.dart' as bt;
 import 'package:mytrademate/backtesting/hybrid_backtester.dart';
 import 'package:mytrademate/backtesting/metrics_calculator.dart' as mc;
 import 'package:mytrademate/src/core/trading_prefs.dart';
+import 'package:mytrademate/backtesting/backtester_report_adapter.dart';
 
 class BacktestScreen extends StatefulWidget {
   const BacktestScreen({super.key});
@@ -378,37 +379,90 @@ class _BacktestScreenState extends State<BacktestScreen> {
 
     try {
       _ohlcv ??= await OHLCVService.createFromPrefs();
-      bt.BacktestResult result;
-      final backtester = Backtester(
-        engine: AILocator.I.engine,
-        ohlcv: _ohlcv!,
-        strategyName: _useEnsemble || _strategy == 'ensemble' ? null : _selectedStrategy,
-      );
-      result = await backtester.run(
-        symbol: _selectedSymbol,
-        interval: _selectedInterval,
-        initialCapital: _initialCapital,
-        window: 64,
-        horizon: 1,
-        positionSize: _positionSize,
-        ensemble: _useEnsemble ? AILocator.I.ensemble : null,
-      );
-      
+      BacktestReport report;
+      if (!_useEnsemble && _selectedStrategy.startsWith('Hybrid')) {
+        debugPrint('🔧 Using BacktesterV2 with strategy: $_selectedStrategy');
+        final backtesterV2 = BacktesterV2(
+          engine: AILocator.I.engine,
+          ohlcv: _ohlcv!,
+          strategyName: _selectedStrategy,
+        );
+        report = await backtesterV2.run(
+          symbol: _selectedSymbol,
+          interval: _selectedInterval,
+          initialCapital: _initialCapital,
+          window: 64,
+          horizon: 1,
+          positionSize: _positionSize,
+          ensemble: null,
+        );
+      } else {
+        debugPrint('🔧 Using original Backtester');
+        final backtester = Backtester(
+          engine: AILocator.I.engine,
+          ohlcv: _ohlcv!,
+        );
+        final oldResult = await backtester.run(
+          symbol: _selectedSymbol,
+          interval: _selectedInterval,
+          initialCapital: _initialCapital,
+          window: 64,
+          horizon: 1,
+          positionSize: _positionSize,
+          ensemble: _useEnsemble ? AILocator.I.ensemble : null,
+        );
+        report = BacktestReport(
+          initialCapital: oldResult.initialCapital,
+          finalCapital: oldResult.finalCapital,
+          totalReturn: oldResult.totalReturn,
+          numTrades: oldResult.numTrades,
+          winningTrades: oldResult.winningTrades,
+          losingTrades: oldResult.losingTrades,
+          avgWin: oldResult.avgWin,
+          avgLoss: oldResult.avgLoss,
+          maxDrawdown: oldResult.maxDrawdown,
+          sharpe: oldResult.sharpe,
+          feesPaid: oldResult.feesPaid,
+          times: oldResult.times,
+          equity: oldResult.equity,
+          trades: const [],
+        );
+      }
+
       setState(() {
-        _rawResult = result;
+        _rawResult = bt.BacktestResult(
+          start: report.times.isEmpty ? DateTime.now() : report.times.first,
+          end: report.times.isEmpty ? DateTime.now() : report.times.last,
+          symbol: _selectedSymbol,
+          interval: _selectedInterval,
+          times: report.times,
+          equity: report.equity,
+          initialCapital: report.initialCapital,
+          finalCapital: report.finalCapital,
+          totalReturn: report.totalReturn,
+          numTrades: report.numTrades,
+          winningTrades: report.winningTrades,
+          losingTrades: report.losingTrades,
+          avgWin: report.avgWin,
+          avgLoss: report.avgLoss,
+          maxDrawdown: report.maxDrawdown,
+          sharpe: report.sharpe,
+          feesPaid: report.feesPaid,
+          trades: const [],
+        );
         _result = BacktestResult(
-          initialCapital: result.initialCapital,
-          finalCapital: result.finalCapital,
-          totalPnl: result.finalCapital - result.initialCapital,
-          returnPercent: result.totalReturn,
-          totalTrades: result.numTrades,
-          winningTrades: result.winningTrades,
-          losingTrades: result.losingTrades,
-          avgWin: result.avgWin,
-          avgLoss: result.avgLoss,
-          maxDrawdown: result.maxDrawdown,
-          sharpeRatio: result.sharpe,
-          totalFees: result.feesPaid,
+          initialCapital: report.initialCapital,
+          finalCapital: report.finalCapital,
+          totalPnl: report.finalCapital - report.initialCapital,
+          returnPercent: report.totalReturn,
+          totalTrades: report.numTrades,
+          winningTrades: report.winningTrades,
+          losingTrades: report.losingTrades,
+          avgWin: report.avgWin,
+          avgLoss: report.avgLoss,
+          maxDrawdown: report.maxDrawdown,
+          sharpeRatio: report.sharpe,
+          totalFees: report.feesPaid,
         );
         _isRunning = false;
       });
