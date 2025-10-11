@@ -6,8 +6,12 @@ class AiConfig {
   /// Decision thresholds (shared by ALL screens)
   static const double upThresh = 0.002;      // +0.2%
   static const double downThresh = -0.002;   // -0.2%
-  static const double confThresh = 0.20;     // 20%
+  static const double confThresh = 0.40;     // 40% (more selective)
   static const double volCap = 1.00;         // 100% (relax cap to avoid over-filtering trades)
+
+  /// Additional global filters (optional usage by strategies/backtester)
+  static const double minExpReturn = 0.015;  // +1.5% minimum expected return
+  static const double maxVolatility = 0.10;  // 10% max annualized volatility
 
   /// Canonical feature policy (match PredictionRepo)
   static const String timeframe = '5m';
