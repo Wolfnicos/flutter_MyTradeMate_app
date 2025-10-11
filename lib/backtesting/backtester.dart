@@ -172,14 +172,34 @@ class Backtester {
           trades++;
           tradeLog.add(TradeRecord(time: candles[i].time, action: 'BUY', price: priceWSlip, qty: qty, fee: fee, pnl: 0.0));
         } else if (positionQty > 0.0 && action == 'SELL') {
-          final (newCap, fee, pnl) = execSim.sell(
-            capital: capital,
-            positionQty: positionQty,
-            entryPrice: entryPrice,
-            price: close,
-          );
-          capital = newCap;
-          totalFees += fee;
+          // Use SL/TP simulation across next N candles
+          final start = i + 1;
+          final end = (start + 25) < candles.length ? (start + 25) : candles.length;
+          final futureCandles = start < candles.length ? candles.sublist(start, end) : <Candle>[];
+          double pnl;
+          double exitFee;
+          if (futureCandles.isNotEmpty) {
+            final positionValue = positionQty * entryPrice;
+            pnl = execSim.simulateTrade(
+              action: 'BUY', // closing a long position entered via BUY
+              entryPrice: entryPrice,
+              futureCandles: futureCandles,
+              positionValue: positionValue,
+            );
+            exitFee = positionValue * execSim.feeRate; // approximate exit fee used in simulateTrade
+            capital += pnl;
+          } else {
+            final r = execSim.sell(
+              capital: capital,
+              positionQty: positionQty,
+              entryPrice: entryPrice,
+              price: close,
+            );
+            capital = r.$1;
+            exitFee = r.$2;
+            pnl = r.$3;
+          }
+          totalFees += exitFee;
           if (pnl > 0) {
             wins++;
             totalWin += pnl;
@@ -188,7 +208,7 @@ class Backtester {
             totalLoss += -pnl;
           }
           positionQty = 0.0;
-          tradeLog.add(TradeRecord(time: candles[i].time, action: 'SELL', price: close, qty: 0.0, fee: fee, pnl: pnl));
+          tradeLog.add(TradeRecord(time: candles[i].time, action: 'SELL', price: close, qty: 0.0, fee: exitFee, pnl: pnl));
           entryPrice = 0.0;
         }
       } catch (e) {
