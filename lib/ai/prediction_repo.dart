@@ -6,6 +6,8 @@ import 'prediction_cache.dart';
 import 'intelligent_cache.dart';
 import '../services/ohlcv_service.dart';
 import '../services/symbol_mapper.dart';
+import 'strategies/hybrid_strategies.dart' as hs;
+import 'package:mytrademate/src/core/trading_prefs.dart';
 
 /// PredictionRepo - Repository pattern pentru predicții AI
 /// - Centralizează accesul la predicții
@@ -17,6 +19,7 @@ class PredictionRepo {
   final OHLCVService ohlcvService;
   final PredictionCache _cache = PredictionCache();
   late final IntelligentCacheManager _smartCache;
+  final Map<String, String> _hybridAction = {};
   
   PredictionRepo(this.ohlcvService) {
     _smartCache = IntelligentCacheManager(_cache);
@@ -102,6 +105,50 @@ class PredictionRepo {
         latestVolume: latestVolume,
         annVol: prediction.annVol,
       );
+
+      // If default strategy is hybrid, compute hybrid action and store for decide()
+      try {
+        final prefs = await TradingPrefs.load();
+        final strategy = prefs.getDefaultStrategy();
+        if (strategy.startsWith('hybrid')) {
+          // Load required timeframes
+          final needs15m = strategy == 'hybrid3';
+          final needs1h = strategy == 'hybrid2' || strategy == 'hybrid4';
+          final needs4h = strategy == 'hybrid1' || strategy == 'hybrid3' || strategy == 'hybrid5';
+          final needs5m = strategy != 'hybrid3';
+          final needs1d = true;
+          final tf5m = needs5m ? await ohlcvService.fetchCandles(feedSymbol, interval: '5m', limit: 2000) : <Candle>[];
+          final tf15m = needs15m ? await ohlcvService.fetchCandles(feedSymbol, interval: '15m', limit: 2000) : <Candle>[];
+          final tf1h = needs1h ? await ohlcvService.fetchCandles(feedSymbol, interval: '1h', limit: 2000) : <Candle>[];
+          final tf4h = needs4h ? await ohlcvService.fetchCandles(feedSymbol, interval: '4h', limit: 2000) : <Candle>[];
+          final tf1d = needs1d ? await ohlcvService.fetchCandles(feedSymbol, interval: '1d', limit: 2000) : <Candle>[];
+          Map<String, dynamic> res;
+          switch (strategy) {
+            case 'hybrid1':
+              res = hs.hybridStrategy1(tf5m: tf5m, tf4h: tf4h, tf1d: tf1d);
+              break;
+            case 'hybrid2':
+              res = hs.hybridStrategy2(tf5m: tf5m, tf1h: tf1h, tf1d: tf1d);
+              break;
+            case 'hybrid3':
+              res = hs.hybridStrategy3(tf15m: tf15m, tf4h: tf4h, tf1d: tf1d);
+              break;
+            case 'hybrid4':
+              res = hs.hybridStrategy4(tf5m: tf5m, tf1h: tf1h, tf1d: tf1d);
+              break;
+            case 'hybrid5':
+              res = hs.hybridStrategy5(tf5m: tf5m, tf4h: tf4h, tf1d: tf1d);
+              break;
+            default:
+              res = const {'action': 'HOLD'};
+          }
+          final action = (res['action'] ?? 'HOLD') as String;
+          final key = _hyKey(prediction.symbol, prediction.asOf);
+          _hybridAction[key] = action;
+        }
+      } catch (_) {
+        // ignore hybrid computation errors
+      }
       
       // Single consolidated log per symbol
       final action = AILocator.I.decide(prediction);
@@ -120,6 +167,12 @@ class PredictionRepo {
       }
       return null;
     }
+  }
+
+  String _hyKey(String symbol, DateTime asOf) => '${symbol.toUpperCase()}@${asOf.millisecondsSinceEpoch}';
+
+  String? hybridActionFor(Prediction p) {
+    return _hybridAction[_hyKey(p.symbol, p.asOf)];
   }
   
   /// Fetch a fresh prediction for a given UI symbol and interval, falling back to cache if valid.

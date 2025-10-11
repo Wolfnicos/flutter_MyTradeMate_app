@@ -188,3 +188,123 @@ Indicators calculateIndicators(List<Candle> candles) {
 }
 
 
+/// Ichimoku Cloud components (simplified, computed for the last candle)
+/// Returns current Tenkan-sen (conversion), Kijun-sen (base),
+/// Senkou Span A/B (cloud edges), and Chikou Span (lagging close)
+({
+  double tenkan,
+  double kijun,
+  double spanA,
+  double spanB,
+  double chikou,
+}) ichimokuCloud(List<Candle> candles, {
+  int tenkanPeriod = 9,
+  int kijunPeriod = 26,
+  int senkouBPeriod = 52,
+  int chikouLag = 26,
+}) {
+  if (candles.length < senkouBPeriod + 1) {
+    return (
+      tenkan: double.nan,
+      kijun: double.nan,
+      spanA: double.nan,
+      spanB: double.nan,
+      chikou: double.nan,
+    );
+  }
+
+  double midHighLow(int period, int endIdx) {
+    final start = (endIdx - period + 1).clamp(0, endIdx);
+    double highest = candles[start].high;
+    double lowest = candles[start].low;
+    for (int i = start + 1; i <= endIdx; i++) {
+      if (candles[i].high > highest) highest = candles[i].high;
+      if (candles[i].low < lowest) lowest = candles[i].low;
+    }
+    return (highest + lowest) / 2.0;
+  }
+
+  final lastIdx = candles.length - 1;
+  final tenkan = midHighLow(tenkanPeriod, lastIdx);
+  final kijun = midHighLow(kijunPeriod, lastIdx);
+  final spanA = (tenkan + kijun) / 2.0; // forward-shift ignored in simplified calc
+  final spanB = midHighLow(senkouBPeriod, lastIdx);
+
+  // Chikou span: close price shifted back by chikouLag (simplified: value only)
+  final chikouIdx = (lastIdx - chikouLag).clamp(0, lastIdx);
+  final chikou = candles[chikouIdx].close;
+
+  return (tenkan: tenkan, kijun: kijun, spanA: spanA, spanB: spanB, chikou: chikou);
+}
+
+/// Determine if price is above the Ichimoku cloud (bullish), below (bearish), or inside (neutral)
+/// Returns 1 for bullish, -1 for bearish, 0 for inside/undefined
+int ichimokuCloudSignal(List<Candle> candles) {
+  final cloud = ichimokuCloud(candles);
+  if ([cloud.tenkan, cloud.kijun, cloud.spanA, cloud.spanB, cloud.chikou].any((x) => !x.isFinite)) {
+    return 0;
+  }
+  final lastClose = candles.last.close;
+  final upper = cloud.spanA > cloud.spanB ? cloud.spanA : cloud.spanB;
+  final lower = cloud.spanA > cloud.spanB ? cloud.spanB : cloud.spanA;
+  if (lastClose > upper) return 1;
+  if (lastClose < lower) return -1;
+  return 0;
+}
+
+/// EMA crossover signal: 1 if fastEMA > slowEMA, -1 if fastEMA < slowEMA, 0 if undefined
+int emaCrossoverSignal(List<double> closes, int fastPeriod, int slowPeriod) {
+  if (closes.length < slowPeriod) return 0;
+  final fast = ema(closes, fastPeriod);
+  final slow = ema(closes, slowPeriod);
+  if (!fast.isFinite || !slow.isFinite) return 0;
+  if (fast > slow) return 1;
+  if (fast < slow) return -1;
+  return 0;
+}
+
+/// RSI momentum signal using overbought/oversold thresholds:
+/// 1 for bullish (RSI > overbought), -1 for bearish (RSI < oversold), else 0
+int rsiMomentumSignal(List<double> closes, {int period = 14, double overbought = 70, double oversold = 30}) {
+  if (closes.length <= period) return 0;
+  final rr = rsi(closes, period: period);
+  if (!rr.isFinite) return 0;
+  if (rr >= overbought) return 1;
+  if (rr <= oversold) return -1;
+  return 0;
+}
+
+/// ADX (Average Directional Movement Index) proxy at the last bar
+/// Returns a simplified ADX value using sums over the last [period] bars
+double adx(List<Candle> candles, {int period = 14}) {
+  if (candles.length < period + 1) return 0.0;
+  double trSum = 0.0, plusDmSum = 0.0, minusDmSum = 0.0;
+  for (int i = candles.length - period; i < candles.length; i++) {
+    if (i == 0) continue;
+    final high = candles[i].high;
+    final low = candles[i].low;
+    final prevClose = candles[i - 1].close;
+    final prevHigh = candles[i - 1].high;
+    final prevLow = candles[i - 1].low;
+    final tr = [
+      high - low,
+      (high - prevClose).abs(),
+      (low - prevClose).abs(),
+    ].reduce((a, b) => a > b ? a : b);
+    final upMove = high - prevHigh;
+    final downMove = prevLow - low;
+    final plusDm = (upMove > downMove && upMove > 0) ? upMove : 0.0;
+    final minusDm = (downMove > upMove && downMove > 0) ? downMove : 0.0;
+    trSum += tr;
+    plusDmSum += plusDm;
+    minusDmSum += minusDm;
+  }
+  if (trSum == 0) return 0.0;
+  final plusDi = 100.0 * (plusDmSum / trSum);
+  final minusDi = 100.0 * (minusDmSum / trSum);
+  final den = (plusDi + minusDi).abs() < 1e-12 ? 1e-12 : (plusDi + minusDi);
+  final dx = 100.0 * ((plusDi - minusDi).abs() / den);
+  return dx; // ADX proxy
+}
+
+

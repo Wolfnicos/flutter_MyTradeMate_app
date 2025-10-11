@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mytrademate/backtesting/backtester.dart';
 import 'package:mytrademate/backtesting/backtest_result.dart' as bt;
+import 'package:mytrademate/backtesting/hybrid_backtester.dart';
+import 'package:mytrademate/backtesting/metrics_calculator.dart' as mc;
+import 'package:mytrademate/src/core/trading_prefs.dart';
 
 class BacktestScreen extends StatefulWidget {
   const BacktestScreen({super.key});
@@ -22,6 +25,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
   double _initialCapital = 10000.0;
   double _positionSize = 0.1; // 10% of capital per trade
   bool _useEnsemble = true;
+  String _strategy = 'ensemble'; // ensemble | hybrid1..hybrid5
   
   bool _isRunning = false;
   BacktestResult? _result;
@@ -216,6 +220,20 @@ class _BacktestScreenState extends State<BacktestScreen> {
                 contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _strategy,
+                decoration: const InputDecoration(labelText: 'Strategy', border: OutlineInputBorder()),
+                items: const [
+                  DropdownMenuItem(value: 'ensemble', child: Text('AI Ensemble (default)')),
+                  DropdownMenuItem(value: 'hybrid1', child: Text('Hybrid 1: EMA+RSI+Cloud')),
+                  DropdownMenuItem(value: 'hybrid2', child: Text('Hybrid 2: BB+ADX+Cloud')),
+                  DropdownMenuItem(value: 'hybrid3', child: Text('Hybrid 3: Trend+RSI')),
+                  DropdownMenuItem(value: 'hybrid4', child: Text('Hybrid 4: Breakout+DailyTrend')),
+                  DropdownMenuItem(value: 'hybrid5', child: Text('Hybrid 5: Vol-adaptive+Cloud')),
+                ],
+                onChanged: (v) => setState(() => _strategy = v ?? 'ensemble'),
+              ),
+              const SizedBox(height: 8),
               TextField(
                 decoration: const InputDecoration(labelText: 'Initial Capital (USDT)', border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
@@ -265,6 +283,14 @@ class _BacktestScreenState extends State<BacktestScreen> {
     final r = _result!;
     final pnlColor = r.totalPnl >= 0 ? Colors.green : Colors.red;
     final winRate = r.totalTrades > 0 ? (r.winningTrades / r.totalTrades) * 100 : 0.0;
+    final merit = mc.MetricsCalculator.meritFromBacktest(
+      _rawResult?.equity ?? const [],
+      totalReturn: r.returnPercent,
+      wins: r.winningTrades,
+      trades: r.totalTrades,
+      maxDd: r.maxDrawdown,
+    );
+    final decision = mc.MetricsCalculator.meritDecision(merit);
     
     return Card(
       child: Padding(
@@ -297,6 +323,25 @@ class _BacktestScreenState extends State<BacktestScreen> {
             const Divider(),
             _buildResultRow('Sharpe Ratio', r.sharpeRatio.toStringAsFixed(2)),
             _buildResultRow('Fees Paid', '\$${r.totalFees.toStringAsFixed(2)}'),
+            const Divider(),
+            _buildResultRow('Merit Score', merit.toStringAsFixed(2)),
+            _buildResultRow('Decision', decision),
+            if (merit > 8.0 && _strategy != 'ensemble') ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final prefs = await TradingPrefs.load();
+                  await prefs.setDefaultStrategy(_strategy);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Default strategy set to ${_strategy.toUpperCase()}')),
+                  );
+                },
+                icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+                label: const Text('Set as Default Strategy', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+              )
+            ],
           ],
         ),
       ),
@@ -332,21 +377,31 @@ class _BacktestScreenState extends State<BacktestScreen> {
 
     try {
       _ohlcv ??= await OHLCVService.createFromPrefs();
-      
-      final backtester = Backtester(
-        engine: AILocator.I.engine,
-        ohlcv: _ohlcv!,
-      );
-      
-      final result = await backtester.run(
-        symbol: _selectedSymbol,
-        interval: _selectedInterval,
-        initialCapital: _initialCapital,
-        window: 64,
-        horizon: 1,
-        positionSize: _positionSize,
-        ensemble: _useEnsemble ? AILocator.I.ensemble : null,
-      );
+      bt.BacktestResult result;
+      if (_strategy == 'ensemble') {
+        final backtester = Backtester(
+          engine: AILocator.I.engine,
+          ohlcv: _ohlcv!,
+        );
+        result = await backtester.run(
+          symbol: _selectedSymbol,
+          interval: _selectedInterval,
+          initialCapital: _initialCapital,
+          window: 64,
+          horizon: 1,
+          positionSize: _positionSize,
+          ensemble: _useEnsemble ? AILocator.I.ensemble : null,
+        );
+      } else {
+        final hy = HybridBacktester(ohlcv: _ohlcv!);
+        result = await hy.run(
+          symbol: _selectedSymbol,
+          strategy: _strategy,
+          initialCapital: _initialCapital,
+          positionSize: _positionSize,
+          window: 64,
+        );
+      }
       
       setState(() {
         _rawResult = result;

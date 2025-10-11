@@ -188,6 +188,13 @@ extension AILocatorExt on AILocator {
     if (!isInitialized || prediction == null) {
       return 'HOLD'; // Safe default
     }
+    // If a hybrid action was computed for this prediction timestamp, prefer it
+    try {
+      final hy = repo.hybridActionFor(prediction);
+      if (hy != null) return hy;
+    } catch (_) {
+      // ignore and fallback
+    }
     return engine.decide(prediction);
   }
   

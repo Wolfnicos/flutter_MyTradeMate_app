@@ -26,6 +26,7 @@ class TradingPrefs {
   static const _kQuotePerTrade =
       'policy_quote_per_trade'; // in quote ccy (e.g. USDT)
   static const _kPaperTrading = 'paper_trading_mode'; // bool
+  static const _kDefaultStrategy = 'strategy_default'; // 'ensemble' | 'hybrid1'..'hybrid5'
 
   final SharedPreferences _sp;
   TradingPrefs._(this._sp);
@@ -89,6 +90,16 @@ class TradingPrefs {
     if (env != null) await _sp.setInt(_kEnv, env.index);
     if (fixedQuote != null) await _sp.setDouble(_kFixedQuote, fixedQuote);
     if (paperTrading != null) await _sp.setBool(_kPaperTrading, paperTrading);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Strategy selection persistence
+  Future<void> setDefaultStrategy(String strategy) async {
+    await _sp.setString(_kDefaultStrategy, strategy);
+  }
+
+  String getDefaultStrategy() {
+    return _sp.getString(_kDefaultStrategy) ?? 'ensemble';
   }
 
   bool get hasCreds =>

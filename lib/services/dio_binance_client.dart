@@ -290,11 +290,15 @@ class DioBinanceClient {
     String symbol,
     String interval, {
     int limit = 200,
+    int? startTime, // ms
+    int? endTime,   // ms
   }) async {
     final data = await _get('/api/v3/klines', query: {
       'symbol': _normSymbol(symbol),
       'interval': interval,
       'limit': limit,
+      if (startTime != null) 'startTime': startTime,
+      if (endTime != null) 'endTime': endTime,
     });
     final raw = parseKlinesForTest(data);
     // Coerce to numeric where possible for runtime callers

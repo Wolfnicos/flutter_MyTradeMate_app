@@ -32,6 +32,62 @@ class MetricsCalculator {
     if (std == 0.0) return 0.0;
     return mean / std;
   }
+
+  /// Merit Score = (Expected Return * Win Rate * Portfolio Impact)
+  ///                / (Max Drawdown * Risk * Time Commitment)
+  /// All inputs are expected as fractions (e.g., 0.12 = 12%).
+  static double meritScore({
+    required double expectedReturn,
+    required double winRate,
+    required double portfolioImpact,
+    required double maxDrawdown,
+    required double risk,
+    required double timeCommitment,
+  }) {
+    const double eps = 1e-9;
+    final num = (expectedReturn.clamp(-1.0, 10.0)) *
+        (winRate.clamp(0.0, 1.0)) *
+        (portfolioImpact.clamp(0.0, 10.0));
+    final den = (maxDrawdown.abs().clamp(eps, 10.0)) *
+        (risk.clamp(eps, 10.0)) *
+        (timeCommitment.clamp(eps, 10.0));
+    return (num / den).isFinite ? (num / den) : 0.0;
+  }
+
+  /// Convenience: compute Merit Score from a backtest result.
+  /// Assumptions:
+  /// - expectedReturn uses totalReturn (fraction)
+  /// - winRate computed from wins/numTrades (0..1)
+  /// - portfolioImpact/risk/timeCommitment are user-tunable scalars (default 1)
+  static double meritFromBacktest(
+    List<double> equity, {
+    required double totalReturn,
+    required int wins,
+    required int trades,
+    required double maxDd,
+    double portfolioImpact = 1.0,
+    double risk = 1.0,
+    double timeCommitment = 1.0,
+  }) {
+    final wr = trades > 0 ? (wins / trades) : 0.0;
+    final exp = totalReturn; // already fraction
+    final dd = maxDd;
+    return meritScore(
+      expectedReturn: exp,
+      winRate: wr,
+      portfolioImpact: portfolioImpact,
+      maxDrawdown: dd,
+      risk: risk,
+      timeCommitment: timeCommitment,
+    );
+  }
+
+  /// Classify Merit Score by thresholds
+  static String meritDecision(double score) {
+    if (score > 8.0) return 'Implementare imediată';
+    if (score >= 5.0) return 'Backtesting extins';
+    return 'Respinge';
+  }
 }
 
 
