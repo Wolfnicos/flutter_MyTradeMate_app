@@ -12,6 +12,3 @@ void main() {
     expect(e, lessThanOrEqualTo(1.0));
   });
 }
-
-
-

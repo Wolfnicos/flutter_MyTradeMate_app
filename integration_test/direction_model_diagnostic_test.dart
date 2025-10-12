@@ -11,7 +11,7 @@ void main() {
 
   group('🔬 DirectionModel Diagnostic', () {
     test('Bullish scenario - FULL DIAGNOSTIC', () async {
-      print('\n' + '=' * 60);
+      print('\n${'=' * 60}');
       print('🔬 STARTING FULL DIAGNOSTIC TEST');
       print('=' * 60 + '\n');
 
@@ -24,12 +24,12 @@ void main() {
       print('   Last candle:  close=${candles.last.close.toStringAsFixed(2)}');
       print('   Price change: +${((candles.last.close - candles.first.close) / candles.first.close * 100).toStringAsFixed(2)}%');
       
-      print('\n' + '-' * 60 + '\n');
+      print('\n${'-' * 60}\n');
       
       // Run prediction with full logging
       final probs = await model.predictProbs(candles);
       
-      print('\n' + '=' * 60);
+      print('\n${'=' * 60}');
       print('🎯 FINAL RESULT:');
       print('   Buy:  ${(probs[0] * 100).toStringAsFixed(2)}%');
       print('   Hold: ${(probs[1] * 100).toStringAsFixed(2)}%');
@@ -59,7 +59,7 @@ void main() {
     });
 
     test('Try FP16 model as alternative', () async {
-      print('\n' + '=' * 60);
+      print('\n${'=' * 60}');
       print('🔬 TESTING FP16 MODEL');
       print('=' * 60 + '\n');
 
@@ -74,7 +74,7 @@ void main() {
     });
 
     test('Bearish scenario - Compare behavior', () async {
-      print('\n' + '=' * 60);
+      print('\n${'=' * 60}');
       print('🔬 BEARISH SCENARIO TEST');
       print('=' * 60 + '\n');
 
@@ -87,7 +87,7 @@ void main() {
       print('   Last candle:  close=${candles.last.close.toStringAsFixed(2)}');
       print('   Price change: ${((candles.last.close - candles.first.close) / candles.first.close * 100).toStringAsFixed(2)}%');
       
-      print('\n' + '-' * 60 + '\n');
+      print('\n${'-' * 60}\n');
       
       final probs = await model.predictProbs(candles);
       

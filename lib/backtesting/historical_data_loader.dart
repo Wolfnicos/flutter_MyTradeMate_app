@@ -8,8 +8,10 @@ class HistoricalDataLoader {
   final OHLCVService service;
   HistoricalDataLoader(this.service);
 
-  Future<List<Candle>> fromExchange(String symbol, {String interval = '5m', int limit = 1000}) async {
-    final klines = await service.fetchCandles(symbol, interval: interval, limit: limit);
+  Future<List<Candle>> fromExchange(String symbol,
+      {String interval = '5m', int limit = 1000}) async {
+    final klines =
+        await service.fetchCandles(symbol, interval: interval, limit: limit);
     return klines;
   }
 
@@ -34,5 +36,3 @@ class HistoricalDataLoader {
     return out;
   }
 }
-
-

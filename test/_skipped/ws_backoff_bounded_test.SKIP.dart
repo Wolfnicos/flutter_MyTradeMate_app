@@ -18,7 +18,10 @@ void main() {
         throttleInterval: const Duration(milliseconds: 5),
         gapThreshold: const Duration(milliseconds: 50),
         gapPollInterval: const Duration(milliseconds: 25),
-        reconnectBackoff: const [Duration(milliseconds: 40), Duration(milliseconds: 40)],
+        reconnectBackoff: const [
+          Duration(milliseconds: 40),
+          Duration(milliseconds: 40)
+        ],
         maxReconnects: 2,
         jitterBackoff: false,
       );
@@ -33,5 +36,3 @@ void main() {
     }
   }, timeout: const Timeout(Duration(seconds: 8)));
 }
-
-

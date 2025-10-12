@@ -18,9 +18,9 @@ class ModelUtils {
 
     // Take the last windowSize candles
     final window = candles.sublist(candles.length - windowSize);
-    
+
     final features = <List<double>>[];
-    
+
     final useExtended = numFeatures >= 25;
     for (int i = 0; i < windowSize; i++) {
       var timestepFeatures = useExtended
@@ -31,7 +31,7 @@ class ModelUtils {
       if (timestepFeatures.length != numFeatures) {
         timestepFeatures = _coerceFeaturesLength(timestepFeatures, numFeatures);
       }
-      
+
       features.add(timestepFeatures);
     }
 
@@ -106,8 +106,10 @@ class ModelUtils {
     features.add(obvNorm);
 
     // Feature 11-12: Volume metrics
-    final avgVol = window.map((c) => c.volume).reduce((a, b) => a + b) / window.length;
-    final volumeRel = current.volume / (avgVol + 1e-10); // Avoid division by zero
+    final avgVol =
+        window.map((c) => c.volume).reduce((a, b) => a + b) / window.length;
+    final volumeRel =
+        current.volume / (avgVol + 1e-10); // Avoid division by zero
     final volumeZ = (current.volume - avgVol) / (avgVol + 1e-10);
     features.add(volumeRel);
     features.add(volumeZ);
@@ -129,18 +131,19 @@ class ModelUtils {
     int idx,
   ) {
     final base = _extractTimestepFeatures(window, idx);
- 
+
     // Helper arrays for ranged computations
     final highsAll = window.map((c) => c.high).toList();
     final lowsAll = window.map((c) => c.low).toList();
     final closesAll = window.map((c) => c.close).toList();
- 
+
     // 1) Bollinger Bands (period 20): upper, lower, %B
     final bb = _bollinger(closesAll, idx, period: 20, mult: 2.0);
     base.addAll([bb.upperRatio, bb.lowerRatio, bb.percentB]);
 
     // 2) Stochastic Oscillator %K, %D (period 14, D=3 SMA)
-    final sto = _stochastic(highsAll, lowsAll, closesAll, idx, kPeriod: 14, dPeriod: 3);
+    final sto =
+        _stochastic(highsAll, lowsAll, closesAll, idx, kPeriod: 14, dPeriod: 3);
     base.addAll([sto.k, sto.d]);
 
     // 3) Williams %R (period 14) scaled to [-1, 0]
@@ -181,12 +184,12 @@ class ModelUtils {
     if (idx < periods) {
       return 0.0; // Not enough history
     }
-    
+
     final current = window[idx].close;
     final past = window[idx - periods].close;
-    
+
     if (past == 0) return 0.0;
-    
+
     return (current - past) / past;
   }
 
@@ -214,21 +217,21 @@ class ModelUtils {
 
     for (int i = data.length - period; i < data.length; i++) {
       if (i == 0) continue;
-      
+
       final change = data[i].close - data[i - 1].close;
       if (change > 0) {
         gains += change;
-        } else {
+      } else {
         losses += -change;
       }
     }
 
     if (losses == 0) return 100.0;
-    
+
     final avgGain = gains / period;
     final avgLoss = losses / period;
     final rs = avgGain / avgLoss;
-    
+
     return 100 - (100 / (1 + rs));
   }
 
@@ -240,7 +243,7 @@ class ModelUtils {
     }
 
     final trs = <double>[];
-    
+
     for (int i = 1; i < data.length; i++) {
       final high = data[i].high;
       final low = data[i].low;
@@ -255,10 +258,9 @@ class ModelUtils {
       trs.add(tr);
     }
 
-    final recentTRs = trs.length > period 
-        ? trs.sublist(trs.length - period)
-        : trs;
-    
+    final recentTRs =
+        trs.length > period ? trs.sublist(trs.length - period) : trs;
+
     return recentTRs.reduce((a, b) => a + b) / recentTRs.length;
   }
 
@@ -267,7 +269,7 @@ class ModelUtils {
     if (data.length < 2) return 0.5; // Neutral
 
     double obv = 0;
-    
+
     for (int i = 1; i < data.length; i++) {
       if (data[i].close > data[i - 1].close) {
         obv += data[i].volume;
@@ -280,9 +282,9 @@ class ModelUtils {
     // Normalize to [0, 1] range
     // Max possible OBV would be sum of all volumes
     final maxObv = data.map((c) => c.volume).reduce((a, b) => a + b);
-    
+
     if (maxObv == 0) return 0.5;
-    
+
     // Map from [-maxObv, +maxObv] to [0, 1]
     return (obv / maxObv + 1) / 2;
   }
@@ -297,12 +299,12 @@ class ModelUtils {
   static double _std(List<double> values) {
     if (values.isEmpty) return 0.0;
     if (values.length == 1) return 0.0;
-    
+
     final mean = _mean(values);
-    final variance = values
-        .map((x) => pow(x - mean, 2))
-        .reduce((a, b) => a + b) / values.length;
-    
+    final variance =
+        values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
+            values.length;
+
     return sqrt(variance);
   }
 
@@ -416,7 +418,7 @@ class ModelUtils {
     List<Candle> data,
     int idx,
   ) {
-    double _mid(int period) {
+    double mid(int period) {
       final end = idx + 1;
       final start = (end - period) < 0 ? 0 : (end - period);
       final highs = data.sublist(start, end).map((c) => c.high);
@@ -426,10 +428,10 @@ class ModelUtils {
       return (h + l) / 2.0;
     }
 
-    final tenkan = _mid(9);
-    final kijun = _mid(26);
+    final tenkan = mid(9);
+    final kijun = mid(26);
     final spanA = (tenkan + kijun) / 2.0;
-    final spanB = _mid(52);
+    final spanB = mid(52);
     final close = data[idx].close;
     final spanMax = spanA > spanB ? spanA : spanB;
     final spanMin = spanA > spanB ? spanB : spanA;
@@ -439,7 +441,8 @@ class ModelUtils {
     return (tenkanKijun: tenkanKijun, spanDist: spanDist, cloudPos: cloudPos);
   }
 
-  static ({double vwapRatio, double vahDist, double valDist}) _volumeProfileProxy(
+  static ({double vwapRatio, double vahDist, double valDist})
+      _volumeProfileProxy(
     List<Candle> data,
     int idx, {
     int lookback = 20,
@@ -473,9 +476,11 @@ class ModelUtils {
   }) {
     final c = data[idx];
     final tr = (c.high - c.low).abs() < 1e-12 ? 1e-12 : (c.high - c.low);
-    final body = (c.close - c.open) / tr; // [-inf..inf] but bounded by clamp below
+    final body =
+        (c.close - c.open) / tr; // [-inf..inf] but bounded by clamp below
     final avgVol = data
-            .sublist((idx + 1 - lookback) < 0 ? 0 : (idx + 1 - lookback), idx + 1)
+            .sublist(
+                (idx + 1 - lookback) < 0 ? 0 : (idx + 1 - lookback), idx + 1)
             .map((e) => e.volume)
             .fold<double>(0.0, (a, b) => a + b) /
         (lookback < 1 ? 1 : (idx + 1 < lookback ? (idx + 1) : lookback));
@@ -483,7 +488,8 @@ class ModelUtils {
     return (body * relVol).clamp(-3.0, 3.0);
   }
 
-  static double _multiTfReturn(List<double> closes, int idx, {required int periods}) {
+  static double _multiTfReturn(List<double> closes, int idx,
+      {required int periods}) {
     if (idx < periods) return 0.0;
     final past = closes[idx - periods];
     final cur = closes[idx];
@@ -506,8 +512,10 @@ class ModelUtils {
     final dimB = inShape[2];
 
     // Determine intended time/feature dims (we expect 64x15)
-    final timeDim = (dimA == 64 || dimB == 64) ? 64 : dimA; // fallback to dimA if unknown
-    final featDim = (dimA == 15 || dimB == 15) ? 15 : dimB; // fallback to dimB if unknown
+    final timeDim =
+        (dimA == 64 || dimB == 64) ? 64 : dimA; // fallback to dimA if unknown
+    final featDim =
+        (dimA == 15 || dimB == 15) ? 15 : dimB; // fallback to dimB if unknown
 
     // Extract canonical [timeDim, featDim] features and normalize to stats length
     final featsTF = featuresFromCandles(window, timeDim, featDim);
@@ -563,7 +571,7 @@ class ModelUtils {
         ),
       );
     }
-    
+
     throw ArgumentError('Unsupported output shape: $outShape');
   }
 
@@ -579,7 +587,7 @@ class ModelUtils {
       // [1, 1, 1] -> output[0][0][0]
       return (output as List<List<List<double>>>)[0][0][0];
     }
-    
+
     throw ArgumentError('Cannot extract scalar from shape: $outShape');
   }
 
@@ -638,7 +646,9 @@ class ModelUtils {
     // x[0] shape: [time][feat]
     final time = x[0].length;
     final feat = x[0][0].length;
-    final out = <List<List<double>>>[List.generate(feat, (_) => List.filled(time, 0.0))];
+    final out = <List<List<double>>>[
+      List.generate(feat, (_) => List.filled(time, 0.0))
+    ];
     for (int t = 0; t < time; t++) {
       for (int f = 0; f < feat; f++) {
         out[0][f][t] = x[0][t][f];
@@ -669,4 +679,3 @@ class ModelUtils {
     return out;
   }
 }
-

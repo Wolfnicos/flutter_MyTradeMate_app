@@ -33,12 +33,14 @@ class _StrategySettingsScreenState extends State<StrategySettingsScreen> {
                   const SizedBox(height: 16),
                   SwitchListTile(
                     title: const Text('Use Ensemble Predictions'),
-                    subtitle: const Text('Combine all 3 models for better accuracy'),
+                    subtitle:
+                        const Text('Combine all 3 models for better accuracy'),
                     value: _useEnsemble,
                     onChanged: (v) => setState(() => _useEnsemble = v),
                   ),
                   const Divider(height: 32),
-                  Text('Confidence Threshold: ${(_confThreshold * 100).toStringAsFixed(0)}%'),
+                  Text(
+                      'Confidence Threshold: ${(_confThreshold * 100).toStringAsFixed(0)}%'),
                   Slider(
                     value: _confThreshold,
                     min: 0.10,
@@ -74,5 +76,3 @@ class _StrategySettingsScreenState extends State<StrategySettingsScreen> {
     );
   }
 }
-
-

@@ -21,7 +21,8 @@ Widget _app() {
 Future<void> _noop() async {}
 
 void main() {
-  testWidgets('MarketDetails: price strip is a live region with value', (t) async {
+  testWidgets('MarketDetails: price strip is a live region with value',
+      (t) async {
     await t.pumpWidget(_app());
     await t.pump(const Duration(milliseconds: 50));
 
@@ -34,5 +35,3 @@ void main() {
     expect(find.byKey(AppKeys.marketLiveRegion), findsOneWidget);
   });
 }
-
-

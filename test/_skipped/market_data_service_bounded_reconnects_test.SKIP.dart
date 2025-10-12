@@ -34,7 +34,9 @@ void main() {
       await svc.dispose();
       await Future<void>.delayed(Duration.zero);
       // best-effort flush
-      for (var i = 0; i < 3; i++) { await Future<void>.delayed(Duration.zero); }
+      for (var i = 0; i < 3; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
     });
     addTearDown(() async {
       await src.close();
@@ -55,5 +57,3 @@ void main() {
     expect(ticks.isNotEmpty, isTrue);
   }, timeout: const Timeout(Duration(seconds: 8)));
 }
-
-

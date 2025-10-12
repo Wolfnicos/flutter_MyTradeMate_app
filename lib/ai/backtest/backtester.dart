@@ -4,10 +4,10 @@ import 'metrics.dart';
 
 /// BacktestResult - rezultat complet al unui backtest
 class BacktestResult {
-  final List<double> equity;      // Equity curve (valoare portofoliu în timp)
-  final List<String> actions;     // Lista acțiunilor luate
+  final List<double> equity; // Equity curve (valoare portofoliu în timp)
+  final List<String> actions; // Lista acțiunilor luate
   final List<DateTime> timestamps; // Timestamps pentru fiecare punct
-  final Metrics metrics;          // Performance metrics
+  final Metrics metrics; // Performance metrics
   final double initialCapital;
   final double finalCapital;
 
@@ -38,7 +38,7 @@ class Trade {
   final double? exitPrice;
   final double quantity;
   final String side; // 'BUY' sau 'SELL'
-  
+
   Trade({
     required this.entryTime,
     this.exitTime,
@@ -47,15 +47,14 @@ class Trade {
     required this.quantity,
     required this.side,
   });
-  
+
   double? get pnl {
     if (exitPrice == null) return null;
-    final diff = side == 'BUY' 
-        ? (exitPrice! - entryPrice) 
-        : (entryPrice - exitPrice!);
+    final diff =
+        side == 'BUY' ? (exitPrice! - entryPrice) : (entryPrice - exitPrice!);
     return diff * quantity;
   }
-  
+
   double? get pnlPercent {
     if (exitPrice == null) return null;
     return side == 'BUY'
@@ -118,7 +117,7 @@ class Backtester {
         qty = netSpend / buyPrice;
         cash -= spend;
         buyCount++;
-        
+
         currentTrade = Trade(
           entryTime: currentCandle.time,
           entryPrice: buyPrice,
@@ -133,7 +132,7 @@ class Backtester {
         final netProceeds = proceeds - feeAmount;
         cash += netProceeds;
         sellCount++;
-        
+
         if (currentTrade != null) {
           trades.add(Trade(
             entryTime: currentTrade.entryTime,
@@ -144,7 +143,7 @@ class Backtester {
             side: currentTrade.side,
           ));
         }
-        
+
         qty = 0;
         currentTrade = null;
       }
@@ -187,4 +186,3 @@ class Backtester {
     );
   }
 }
-

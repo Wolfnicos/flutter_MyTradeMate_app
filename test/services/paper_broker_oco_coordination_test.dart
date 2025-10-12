@@ -45,5 +45,3 @@ void main() {
     expect(fills.first.price, closeTo(1012.00, 1e-9));
   });
 }
-
-

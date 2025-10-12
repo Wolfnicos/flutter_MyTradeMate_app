@@ -30,8 +30,9 @@ class _NullModels implements ModelsAdapter {
       predictAllFromSequence(List<List<double>> seq) async =>
           (probUp: null, nextReturn: null, volatility: null);
 }
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('AIService handles null model outputs → HOLD, defaults', () async {
     final svc = AIService(
@@ -45,5 +46,3 @@ void main() {
     expect(r.targetPrice, greaterThan(0));
   });
 }
-
-

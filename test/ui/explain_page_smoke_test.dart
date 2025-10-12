@@ -7,7 +7,7 @@ void main() {
   testWidgets('ExplainPage renders core fields', (tester) async {
     final data = ExplainData(
       symbol: 'BTCUSDT',
-      asOf: DateTime.utc(2025,1,1),
+      asOf: DateTime.utc(2025, 1, 1),
       pBuy: 0.56,
       expReturn: 0.01,
       annVol: 0.05,

@@ -5,7 +5,8 @@ import 'package:mytrademate/ui/kit/ui_market_error.dart';
 
 void main() {
   testWidgets('UiMarketSkeleton builds', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: UiMarketSkeleton())));
+    await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: UiMarketSkeleton())));
     expect(find.byType(UiMarketSkeleton), findsOneWidget);
   });
 
@@ -21,6 +22,3 @@ void main() {
     expect(retried, isTrue);
   });
 }
-
-
-

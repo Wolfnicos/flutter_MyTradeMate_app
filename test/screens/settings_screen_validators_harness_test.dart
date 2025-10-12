@@ -15,6 +15,3 @@ void main() {
     expect(validateSecretForTest('very-long-secret-123'), isNull);
   });
 }
-
-
-

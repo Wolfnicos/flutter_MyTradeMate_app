@@ -16,7 +16,7 @@ void main() {
       expReturn: 0.0035,
       annVol: 0.19,
       relVolume: 1.0,
-      asOf: DateTime.utc(2025,1,1,12),
+      asOf: DateTime.utc(2025, 1, 1, 12),
     );
 
     await tracer.log(
@@ -35,5 +35,3 @@ void main() {
     expect((m['meta'] as Map)['featuresHash'], isA<String>());
   });
 }
-
-

@@ -62,11 +62,11 @@ void main() {
         tracker: PerformanceTracker(),
       );
       final models = [
-        SignalVote(direction: 'BUY', confidence: 0.85),
-        SignalVote(direction: 'BUY', confidence: 0.75),
-        SignalVote(direction: 'BUY', confidence: 0.70),
+        const SignalVote(direction: 'BUY', confidence: 0.85),
+        const SignalVote(direction: 'BUY', confidence: 0.75),
+        const SignalVote(direction: 'BUY', confidence: 0.70),
       ];
-      final fallback = SignalVote(direction: 'BUY', confidence: 0.40);
+      const fallback = SignalVote(direction: 'BUY', confidence: 0.40);
       final combined = ens.combine(models, fallback);
       expect(combined.confidence, greaterThan(0.80));
       expect(combined.metadata['boost_applied'], isTrue);
@@ -81,11 +81,11 @@ void main() {
         tracker: PerformanceTracker(),
       );
       final models = [
-        SignalVote(direction: 'BUY', confidence: 0.80),
-        SignalVote(direction: 'SELL', confidence: 0.75),
-        SignalVote(direction: 'HOLD', confidence: 0.60),
+        const SignalVote(direction: 'BUY', confidence: 0.80),
+        const SignalVote(direction: 'SELL', confidence: 0.75),
+        const SignalVote(direction: 'HOLD', confidence: 0.60),
       ];
-      final fallback = SignalVote(direction: 'HOLD', confidence: 0.40);
+      const fallback = SignalVote(direction: 'HOLD', confidence: 0.40);
       final combined = ens.combine(models, fallback);
       expect(combined.confidence, lessThan(0.60));
       expect(combined.metadata['penalty_applied'], isTrue);
@@ -112,5 +112,3 @@ void main() {
     });
   });
 }
-
-

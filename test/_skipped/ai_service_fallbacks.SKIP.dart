@@ -32,8 +32,9 @@ class _ModelsHold implements ModelsAdapter {
       predictAllFromSequence(List<List<double>> seq) async =>
           (probUp: 0.5, nextReturn: 0.0, volatility: 0.04);
 }
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('AIService falls back when 24h and klines fail', () async {
     final svc = AIService(
@@ -47,5 +48,3 @@ void main() {
     expect(r.targetPrice, greaterThan(0));
   });
 }
-
-

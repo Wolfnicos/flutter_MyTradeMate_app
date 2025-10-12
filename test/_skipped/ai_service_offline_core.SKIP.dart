@@ -72,8 +72,9 @@ class _ModelsAdapter implements ModelsAdapter {
     return out;
   }
 }
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('getPrediction offline → BUY + explain-ish mapping', () async {
     final svc = AIService(
@@ -89,5 +90,3 @@ void main() {
     expect(toBinanceSymbolForTest(' ethusdt '), 'ETHUSDT');
   });
 }
-
-

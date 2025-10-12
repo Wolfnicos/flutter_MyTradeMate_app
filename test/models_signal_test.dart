@@ -18,6 +18,3 @@ void main() {
     expect(s2.dir, Direction.up);
   });
 }
-
-
-

@@ -7,6 +7,3 @@ void main() {
     expect(c.parseTickerPriceForTest({'c': 1001.2}), 1001.2);
   });
 }
-
-
-

@@ -10,10 +10,19 @@ Future<void> _noDelay(Duration _) async {}
 void main() {
   test('WS flaps: reconnects bounded and no duplicate emissions', () async {
     final script = <Map<String, dynamic>>[
-      {'tick': {'c': '1000.0'}, 'delayMs': 5},
+      {
+        'tick': {'c': '1000.0'},
+        'delayMs': 5
+      },
       {'close': true, 'delayMs': 20},
-      {'tick': {'c': '1001.0'}, 'delayMs': 10},
-      {'tick': {'c': '1015.0'}, 'delayMs': 8},
+      {
+        'tick': {'c': '1001.0'},
+        'delayMs': 10
+      },
+      {
+        'tick': {'c': '1015.0'},
+        'delayMs': 8
+      },
       {'end': true, 'delayMs': 1},
     ];
 
@@ -67,5 +76,3 @@ void main() {
     }
   }, timeout: const Timeout(Duration(seconds: 10)));
 }
-
-

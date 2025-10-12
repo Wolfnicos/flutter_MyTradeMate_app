@@ -15,11 +15,14 @@ void main() {
       // Input sanity checks
       final feats = ModelUtils.featuresFromCandles(candles, 64, 15);
       expect(feats.length, equals(64), reason: 'Window size must be 64');
-      expect(feats.first.length, equals(15), reason: 'Features count must be 15');
+      expect(feats.first.length, equals(15),
+          reason: 'Features count must be 15');
 
       final flat = ModelUtils.normalize2D(feats);
-      expect(flat.every((x) => x.isFinite), isTrue, reason: 'All features must be finite');
-      expect(flat.any((x) => x.isNaN), isFalse, reason: 'No NaN values allowed');
+      expect(flat.every((x) => x.isFinite), isTrue,
+          reason: 'All features must be finite');
+      expect(flat.any((x) => x.isNaN), isFalse,
+          reason: 'No NaN values allowed');
 
       // Log input stats for debugging
       // ignore: avoid_print
@@ -27,9 +30,12 @@ void main() {
       for (int i = 0; i < 15; i++) {
         final values = feats.map((row) => row[i]).toList();
         final mean = values.reduce((a, b) => a + b) / values.length;
-        final std = sqrt(values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) / values.length);
+        final std = sqrt(
+            values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
+                values.length);
         // ignore: avoid_print
-        print('  Feature $i: mean=${mean.toStringAsFixed(4)}, std=${std.toStringAsFixed(4)}');
+        print(
+            '  Feature $i: mean=${mean.toStringAsFixed(4)}, std=${std.toStringAsFixed(4)}');
       }
 
       // Run prediction
@@ -49,22 +55,26 @@ void main() {
 
       // Check if TFLite is active (not fallback's exact [.33, .34, .33])
       final isFallback = (probs[0] - 0.33).abs() < 0.005 &&
-                         (probs[1] - 0.34).abs() < 0.005 &&
-                         (probs[2] - 0.33).abs() < 0.005;
+          (probs[1] - 0.34).abs() < 0.005 &&
+          (probs[2] - 0.33).abs() < 0.005;
 
       if (isFallback) {
         // ignore: avoid_print
         print('\n⚠️  WARNING: Fallback detected (uniform distribution)');
         // ignore: avoid_print
-        print('   This means TFLite interpreter is NOT available in this test environment.');
+        print(
+            '   This means TFLite interpreter is NOT available in this test environment.');
         // ignore: avoid_print
         print('   Run on device/simulator to test actual TFLite model.');
       } else {
         // ignore: avoid_print
         print('\n✅ TFLite model active!');
-        expect(probs[0], greaterThan(0.4), reason: 'Bullish data should favor BUY (>40%)');
-        expect((probs[0] - 1/3).abs(), greaterThan(0.05), reason: 'Distribution should NOT be uniform');
-        expect(probs[0], greaterThan(probs[2]), reason: 'BUY should dominate over SELL on bullish data');
+        expect(probs[0], greaterThan(0.4),
+            reason: 'Bullish data should favor BUY (>40%)');
+        expect((probs[0] - 1 / 3).abs(), greaterThan(0.05),
+            reason: 'Distribution should NOT be uniform');
+        expect(probs[0], greaterThan(probs[2]),
+            reason: 'BUY should dominate over SELL on bullish data');
       }
     });
 
@@ -87,12 +97,14 @@ void main() {
       expect(sum, closeTo(1.0, 0.02));
 
       final isFallback = (probs[0] - 0.33).abs() < 0.005 &&
-                         (probs[1] - 0.34).abs() < 0.005 &&
-                         (probs[2] - 0.33).abs() < 0.005;
+          (probs[1] - 0.34).abs() < 0.005 &&
+          (probs[2] - 0.33).abs() < 0.005;
 
       if (!isFallback) {
-        expect(probs[2], greaterThan(0.4), reason: 'Bearish data should favor SELL');
-        expect(probs[2], greaterThan(probs[0]), reason: 'SELL should dominate over BUY on bearish data');
+        expect(probs[2], greaterThan(0.4),
+            reason: 'Bearish data should favor SELL');
+        expect(probs[2], greaterThan(probs[0]),
+            reason: 'SELL should dominate over BUY on bearish data');
       }
     });
 
@@ -200,5 +212,3 @@ List<Candle> _generateSidewaysCandles(int n) {
 
   return candles;
 }
-
-

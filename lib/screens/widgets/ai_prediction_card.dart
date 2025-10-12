@@ -236,9 +236,8 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
         }
         VolLevel vol = VolLevel.moderate;
         final annVol = pred.annVol.abs();
-        final vLbl = annVol >= 0.10
-            ? 'HIGH'
-            : (annVol >= 0.03 ? 'MEDIUM' : 'LOW');
+        final vLbl =
+            annVol >= 0.10 ? 'HIGH' : (annVol >= 0.03 ? 'MEDIUM' : 'LOW');
         if (vLbl == 'LOW') {
           vol = VolLevel.low;
         } else if (vLbl == 'HIGH') {
@@ -261,7 +260,8 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
           color: Theme.of(context).cardColor.withValues(alpha: 230),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
-            side: BorderSide(color: actionColor.withValues(alpha: 128), width: 2),
+            side:
+                BorderSide(color: actionColor.withValues(alpha: 128), width: 2),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -280,7 +280,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                   ],
                 ),
                 const Divider(height: 20, color: Colors.white12),
-                
+
                 // Action and Confidence
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -289,7 +289,9 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Action:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const Text('Action:',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 12)),
                         const SizedBox(height: 4),
                         Text(action,
                             style: TextStyle(
@@ -301,9 +303,11 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Text('Confidence', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        const Text('Confidence',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 12)),
                         const SizedBox(height: 4),
-                        Text('${(pred.confidence()*100).toStringAsFixed(1)}%',
+                        Text('${(pred.confidence() * 100).toStringAsFixed(1)}%',
                             style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w900,
@@ -313,7 +317,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Detailed metrics grid
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -323,11 +327,20 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
                   ),
                   child: Column(
                     children: [
-                      _buildMetricRow('Expected Return', '${(pred.expReturn * 100).toStringAsFixed(2)}%', Icons.account_balance_wallet),
+                      _buildMetricRow(
+                          'Expected Return',
+                          '${(pred.expReturn * 100).toStringAsFixed(2)}%',
+                          Icons.account_balance_wallet),
                       const Divider(height: 16, color: Colors.white12),
-                      _buildMetricRow('Volatility (ann.)', '${(pred.annVol * 100).toStringAsFixed(1)}%', Icons.show_chart),
+                      _buildMetricRow(
+                          'Volatility (ann.)',
+                          '${(pred.annVol * 100).toStringAsFixed(1)}%',
+                          Icons.show_chart),
                       const Divider(height: 16, color: Colors.white12),
-                      _buildMetricRow('Probability Up', '${(pred.pBuy * 100).toStringAsFixed(1)}%', Icons.trending_up),
+                      _buildMetricRow(
+                          'Probability Up',
+                          '${(pred.pBuy * 100).toStringAsFixed(1)}%',
+                          Icons.trending_up),
                     ],
                   ),
                 ),
@@ -491,14 +504,13 @@ Widget _buildMetricRow(String label, String value, IconData icon) {
         children: [
           Icon(icon, color: Colors.cyanAccent, size: 18),
           const SizedBox(width: 10),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          Text(label,
+              style: const TextStyle(color: Colors.white70, fontSize: 14)),
         ],
       ),
       Text(value,
           style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-              color: Colors.white)),
+              fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white)),
     ],
   );
 }

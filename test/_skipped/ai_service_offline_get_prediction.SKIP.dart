@@ -40,8 +40,9 @@ class _FakeModels implements ModelsAdapter {
     return (probUp: 0.8, nextReturn: 0.02, volatility: 0.05);
   }
 }
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('getPrediction offline returns BUY with explain-ish fields stable',
       () async {
@@ -64,5 +65,3 @@ void main() {
     expect(volLabelForTest(0.12), 'HIGH');
   });
 }
-
-

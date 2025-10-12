@@ -56,7 +56,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // 1) Open confirm sheet (tap trade CTA)
-      final tradeCta = find.byKey(const Key('trade.place')); // TODO: use AppKeys.tradePlace
+      final tradeCta =
+          find.byKey(const Key('trade.place')); // TODO: use AppKeys.tradePlace
       // Skip until UI key is wired
       if (tradeCta.evaluate().isEmpty) {
         return; // scaffold only
@@ -65,9 +66,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // 2) Sheet visible with summary and confirm
-      expect(find.byKey(const Key('confirm.sheet')), findsOneWidget); // TODO: AppKeys.confirmSheet
+      expect(find.byKey(const Key('confirm.sheet')),
+          findsOneWidget); // TODO: AppKeys.confirmSheet
       expect(find.textContaining('BTCUSDT'), findsWidgets);
-      final confirmBtn = find.byKey(const Key('confirm.place')); // TODO: AppKeys.confirmPlace
+      final confirmBtn =
+          find.byKey(const Key('confirm.place')); // TODO: AppKeys.confirmPlace
       expect(confirmBtn, findsOneWidget);
 
       // 3) Confirm
@@ -76,7 +79,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       // 4) Snackbar with Undo appears
-      expect(find.byKey(const Key('undo.trade')), findsOneWidget); // TODO: AppKeys.undoTrade
+      expect(find.byKey(const Key('undo.trade')),
+          findsOneWidget); // TODO: AppKeys.undoTrade
 
       // 5) Broker got the place call (scaffold expectation)
       expect(broker.placed.length, anyOf(0, 1));
@@ -120,8 +124,3 @@ void main() {
     skip: true,
   );
 }
-
-
-
-
-

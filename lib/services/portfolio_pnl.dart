@@ -33,6 +33,3 @@ class PnlBaselineStore {
     return (delta, usedBaseline);
   }
 }
-
-
-

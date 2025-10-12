@@ -150,3 +150,6 @@ Dacă nu merge, **Soluția 3 (Xcode manual)** e cea mai sigură.
 **Doar iOS build system are probleme temporare. 🎯**
 
 
+
+
+

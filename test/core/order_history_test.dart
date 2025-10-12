@@ -25,6 +25,3 @@ void main() {
     expect(all.first.symbol, 'BTCUSDT');
   });
 }
-
-
-

@@ -23,5 +23,3 @@ class AppKeys {
   static const confirmPlace = Key('trade.confirm.place');
   static const undoTrade = Key('trade.undo');
 }
-
-

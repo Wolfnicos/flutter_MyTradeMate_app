@@ -17,6 +17,3 @@ void main() {
     expect(sp2.getDouble('binance.fixedQuote'), 50);
   });
 }
-
-
-

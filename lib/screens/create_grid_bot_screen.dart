@@ -6,7 +6,7 @@ import '../models/grid_bot.dart';
 class CreateGridBotScreen extends StatefulWidget {
   final String symbol;
   final double? currentPrice;
-  
+
   const CreateGridBotScreen({
     super.key,
     required this.symbol,
@@ -23,10 +23,10 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
   final _maxPriceCtrl = TextEditingController();
   final _gridCountCtrl = TextEditingController(text: '120');
   final _investmentCtrl = TextEditingController(text: '50');
-  
+
   GridMode _mode = GridMode.geometric;
   bool _autoRestart = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -68,13 +68,14 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
               'Grilă Spot',
               style: TextStyle(color: Colors.grey[400], fontSize: 14),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Ce este grila Spot section
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: const ExpansionTile(
                 title: Text('Ce este grila Spot'),
                 leading: Icon(Icons.help_outline, color: Colors.blue),
@@ -87,7 +88,8 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                         _FeatureTile(
                           icon: Icons.autorenew,
                           title: 'Automatizare',
-                          subtitle: 'Economisește timp prin automatizarea ordinelor de cumpărare și vânzare.',
+                          subtitle:
+                              'Economisește timp prin automatizarea ordinelor de cumpărare și vânzare.',
                         ),
                         SizedBox(height: 12),
                         _FeatureTile(
@@ -99,12 +101,16 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                         _FeatureTile(
                           icon: Icons.schedule,
                           title: 'Strategie consecventă',
-                          subtitle: 'Menține o abordare de tranzacționare constantă.',
+                          subtitle:
+                              'Menține o abordare de tranzacționare constantă.',
                         ),
                         SizedBox(height: 12),
                         Text(
                           '* Deoarece condițiile de piață diferă, acești parametri nu pot garanta obținerea acelorași rezultate.',
-                          style: TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic),
                         ),
                       ],
                     ),
@@ -112,11 +118,12 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Price Range
-            const Text('Interval de preț', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text('Interval de preț',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -128,7 +135,8 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                       border: OutlineInputBorder(),
                       suffixText: 'ETH',
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     validator: (v) {
                       final val = double.tryParse(v ?? '');
                       if (val == null || val <= 0) return 'Invalid';
@@ -145,7 +153,8 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                       border: OutlineInputBorder(),
                       suffixText: 'ETH',
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     validator: (v) {
                       final val = double.tryParse(v ?? '');
                       if (val == null || val <= 0) return 'Invalid';
@@ -157,11 +166,12 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Grid Count
-            const Text('Numărul de grile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text('Numărul de grile',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             TextFormField(
               controller: _gridCountCtrl,
@@ -178,11 +188,12 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Mode
-            const Text('Mod', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text('Mod',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             SegmentedButton<GridMode>(
               segments: const [
@@ -202,11 +213,12 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                 setState(() => _mode = newSelection.first);
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Investment
-            const Text('Investiție', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text('Investiție',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
             TextFormField(
               controller: _investmentCtrl,
@@ -216,26 +228,28 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                 suffixText: 'USDT',
                 helperText: 'Minim 10 USDT',
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
                 final val = double.tryParse(v ?? '');
                 if (val == null || val < 10) return 'Min 10 USDT';
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Auto-restart toggle
             SwitchListTile(
               title: const Text('Auto-restart la finalizare'),
-              subtitle: const Text('Botul va reporni automat când toate grilele sunt completate'),
+              subtitle: const Text(
+                  'Botul va reporni automat când toate grilele sunt completate'),
               value: _autoRestart,
               onChanged: (v) => setState(() => _autoRestart = v),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Profit estimate
             if (_formKey.currentState?.validate() ?? false)
               Card(
@@ -245,7 +259,8 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Estimare profit', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text('Estimare profit',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       Text(
                         'Profit/grilă: ${_calculateProfitPerGrid().toStringAsFixed(2)} %',
@@ -255,16 +270,17 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
                   ),
                 ),
               ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Create button
             ElevatedButton(
               onPressed: _createBot,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Creează Bot', style: TextStyle(fontSize: 16)),
             ),
@@ -285,7 +301,7 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
 
   void _createBot() {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final config = GridBotConfig(
       symbol: widget.symbol,
       minPrice: double.parse(_minPriceCtrl.text),
@@ -295,14 +311,15 @@ class _CreateGridBotScreenState extends State<CreateGridBotScreen> {
       mode: _mode,
       autoRestart: _autoRestart,
     );
-    
+
     if (!config.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(config.validationError ?? 'Invalid configuration')),
+        SnackBar(
+            content: Text(config.validationError ?? 'Invalid configuration')),
       );
       return;
     }
-    
+
     // TODO: Create bot via service
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Bot creat cu succes!')),
@@ -315,7 +332,7 @@ class _FeatureTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  
+
   const _FeatureTile({
     required this.icon,
     required this.title,
@@ -346,6 +363,3 @@ class _FeatureTile extends StatelessWidget {
     );
   }
 }
-
-
-

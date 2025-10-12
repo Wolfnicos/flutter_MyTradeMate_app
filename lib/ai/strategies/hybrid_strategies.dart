@@ -18,7 +18,8 @@ class RegimeContext {
 
 RegimeContext detectMarketRegime(List<Candle> candles) {
   if (candles.length < 64) {
-    return const RegimeContext(regime: MarketRegime.range, volatility: 0.3, trendStrength: 0.0);
+    return const RegimeContext(
+        regime: MarketRegime.range, volatility: 0.3, trendStrength: 0.0);
   }
   final closes = candles.map((c) => c.close).toList();
   final v = ewmaVol(closes, lambda: 0.94).clamp(0.01, 3.0);
@@ -53,25 +54,43 @@ RegimeContext detectMarketRegime(List<Candle> candles) {
   double wS, wW, wP;
   // Base by volatility: higher vol → favor scalper and swing
   if (volatility >= 0.8) {
-    wS = 0.5; wW = 0.35; wP = 0.15;
+    wS = 0.5;
+    wW = 0.35;
+    wP = 0.15;
   } else if (volatility >= 0.4) {
-    wS = 0.35; wW = 0.40; wP = 0.25;
+    wS = 0.35;
+    wW = 0.40;
+    wP = 0.25;
   } else {
-    wS = 0.20; wW = 0.40; wP = 0.40;
+    wS = 0.20;
+    wW = 0.40;
+    wP = 0.40;
   }
   // Regime tilt
   switch (regime) {
     case MarketRegime.bullish:
-      wP += 0.10; wW += 0.05; wS -= 0.15; break;
+      wP += 0.10;
+      wW += 0.05;
+      wS -= 0.15;
+      break;
     case MarketRegime.bearish:
-      wS += 0.10; wW += 0.05; wP -= 0.15; break;
+      wS += 0.10;
+      wW += 0.05;
+      wP -= 0.15;
+      break;
     case MarketRegime.range:
-      wS += 0.05; wW += 0.05; wP -= 0.10; break;
+      wS += 0.05;
+      wW += 0.05;
+      wP -= 0.10;
+      break;
     case MarketRegime.highVol:
-      wS += 0.15; wW += 0.05; wP -= 0.20; break;
+      wS += 0.15;
+      wW += 0.05;
+      wP -= 0.20;
+      break;
   }
   // Normalize and clamp
-  double sum = max(1e-9, wS + wW + wP);
+  final double sum = max(1e-9, wS + wW + wP);
   wS = (wS / sum).clamp(0.0, 1.0);
   wW = (wW / sum).clamp(0.0, 1.0);
   wP = (wP / sum).clamp(0.0, 1.0);
@@ -79,11 +98,12 @@ RegimeContext detectMarketRegime(List<Candle> candles) {
 }
 
 /// Weighted vote across signals: BUY=+1, SELL=-1, HOLD=0
-String weightedVote(Map<String, int> signals, ({double scalper, double swing, double position}) w) {
+String weightedVote(Map<String, int> signals,
+    ({double scalper, double swing, double position}) w) {
   double sum = 0.0;
-  int sScalper = signals['scalper'] ?? 0;
-  int sSwing = signals['swing'] ?? 0;
-  int sPosition = signals['position'] ?? 0;
+  final int sScalper = signals['scalper'] ?? 0;
+  final int sSwing = signals['swing'] ?? 0;
+  final int sPosition = signals['position'] ?? 0;
   sum += sScalper * w.scalper;
   sum += sSwing * w.swing;
   sum += sPosition * w.position;
@@ -123,14 +143,18 @@ Map<String, dynamic> hybridStrategy1({
   required List<Candle> tf1d,
 }) {
   final scalper = emaCrossoverSignal(_closes(tf5m), 8, 21);
-  final swing = rsiMomentumSignal(_closes(tf4h), period: 14, overbought: 70, oversold: 30);
+  final swing = rsiMomentumSignal(_closes(tf4h),
+      period: 14, overbought: 70, oversold: 30);
   final pos = ichimokuCloudSignal(tf1d);
   final regime = detectMarketRegime(tf4h);
-  final w = calculateDynamicWeights(volatility: regime.volatility, regime: regime.regime);
-  final action = weightedVote({'scalper': scalper, 'swing': swing, 'position': pos}, w);
+  final w = calculateDynamicWeights(
+      volatility: regime.volatility, regime: regime.regime);
+  final action =
+      weightedVote({'scalper': scalper, 'swing': swing, 'position': pos}, w);
   return {
     'action': action,
-    'confidence': calculateConfidence({'scalper': scalper, 'swing': swing, 'position': pos}),
+    'confidence': calculateConfidence(
+        {'scalper': scalper, 'swing': swing, 'position': pos}),
     'position_size': riskAdjustedSize(regime.volatility, action),
   };
 }
@@ -143,7 +167,8 @@ Map<String, dynamic> hybridStrategy2({
 }) {
   // Regime-aware parameter tuning
   final regime = detectMarketRegime(tf1d);
-  final highVol = regime.volatility >= 0.8 || regime.regime == MarketRegime.highVol;
+  final highVol =
+      regime.volatility >= 0.8 || regime.regime == MarketRegime.highVol;
   final bandPeriod = highVol ? 14 : 20;
   final bandMult = highVol ? 2.5 : 2.0;
   final adxPeriod = highVol ? 10 : 14;
@@ -151,10 +176,13 @@ Map<String, dynamic> hybridStrategy2({
 
   // Mean reversion on 5m via Bollinger
   final closes5 = _closes(tf5m);
-  final bb5 = bollingerBands(closes5, period: bandPeriod, stdDevMultiplier: bandMult);
+  final bb5 =
+      bollingerBands(closes5, period: bandPeriod, stdDevMultiplier: bandMult);
   int scalper = 0;
   final last5 = closes5.last;
-  if (last5 < bb5.lower) scalper = 1; else if (last5 > bb5.upper) scalper = -1;
+  if (last5 < bb5.lower) {
+    scalper = 1;
+  } else if (last5 > bb5.upper) scalper = -1;
 
   // Trend following on 1h via ADX and EMA(12/26)
   final closes1h = _closes(tf1h);
@@ -169,11 +197,14 @@ Map<String, dynamic> hybridStrategy2({
 
   // Position bias by Ichimoku on daily
   final pos = ichimokuCloudSignal(tf1d);
-  final w = calculateDynamicWeights(volatility: regime.volatility, regime: regime.regime);
-  final action = weightedVote({'scalper': scalper, 'swing': swing, 'position': pos}, w);
+  final w = calculateDynamicWeights(
+      volatility: regime.volatility, regime: regime.regime);
+  final action =
+      weightedVote({'scalper': scalper, 'swing': swing, 'position': pos}, w);
   return {
     'action': action,
-    'confidence': calculateConfidence({'scalper': scalper, 'swing': swing, 'position': pos}),
+    'confidence': calculateConfidence(
+        {'scalper': scalper, 'swing': swing, 'position': pos}),
     'position_size': riskAdjustedSize(regime.volatility, action),
     'debug': {
       'bbPeriod': bandPeriod,
@@ -192,13 +223,17 @@ Map<String, dynamic> hybridStrategy3({
 }) {
   final s15 = emaCrossoverSignal(_closes(tf15m), 12, 26);
   final s4h = emaCrossoverSignal(_closes(tf4h), 20, 50);
-  final rsiD = rsiMomentumSignal(_closes(tf1d), period: 14, overbought: 65, oversold: 35);
+  final rsiD = rsiMomentumSignal(_closes(tf1d),
+      period: 14, overbought: 65, oversold: 35);
   final regime = detectMarketRegime(tf4h);
-  final w = calculateDynamicWeights(volatility: regime.volatility, regime: regime.regime);
-  final action = weightedVote({'scalper': s15, 'swing': s4h, 'position': rsiD}, w);
+  final w = calculateDynamicWeights(
+      volatility: regime.volatility, regime: regime.regime);
+  final action =
+      weightedVote({'scalper': s15, 'swing': s4h, 'position': rsiD}, w);
   return {
     'action': action,
-    'confidence': calculateConfidence({'scalper': s15, 'swing': s4h, 'position': rsiD}),
+    'confidence':
+        calculateConfidence({'scalper': s15, 'swing': s4h, 'position': rsiD}),
     'position_size': riskAdjustedSize(regime.volatility, action),
   };
 }
@@ -214,16 +249,21 @@ Map<String, dynamic> hybridStrategy4({
   final last1h = closes1h.last;
   int swing = 0;
   if (sma20h.isFinite) {
-    if (last1h > sma20h) swing = 1; else if (last1h < sma20h) swing = -1;
+    if (last1h > sma20h) {
+      swing = 1;
+    } else if (last1h < sma20h) swing = -1;
   }
   final pos = emaCrossoverSignal(_closes(tf1d), 50, 200);
   final scalper = emaCrossoverSignal(_closes(tf5m), 5, 13);
   final regime = detectMarketRegime(tf1d);
-  final w = calculateDynamicWeights(volatility: regime.volatility, regime: regime.regime);
-  final action = weightedVote({'scalper': scalper, 'swing': swing, 'position': pos}, w);
+  final w = calculateDynamicWeights(
+      volatility: regime.volatility, regime: regime.regime);
+  final action =
+      weightedVote({'scalper': scalper, 'swing': swing, 'position': pos}, w);
   return {
     'action': action,
-    'confidence': calculateConfidence({'scalper': scalper, 'swing': swing, 'position': pos}),
+    'confidence': calculateConfidence(
+        {'scalper': scalper, 'swing': swing, 'position': pos}),
     'position_size': riskAdjustedSize(regime.volatility, action),
   };
 }
@@ -234,17 +274,19 @@ Map<String, dynamic> hybridStrategy5({
   required List<Candle> tf4h,
   required List<Candle> tf1d,
 }) {
-  int scalper = emaCrossoverSignal(_closes(tf5m), 10, 30);
-  int swing = rsiMomentumSignal(_closes(tf4h), period: 21, overbought: 68, oversold: 32);
-  int position = ichimokuCloudSignal(tf1d);
+  final int scalper = emaCrossoverSignal(_closes(tf5m), 10, 30);
+  final int swing = rsiMomentumSignal(_closes(tf4h),
+      period: 21, overbought: 68, oversold: 32);
+  final int position = ichimokuCloudSignal(tf1d);
   final regime = detectMarketRegime(tf4h);
-  final w = calculateDynamicWeights(volatility: regime.volatility, regime: regime.regime);
-  final action = weightedVote({'scalper': scalper, 'swing': swing, 'position': position}, w);
+  final w = calculateDynamicWeights(
+      volatility: regime.volatility, regime: regime.regime);
+  final action = weightedVote(
+      {'scalper': scalper, 'swing': swing, 'position': position}, w);
   return {
     'action': action,
-    'confidence': calculateConfidence({'scalper': scalper, 'swing': swing, 'position': position}),
+    'confidence': calculateConfidence(
+        {'scalper': scalper, 'swing': swing, 'position': position}),
     'position_size': riskAdjustedSize(regime.volatility, action),
   };
 }
-
-

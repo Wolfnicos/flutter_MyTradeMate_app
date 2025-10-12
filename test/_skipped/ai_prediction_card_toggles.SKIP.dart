@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mytrademate/screens/widgets/ai_prediction_card.dart';
 import 'package:test/test.dart' as test show Skip;
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

@@ -17,7 +17,8 @@ Future<String?> createDiagnosticBundle() async {
   // Include log file if available
   if (logPath != null && await File(logPath).exists()) {
     final bytes = await File(logPath).readAsBytes();
-    archive.addFile(ArchiveFile('logs/mytrademate.log.jsonl', bytes.length, bytes));
+    archive.addFile(
+        ArchiveFile('logs/mytrademate.log.jsonl', bytes.length, bytes));
   }
 
   // Build anonymized config snapshot
@@ -50,8 +51,3 @@ String? _mask(String? s) {
   final tail = s.substring(s.length - 4);
   return '$head********$tail';
 }
-
-
-
-
-

@@ -50,6 +50,3 @@ class LocalStore {
     await sp.setDouble('fixedQuote', fixedQuote);
   }
 }
-
-
-

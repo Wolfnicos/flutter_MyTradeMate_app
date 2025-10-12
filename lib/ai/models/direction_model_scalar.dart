@@ -16,12 +16,15 @@ class DirectionModelScalar {
       print('🔧 [DirectionScalar] Loading TFLite model...');
       // Try preferred path; fall back to known asset names if missing
       try {
-        _interpreter = await Interpreter.fromAsset('assets/models/direction_model.tflite');
+        _interpreter =
+            await Interpreter.fromAsset('assets/models/direction_model.tflite');
       } catch (_) {
         try {
-          _interpreter = await Interpreter.fromAsset('assets/models/direction_f32_builtin.tflite');
+          _interpreter = await Interpreter.fromAsset(
+              'assets/models/direction_f32_builtin.tflite');
         } catch (_) {
-          _interpreter = await Interpreter.fromAsset('assets/models/direction_fp16_builtin.tflite');
+          _interpreter = await Interpreter.fromAsset(
+              'assets/models/direction_fp16_builtin.tflite');
         }
       }
 
@@ -217,5 +220,3 @@ class DirectionModelScalar {
     }
   }
 }
-
-

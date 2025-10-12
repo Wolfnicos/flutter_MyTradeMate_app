@@ -274,3 +274,6 @@ flutter run -d "iPhone 17 Pro Max"
 **SUCCES! Pipeline-ul ML este complet și funcțional! 🎯🚀**
 
 
+
+
+

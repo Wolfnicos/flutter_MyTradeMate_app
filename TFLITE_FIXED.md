@@ -354,3 +354,6 @@ Volatility: 52.7% ✅
 **Fix iOS build și run pentru a verifica! 🚀**
 
 
+
+
+

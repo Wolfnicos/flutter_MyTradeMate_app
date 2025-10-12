@@ -288,6 +288,3 @@ class _Palette {
     required this.buttonText,
   });
 }
-
-
-

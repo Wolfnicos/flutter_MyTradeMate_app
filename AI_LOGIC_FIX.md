@@ -513,3 +513,6 @@ flutter run -d "iPhone 17 Pro Max"
 **AI-ul este acum mult mai inteligent și consistent! 🎯**
 
 
+
+
+

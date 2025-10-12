@@ -42,6 +42,3 @@ class PriceLine extends StatelessWidget {
     );
   }
 }
-
-
-

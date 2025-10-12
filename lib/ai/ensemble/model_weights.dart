@@ -16,7 +16,12 @@ class ModelWeights {
   double accTech = 0.5;
 
   /// Update accuracies (EMA) and derive normalized weights.
-  void update({double? dirHit, double? retHit, double? volHit, double? techHit, double alpha = 0.1}) {
+  void update(
+      {double? dirHit,
+      double? retHit,
+      double? volHit,
+      double? techHit,
+      double alpha = 0.1}) {
     if (dirHit != null) accDir = _ema(accDir, dirHit, alpha);
     if (retHit != null) accRet = _ema(accRet, retHit, alpha);
     if (volHit != null) accVol = _ema(accVol, volHit, alpha);
@@ -40,7 +45,6 @@ class ModelWeights {
     }
   }
 
-  double _ema(double prev, double hit, double alpha) => prev * (1 - alpha) + hit * alpha;
+  double _ema(double prev, double hit, double alpha) =>
+      prev * (1 - alpha) + hit * alpha;
 }
-
-

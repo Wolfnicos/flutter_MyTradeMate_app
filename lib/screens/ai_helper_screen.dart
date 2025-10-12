@@ -18,7 +18,7 @@ class AIHelperScreen extends StatefulWidget {
 class _AIHelperScreenState extends State<AIHelperScreen> {
   // 🤖 Use NEW AI Pipeline instead of legacy!
   OHLCVService? _ohlcvService;
-  
+
   // Doar 5 crypto suportate - cu date REALE
   static const List<Map<String, String>> _supportedCrypto = [
     {'symbol': 'BTCUSDT', 'name': 'Bitcoin', 'label': 'BTC'},
@@ -30,7 +30,7 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
 
   String _selectedQuote = 'USDT'; // Default: USDT
   final List<String> _availableQuotes = ['USDT', 'USD', 'EUR'];
-  
+
   String? _selectedCrypto = 'BTCUSDT';
   final Map<String, ai.Prediction?> _aiPredictions = {}; // NEW AI predictions!
   final Map<String, Map<String, dynamic>?> _marketData = {};
@@ -77,10 +77,10 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
     try {
       final client = await DioBinanceClient.createFromPrefs();
       _ohlcvService ??= OHLCVService(client);
-      
+
       for (final crypto in _supportedCrypto) {
         final symbol = _convertSymbol(crypto['symbol']!);
-        
+
         // Verifică dacă simbolul este suportat
         final isSupported = await client.supportsSymbol(symbol);
         if (!isSupported) {
@@ -100,10 +100,10 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
         try {
           // Use PredictionRepo pentru cache și consistency!
           final prediction = await AILocator.I.repo.getFor(symbol);
-          
+
           // Store result (poate fi null)
           _aiPredictions[crypto['label']!] = prediction;
-          
+
           // Logs sunt deja în PredictionRepo - nu duplicăm aici!
         } catch (e) {
           _aiPredictions[crypto['label']!] = null;
@@ -277,9 +277,8 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
                     _loadAllData();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isSelected
-                        ? Colors.indigo
-                        : Colors.grey.shade800,
+                    backgroundColor:
+                        isSelected ? Colors.indigo : Colors.grey.shade800,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -314,7 +313,7 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
         ..._supportedCrypto.map((crypto) {
           final label = crypto['label']!;
           final marketData = _marketData[label];
-          final prediction = _aiPredictions[label];  // FIX: use _aiPredictions!
+          final prediction = _aiPredictions[label]; // FIX: use _aiPredictions!
           final isSelected = _selectedCrypto == crypto['symbol'];
 
           return _buildCryptoCard(
@@ -334,7 +333,7 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
     required String label,
     required String name,
     required Map<String, dynamic>? marketData,
-    required ai.Prediction? prediction,  // NEW AI Prediction type!
+    required ai.Prediction? prediction, // NEW AI Prediction type!
     required bool isSelected,
     required VoidCallback onTap,
   }) {
@@ -344,9 +343,7 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
     final isPositive = changeNum >= 0;
 
     // Get action from NEW AI prediction
-    final action = prediction != null 
-        ? AILocator.I.decide(prediction) 
-        : 'HOLD';
+    final action = prediction != null ? AILocator.I.decide(prediction) : 'HOLD';
     final actionColor = action == 'BUY'
         ? Colors.green
         : (action == 'SELL' ? Colors.red : Colors.amber);
@@ -436,7 +433,7 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
                     border: Border.all(color: actionColor, width: 1.5),
                   ),
                   child: Text(
-                    action,  // From NEW AI!
+                    action, // From NEW AI!
                     style: TextStyle(
                       color: actionColor,
                       fontWeight: FontWeight.bold,
@@ -456,7 +453,7 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
       (c) => c['symbol'] == _selectedCrypto,
     );
     final label = selectedData['label']!;
-    final prediction = _aiPredictions[label];  // FIX: use _aiPredictions!
+    final prediction = _aiPredictions[label]; // FIX: use _aiPredictions!
     final marketData = _marketData[label];
 
     if (prediction == null && marketData == null) {
@@ -483,17 +480,18 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
     );
   }
 
-  Widget _buildPredictionCard(ai.Prediction prediction) {  // NEW AI Prediction!
+  Widget _buildPredictionCard(ai.Prediction prediction) {
+    // NEW AI Prediction!
     final action = AILocator.I.decide(prediction);
     final actionColor = action == 'BUY'
         ? Colors.green
         : (action == 'SELL' ? Colors.red : Colors.amber);
 
     // Get last close for target price
-    final lastClose = _marketData[_selectedCrypto?.replaceAll('USDT', '')]?['lastPrice'];
-    final lastClosePrice = lastClose != null 
-        ? double.tryParse(lastClose.toString()) ?? 0.0 
-        : 0.0;
+    final lastClose =
+        _marketData[_selectedCrypto?.replaceAll('USDT', '')]?['lastPrice'];
+    final lastClosePrice =
+        lastClose != null ? double.tryParse(lastClose.toString()) ?? 0.0 : 0.0;
 
     return Card(
       child: Padding(
@@ -507,7 +505,8 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
                 const SizedBox(width: 8),
                 Text(
                   L10n.aiPredictionLive,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ],
             ),
@@ -515,27 +514,27 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
             _buildMetricRow(L10n.action, action, actionColor),
             _buildMetricRow(
               L10n.confidence,
-              '${prediction.confidencePercent.toStringAsFixed(1)}%',  // NEW!
+              '${prediction.confidencePercent.toStringAsFixed(1)}%', // NEW!
               actionColor,
             ),
             _buildMetricRow(
               L10n.targetPrice,
-              '$_selectedQuote ${prediction.targetPrice(lastClosePrice).toStringAsFixed(2)}',  // NEW!
+              '$_selectedQuote ${prediction.targetPrice(lastClosePrice).toStringAsFixed(2)}', // NEW!
               null,
             ),
             _buildMetricRow(
-              L10n.volatility, 
-              '${prediction.annVolPercent.toStringAsFixed(1)}%',  // NEW!
+              L10n.volatility,
+              '${prediction.annVolPercent.toStringAsFixed(1)}%', // NEW!
               null,
             ),
             _buildMetricRow(
               L10n.probabilityUp,
-              '${(prediction.pBuy * 100).toStringAsFixed(1)}%',  // NEW!
+              '${(prediction.pBuy * 100).toStringAsFixed(1)}%', // NEW!
               null,
             ),
             _buildMetricRow(
               L10n.estimatedReturn,
-              '${prediction.expReturnPercent.toStringAsFixed(2)}%',  // NEW!
+              '${prediction.expReturnPercent.toStringAsFixed(2)}%', // NEW!
               null,
             ),
           ],
@@ -557,7 +556,8 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
                 const SizedBox(width: 8),
                 Text(
                   L10n.marketDataLive,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ],
             ),
@@ -687,4 +687,3 @@ class _AIHelperScreenState extends State<AIHelperScreen> {
     );
   }
 }
-

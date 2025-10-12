@@ -7,9 +7,9 @@ import 'models/volatility_model.dart';
 /// Unified output used by ensemble to aggregate model votes
 class EnsembleOutput {
   final List<double> probs; // [pBuy, pHold, pSell]
-  final double expReturn;   // fraction (e.g., 0.012 = 1.2%)
-  final double annVol;      // annualized (e.g., 0.65 = 65%)
-  final double confidence;  // 0..1
+  final double expReturn; // fraction (e.g., 0.012 = 1.2%)
+  final double annVol; // annualized (e.g., 0.65 = 65%)
+  final double confidence; // 0..1
 
   const EnsembleOutput({
     required this.probs,
@@ -52,7 +52,7 @@ class DRVPredictor implements EnsemblePredictor {
 
   double _confidenceFromProbs(List<double> p, double annVol) {
     final maxProb = p.reduce((a, b) => a > b ? a : b);
-    final volCap = 0.85;
+    const volCap = 0.85;
     final volPenalty = (1.0 - (annVol / volCap).clamp(0.0, 1.0));
     return (maxProb * volPenalty).clamp(0.0, 1.0);
   }
@@ -113,7 +113,9 @@ class EnsembleEngine {
     }
     final sum = buy + hold + sell;
     if (sum > 0) {
-      buy /= sum; hold /= sum; sell /= sum;
+      buy /= sum;
+      hold /= sum;
+      sell /= sum;
     } else {
       buy = hold = sell = 1.0 / 3.0;
     }
@@ -130,5 +132,3 @@ class EnsembleEngine {
     return o;
   }
 }
-
-

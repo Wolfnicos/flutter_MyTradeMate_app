@@ -19,31 +19,31 @@ abstract class PriceEventSource {
 class RealPriceEventSource implements PriceEventSource {
   WebSocket? _ws;
   StreamController<dynamic>? _controller;
-  
+
   @override
   Stream<dynamic> connectFromSymbol(String symbol, {required bool testnet}) {
     final uri = binanceWsUrl(symbol, testnet: testnet);
     return connect(uri);
   }
-  
+
   @override
   Stream<dynamic> connect(Uri uri) {
     _controller = StreamController<dynamic>();
-    
+
     // Construim URL-ul manual ca String pentru control total
     const scheme = 'wss';
     final host = uri.host;
     final port = uri.hasPort && uri.port != 0 ? ':${uri.port}' : '';
     final path = uri.path;
     final cleanUrl = '$scheme://$host$port$path';
-    
+
     AppLogger.instance.info('ws.connect.direct', context: {
       'cleanUrl': cleanUrl,
       'host': host,
       'port': uri.port,
       'path': path,
     });
-    
+
     // Folosim dart:io WebSocket direct, nu IOWebSocketChannel
     WebSocket.connect(cleanUrl).then((ws) {
       _ws = ws;
@@ -67,12 +67,13 @@ class RealPriceEventSource implements PriceEventSource {
         cancelOnError: false,
       );
     }).catchError((err) {
-      AppLogger.instance.error('ws.connect.failed', context: {'error': err.toString()});
+      AppLogger.instance
+          .error('ws.connect.failed', context: {'error': err.toString()});
       if (_controller != null && !_controller!.isClosed) {
         _controller!.addError(err);
       }
     });
-    
+
     return _controller!.stream;
   }
 
@@ -165,7 +166,8 @@ class PriceStream {
           try {
             final data = json.decode(event);
             final raw = (data is Map)
-                ? (data['c'] ?? (data['data'] != null ? data['data']['c'] : null))
+                ? (data['c'] ??
+                    (data['data'] != null ? data['data']['c'] : null))
                 : null;
             final v = raw is num ? raw.toDouble() : double.tryParse('$raw');
             if (v != null && !_controller.isClosed) {
@@ -178,8 +180,8 @@ class PriceStream {
           if (_manuallyClosed) return;
           if (_paused) return; // dacă e pauzat, nu reconecta
           if (!_controller.isClosed) {
-            _controller.addError(
-                const UserError(AppErrorType.network, 'Connection closed. Retrying…', 'ws.onDone'));
+            _controller.addError(const UserError(AppErrorType.network,
+                'Connection closed. Retrying…', 'ws.onDone'));
           }
           await _scheduleReconnectWithBackoff();
         },

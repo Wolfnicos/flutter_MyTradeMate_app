@@ -28,6 +28,3 @@ void main() {
         closeTo(5.0, 1e-12));
   });
 }
-
-
-

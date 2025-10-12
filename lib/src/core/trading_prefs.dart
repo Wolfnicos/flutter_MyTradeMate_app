@@ -26,7 +26,8 @@ class TradingPrefs {
   static const _kQuotePerTrade =
       'policy_quote_per_trade'; // in quote ccy (e.g. USDT)
   static const _kPaperTrading = 'paper_trading_mode'; // bool
-  static const _kDefaultStrategy = 'strategy_default'; // 'ensemble' | 'hybrid1'..'hybrid5'
+  static const _kDefaultStrategy =
+      'strategy_default'; // 'ensemble' | 'hybrid1'..'hybrid5'
 
   final SharedPreferences _sp;
   TradingPrefs._(this._sp);

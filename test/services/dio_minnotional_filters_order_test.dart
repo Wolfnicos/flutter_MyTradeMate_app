@@ -33,6 +33,3 @@ void main() {
     expect(ethMin, closeTo(5.0, 1e-12));
   });
 }
-
-
-

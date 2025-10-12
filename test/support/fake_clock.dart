@@ -6,6 +6,3 @@ class FakeClock {
   DateTime now() => _now;
   void advance(Duration d) => _now = _now.add(d);
 }
-
-
-

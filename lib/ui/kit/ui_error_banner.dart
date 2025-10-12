@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class UiErrorBanner extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
-  const UiErrorBanner({super.key, required this.message, required this.onRetry});
+  const UiErrorBanner(
+      {super.key, required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -28,5 +29,3 @@ class UiErrorBanner extends StatelessWidget {
     );
   }
 }
-
-

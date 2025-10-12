@@ -19,6 +19,3 @@ void main() {
     expect(out.volatility, 0.08);
   });
 }
-
-
-

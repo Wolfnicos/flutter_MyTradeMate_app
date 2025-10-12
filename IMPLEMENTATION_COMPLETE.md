@@ -379,3 +379,6 @@ flutter run -d "iPhone 17 Pro Max"
 **Enjoy your powerful AI trading system! 🎯**
 
 
+
+
+

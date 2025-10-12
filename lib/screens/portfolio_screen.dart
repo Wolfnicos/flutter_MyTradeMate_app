@@ -44,12 +44,12 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       // Check if paper trading is enabled
       final prefs = await TradingPrefs.load();
       final sp = await SharedPreferences.getInstance();
-      
+
       // Check unified paper trading key (default to true for safety)
       final isPaper = sp.getBool('paper_trading_mode') ?? true;
-      
+
       debugPrint('Portfolio: isPaper=$isPaper');
-      
+
       // If paper trading is enabled, load paper portfolio
       if (isPaper) {
         setState(() {
@@ -58,15 +58,17 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         });
         return await _loadPaperPortfolio();
       }
-      
+
       // Check for API keys
-      final hasKeys = (prefs.apiKey?.isNotEmpty == true) && (prefs.apiSecret?.isNotEmpty == true);
-      
+      final hasKeys = (prefs.apiKey?.isNotEmpty == true) &&
+          (prefs.apiSecret?.isNotEmpty == true);
+
       // Guard: do not call signed endpoints without keys
       if (!hasKeys) {
         setState(() {
           _blocked = true;
-          _blockMsg = 'Connectează un exchange în Settings sau activează Paper Trading.';
+          _blockMsg =
+              'Connectează un exchange în Settings sau activează Paper Trading.';
         });
         return const PortfolioSnapshot([], 0.0, dailyPnl: 0.0);
       }
@@ -117,14 +119,14 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     debugPrint('Loading paper portfolio...');
     final sp = await SharedPreferences.getInstance();
     final paperDataJson = sp.getString('paper_portfolio');
-    
+
     // Initialize with default demo holdings if first time
     Map<String, double> holdings = {
       'USDT': 10000.0, // Start with $10,000 USDT
       'BTC': 0.1, // Some BTC
       'ETH': 1.0, // Some ETH
     };
-    
+
     if (paperDataJson != null) {
       try {
         final data = json.decode(paperDataJson) as Map<String, dynamic>;
@@ -138,11 +140,11 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       debugPrint('Creating initial paper portfolio');
       await _savePaperPortfolio(holdings);
     }
-    
+
     // Convert holdings to portfolio snapshot
     final holdingsList = <Holding>[];
     double totalUsdt = 0.0;
-    
+
     // Fetch prices for all non-USDT assets
     final prices = <String, double>{'USDT': 1.0};
     for (final asset in holdings.keys) {
@@ -155,34 +157,34 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         prices[asset] = 0.0;
       }
     }
-    
+
     // Build holdings list
     for (final entry in holdings.entries) {
       final asset = entry.key;
       final qty = entry.value;
       if (qty <= 0) continue;
-      
+
       final priceUsdt = prices[asset] ?? 1.0;
       holdingsList.add(Holding(asset, qty, priceUsdt));
       totalUsdt += qty * priceUsdt;
     }
-    
+
     // Calculate daily P&L
     final yesterday = sp.getDouble('${_kYesterdayKey}_paper');
     final todayKey = DateTime.now().toUtc().toString().substring(0, 10);
     final lastRef = sp.getString('${_kLastRefDate}_paper');
-    
+
     if (yesterday == null || lastRef != todayKey) {
       await sp.setDouble('${_kYesterdayKey}_paper', totalUsdt);
       await sp.setString('${_kLastRefDate}_paper', todayKey);
     }
-    
+
     final daily = yesterday == null ? 0.0 : (totalUsdt - yesterday);
-    
+
     debugPrint('Paper portfolio loaded: $totalUsdt USDT');
     return PortfolioSnapshot(holdingsList, totalUsdt, dailyPnl: daily);
   }
-  
+
   Future<void> _savePaperPortfolio(Map<String, double> holdings) async {
     final sp = await SharedPreferences.getInstance();
     final json_ = json.encode(holdings);
@@ -206,7 +208,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        _blockMsg ?? 'Connectează un exchange în Settings sau activează Paper Trading.',
+                        _blockMsg ??
+                            'Connectează un exchange în Settings sau activează Paper Trading.',
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -231,11 +234,19 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Total (USDT)', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                            const Text('Total (USDT)',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 14)),
                             const SizedBox(height: 6),
-                            Text(snap.totalUsdt.toStringAsFixed(2), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                            Text(snap.totalUsdt.toStringAsFixed(2),
+                                style: const TextStyle(
+                                    fontSize: 28, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 6),
-                            Text((snap.dailyPnl >= 0 ? '+' : '') + snap.dailyPnl.toStringAsFixed(2), style: TextStyle(fontSize: 16, color: pnlColor)),
+                            Text(
+                                (snap.dailyPnl >= 0 ? '+' : '') +
+                                    snap.dailyPnl.toStringAsFixed(2),
+                                style:
+                                    TextStyle(fontSize: 16, color: pnlColor)),
                           ],
                         ),
                       ),
@@ -256,20 +267,32 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                                 children: [
                                   CircleAvatar(
                                     backgroundColor: Colors.white10,
-                                    child: Text(h.asset[0], style: const TextStyle(color: Colors.white)),
+                                    child: Text(h.asset[0],
+                                        style: const TextStyle(
+                                            color: Colors.white)),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(h.asset, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        Text(h.asset,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
                                         const SizedBox(height: 4),
-                                        Text('${h.qty} @ ${h.priceUsdt.toStringAsFixed(4)} USDT', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                                        Text(
+                                            '${h.qty} @ ${h.priceUsdt.toStringAsFixed(4)} USDT',
+                                            style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 12)),
                                       ],
                                     ),
                                   ),
-                                  Text('$approx${value.toStringAsFixed(2)} USDT', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                  Text(
+                                      '$approx${value.toStringAsFixed(2)} USDT',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600)),
                                 ],
                               ),
                             ),

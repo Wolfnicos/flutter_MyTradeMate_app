@@ -7,7 +7,7 @@ void main() {
   group('SignalEngine Tests', () {
     test('Prediction has valid confidence bounded 0-1', () async {
       final engine = SignalEngine(dirModel: DirectionModel());
-      
+
       final data = List.generate(
         60,
         (i) => Candle(
@@ -19,9 +19,9 @@ void main() {
           volume: 1000.0 + i,
         ),
       );
-      
+
       final pred = await engine.predict('BTCUSDT', data);
-      
+
       expect(pred, isNotNull);
       expect(pred!.confidence(), inInclusiveRange(0.0, 1.0));
       expect(pred.pBuy + pred.pHold + pred.pSell, closeTo(1.0, 0.01));
@@ -29,7 +29,7 @@ void main() {
 
     test('Action is one of BUY/HOLD/SELL', () async {
       final engine = SignalEngine(dirModel: DirectionModel());
-      
+
       final data = List.generate(
         60,
         (i) => Candle(
@@ -41,18 +41,18 @@ void main() {
           volume: 1000.0 + i,
         ),
       );
-      
+
       final pred = await engine.predict('BTCUSDT', data);
-      
+
       expect(pred, isNotNull);
       final decision = engine.decide(pred!);
-      
+
       expect(['BUY', 'HOLD', 'SELL'], contains(decision));
     });
 
     test('Target price is realistic (within ±20% of current)', () async {
       final engine = SignalEngine(dirModel: DirectionModel());
-      
+
       final data = List.generate(
         60,
         (i) => Candle(
@@ -64,13 +64,13 @@ void main() {
           volume: 1000.0,
         ),
       );
-      
+
       final pred = await engine.predict('BTCUSDT', data);
-      
+
       expect(pred, isNotNull);
       final lastClose = data.last.close;
       final target = pred!.targetPrice(lastClose);
-      
+
       // Target should be within ±20% (realistic daily move)
       expect(target, greaterThan(lastClose * 0.80));
       expect(target, lessThan(lastClose * 1.20));
@@ -78,7 +78,7 @@ void main() {
 
     test('Expected return is bounded (±5%)', () async {
       final engine = SignalEngine(dirModel: DirectionModel());
-      
+
       final data = List.generate(
         60,
         (i) => Candle(
@@ -90,9 +90,9 @@ void main() {
           volume: 1000.0,
         ),
       );
-      
+
       final pred = await engine.predict('BTCUSDT', data);
-      
+
       expect(pred, isNotNull);
       expect(pred!.expReturn, greaterThanOrEqualTo(-0.05));
       expect(pred.expReturn, lessThanOrEqualTo(0.05));
@@ -100,7 +100,7 @@ void main() {
 
     test('Volatility is positive and realistic (<300%)', () async {
       final engine = SignalEngine(dirModel: DirectionModel());
-      
+
       final data = List.generate(
         60,
         (i) => Candle(
@@ -112,13 +112,12 @@ void main() {
           volume: 1000.0,
         ),
       );
-      
+
       final pred = await engine.predict('BTCUSDT', data);
-      
+
       expect(pred, isNotNull);
       expect(pred!.annVol, greaterThan(0.0));
       expect(pred.annVol, lessThan(3.0)); // <300% annual
     });
   });
 }
-

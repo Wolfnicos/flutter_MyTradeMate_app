@@ -20,6 +20,3 @@ void main() {
     expect(p.fixedQuote, 75.0);
   });
 }
-
-
-

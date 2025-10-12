@@ -82,6 +82,3 @@ class AiSignalCard extends StatelessWidget {
     );
   }
 }
-
-
-

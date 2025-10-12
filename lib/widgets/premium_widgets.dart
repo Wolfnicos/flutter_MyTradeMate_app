@@ -14,11 +14,18 @@ class ModernCard extends StatelessWidget {
   final Color? accentColor;
   final bool hasGlow;
   final EdgeInsetsGeometry padding;
-  const ModernCard({super.key, required this.child, this.accentColor, this.hasGlow = true, this.padding = const EdgeInsets.all(16)});
+  const ModernCard(
+      {super.key,
+      required this.child,
+      this.accentColor,
+      this.hasGlow = true,
+      this.padding = const EdgeInsets.all(16)});
 
   @override
   Widget build(BuildContext context) {
-    final c = Theme.of(context).cardColor == Colors.transparent ? kCard : Theme.of(context).cardColor;
+    final c = Theme.of(context).cardColor == Colors.transparent
+        ? kCard
+        : Theme.of(context).cardColor;
     return Container(
       decoration: BoxDecoration(
         color: c,
@@ -32,7 +39,8 @@ class ModernCard extends StatelessWidget {
                 )
               ]
             : null,
-        border: Border.all(color: (accentColor ?? Colors.white12).withOpacity(0.12)),
+        border: Border.all(
+            color: (accentColor ?? Colors.white12).withOpacity(0.12)),
       ),
       padding: padding,
       child: child,
@@ -47,7 +55,14 @@ class GradientButton extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double height;
   final TextStyle? textStyle;
-  const GradientButton({super.key, required this.label, required this.gradientColors, required this.onPressed, this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 14), this.height = 56, this.textStyle});
+  const GradientButton(
+      {super.key,
+      required this.label,
+      required this.gradientColors,
+      required this.onPressed,
+      this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      this.height = 56,
+      this.textStyle});
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +78,12 @@ class GradientButton extends StatelessWidget {
           height: height,
           padding: padding,
           alignment: Alignment.center,
-          child: Text(label, style: textStyle ?? const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+          child: Text(label,
+              style: textStyle ??
+                  const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16)),
         ),
       ),
     );
@@ -76,7 +96,13 @@ class MetricCard extends StatelessWidget {
   final String? subtitle;
   final Color accentColor;
   final Widget? trailing;
-  const MetricCard({super.key, required this.label, required this.value, this.subtitle, required this.accentColor, this.trailing});
+  const MetricCard(
+      {super.key,
+      required this.label,
+      required this.value,
+      this.subtitle,
+      required this.accentColor,
+      this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -88,12 +114,18 @@ class MetricCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: kText2, fontSize: 14)),
+                Text(label,
+                    style: const TextStyle(color: kText2, fontSize: 14)),
                 const SizedBox(height: 6),
-                Text(value, style: const TextStyle(color: kText, fontSize: 24, fontWeight: FontWeight.w800)),
+                Text(value,
+                    style: const TextStyle(
+                        color: kText,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800)),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),
-                  Text(subtitle!, style: const TextStyle(color: kText2, fontSize: 12)),
+                  Text(subtitle!,
+                      style: const TextStyle(color: kText2, fontSize: 12)),
                 ]
               ],
             ),
@@ -116,7 +148,8 @@ class NeonProgressBar extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       child: Container(
         height: 8,
-        decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(999)),
+        decoration: BoxDecoration(
+            color: Colors.white10, borderRadius: BorderRadius.circular(999)),
         child: LayoutBuilder(builder: (context, c) {
           final w = c.maxWidth * value.clamp(0.0, 1.0);
           return Stack(children: [
@@ -127,8 +160,11 @@ class NeonProgressBar extends StatelessWidget {
               child: Container(
                 width: w,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [color.withOpacity(0.6), color]),
-                  boxShadow: [BoxShadow(color: color.withOpacity(0.25), blurRadius: 16)],
+                  gradient:
+                      LinearGradient(colors: [color.withOpacity(0.6), color]),
+                  boxShadow: [
+                    BoxShadow(color: color.withOpacity(0.25), blurRadius: 16)
+                  ],
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -147,7 +183,14 @@ class AssetListTile extends StatelessWidget {
   final double changePercent;
   final Widget icon;
   final VoidCallback? onTap;
-  const AssetListTile({super.key, required this.symbol, required this.name, required this.price, required this.changePercent, required this.icon, this.onTap});
+  const AssetListTile(
+      {super.key,
+      required this.symbol,
+      required this.name,
+      required this.price,
+      required this.changePercent,
+      required this.icon,
+      this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -163,14 +206,25 @@ class AssetListTile extends StatelessWidget {
             CircleAvatar(backgroundColor: Colors.white12, child: icon),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(symbol, style: const TextStyle(color: kText, fontWeight: FontWeight.w700)),
-                Text(name, style: const TextStyle(color: kText2, fontSize: 12)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(symbol,
+                        style: const TextStyle(
+                            color: kText, fontWeight: FontWeight.w700)),
+                    Text(name,
+                        style: const TextStyle(color: kText2, fontSize: 12)),
+                  ]),
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(price.toStringAsFixed(2), style: const TextStyle(color: kText, fontWeight: FontWeight.w800)),
-              Text('${up ? '+' : ''}${changePercent.toStringAsFixed(2)}%', style: TextStyle(color: chColor, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text(price.toStringAsFixed(2),
+                  style: const TextStyle(
+                      color: kText, fontWeight: FontWeight.w800)),
+              Text('${up ? '+' : ''}${changePercent.toStringAsFixed(2)}%',
+                  style: TextStyle(
+                      color: chColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
             ]),
           ],
         ),
@@ -196,10 +250,13 @@ class ActionBadge extends StatelessWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: c.withOpacity(0.15), borderRadius: BorderRadius.circular(999), border: Border.all(color: c.withOpacity(0.5))),
-      child: Text(upper, style: TextStyle(color: c, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+      decoration: BoxDecoration(
+          color: c.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: c.withOpacity(0.5))),
+      child: Text(upper,
+          style: TextStyle(
+              color: c, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
     );
   }
 }
-
-

@@ -107,6 +107,3 @@ enum GridMode {
   arithmetic, // linear spacing
   geometric, // exponential spacing (recommended for volatile assets)
 }
-
-
-

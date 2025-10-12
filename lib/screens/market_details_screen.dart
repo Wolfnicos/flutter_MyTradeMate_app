@@ -24,6 +24,7 @@ class MarketDetailsScreen extends StatefulWidget {
   final LoadDataFn? reloadFn; // for tests
   /// For tests: hide AI card (which otherwise spins a FutureBuilder/network).
   final bool showAICard;
+
   /// Optional broker injection for tests; app falls back to DI/default.
   final PaperBroker? broker;
   const MarketDetailsScreen({
@@ -120,8 +121,8 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
           _supportFuture = Future.value(true);
           _tickerFuture = Future.value(<String, dynamic>{});
         } else {
-          _klinesFuture = _fetchKlinesInterval(widget.symbol, _interval)
-              .then((d) {
+          _klinesFuture =
+              _fetchKlinesInterval(widget.symbol, _interval).then((d) {
             _cachedKlines = d;
             return d;
           });
@@ -245,9 +246,8 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                 container: true,
                 excludeSemantics: true,
                 label: S.lastPrice,
-                value: _lastPrice != null
-                    ? _lastPrice!.toStringAsFixed(2)
-                    : '—',
+                value:
+                    _lastPrice != null ? _lastPrice!.toStringAsFixed(2) : '—',
                 key: AppKeys.marketLiveRegion,
                 child: _wsError != null
                     ? InlineErrorBox(
@@ -283,8 +283,9 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                             builder: (context, snap) {
                               if (!snap.hasData) return const SizedBox.shrink();
                               final t = snap.data!;
-                              double parseD(v) =>
-                                  (v is num) ? v.toDouble() : double.tryParse('$v') ?? 0;
+                              double parseD(v) => (v is num)
+                                  ? v.toDouble()
+                                  : double.tryParse('$v') ?? 0;
                               final ch = parseD(t['priceChangePercent']);
                               final high = parseD(t['highPrice']);
                               final low = parseD(t['lowPrice']);
@@ -301,16 +302,20 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                                 runSpacing: 6,
                                 children: [
                                   Row(children: [
-                                    const Text('24h', style: TextStyle(fontSize: 12)),
+                                    const Text('24h',
+                                        style: TextStyle(fontSize: 12)),
                                     const SizedBox(width: 6),
                                     Text(
                                       '${ch.toStringAsFixed(2)}%',
                                       style: small(chColor),
                                     ),
                                   ]),
-                                  Text('High: ${high.toStringAsFixed(2)}', style: small()),
-                                  Text('Low: ${low.toStringAsFixed(2)}', style: small()),
-                                  Text('Vol: ${vol.toStringAsFixed(0)}', style: small()),
+                                  Text('High: ${high.toStringAsFixed(2)}',
+                                      style: small()),
+                                  Text('Low: ${low.toStringAsFixed(2)}',
+                                      style: small()),
+                                  Text('Vol: ${vol.toStringAsFixed(0)}',
+                                      style: small()),
                                 ],
                               );
                             },
@@ -362,7 +367,8 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                   builder: (context, snap) {
                     // Keep last good chart; hide spinners completely
                     List<List<num>>? data;
-                    if (snap.connectionState == ConnectionState.done && !snap.hasError) {
+                    if (snap.connectionState == ConnectionState.done &&
+                        !snap.hasError) {
                       data = snap.data;
                     } else {
                       data = _cachedKlines;
@@ -415,15 +421,22 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) => TradingModal(
-                                          assetSymbol: symbol, isBuying: true)));
+                                          assetSymbol: symbol,
+                                          isBuying: true)));
                             }
                           : null,
-                      icon: const Icon(Icons.shopping_cart, color: Colors.white),
-                      label: const Text('Buy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+                      icon:
+                          const Icon(Icons.shopping_cart, color: Colors.white),
+                      label: const Text('Buy',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -434,8 +447,13 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.indigo,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      child: const Text('Place', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
+                      child: const Text('Place',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -447,15 +465,21 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) => TradingModal(
-                                          assetSymbol: symbol, isBuying: false)));
+                                          assetSymbol: symbol,
+                                          isBuying: false)));
                             }
                           : null,
                       icon: const Icon(Icons.sell, color: Colors.white),
-                      label: const Text('Sell', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+                      label: const Text('Sell',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
                     ),
                   ),
                 ],
@@ -466,7 +490,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
       ),
     );
   }
-  
+
   Future<void> _onTapPlace() async {
     if (!mounted) return;
     await showModalBottomSheet<void>(
@@ -530,7 +554,7 @@ class _TimeframeChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = const ['5m', '15m', '1h', '4h', '1d'];
+    const items = ['5m', '15m', '1h', '4h', '1d'];
     final cs = Theme.of(context).colorScheme;
     return Wrap(
       spacing: 8,
@@ -545,7 +569,7 @@ class _TimeframeChips extends StatelessWidget {
               color: value == it ? cs.primary : cs.onSurface,
               fontWeight: FontWeight.w600,
             ),
-            backgroundColor: cs.surfaceVariant.withOpacity(0.2),
+            backgroundColor: cs.surfaceContainerHighest.withOpacity(0.2),
           ),
       ],
     );
@@ -553,24 +577,33 @@ class _TimeframeChips extends StatelessWidget {
 }
 
 class CandlesPainter extends CustomPainter {
-  final List<List<num>> klines; // [openTime, open, high, low, close, volume,...]
+  final List<List<num>>
+      klines; // [openTime, open, high, low, close, volume,...]
   final Color up;
   final Color down;
   final double? crossX;
   final ColorScheme theme;
   final bool showVolume;
   final bool showEma;
-  CandlesPainter(this.klines, {required this.up, required this.down, required this.crossX, required this.theme, this.showVolume = false, this.showEma = false});
+  CandlesPainter(this.klines,
+      {required this.up,
+      required this.down,
+      required this.crossX,
+      required this.theme,
+      this.showVolume = false,
+      this.showEma = false});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (klines.isEmpty) return;
     final n = klines.length;
-    final doubles = klines.map((e) => e.map((v) => v.toDouble()).toList()).toList();
+    final doubles =
+        klines.map((e) => e.map((v) => v.toDouble()).toList()).toList();
     final highs = doubles.map((e) => e[2]).toList();
     final lows = doubles.map((e) => e[3]).toList();
     final closes = doubles.map((e) => e[4]).toList();
-    final volumes = doubles.map((e) => (e.length > 5 ? e[5] : 0).toDouble()).toList();
+    final volumes =
+        doubles.map((e) => (e.length > 5 ? e[5] : 0).toDouble()).toList();
     double minY = lows.reduce((a, b) => a < b ? a : b);
     double maxY = highs.reduce((a, b) => a > b ? a : b);
     if (minY == maxY) {
@@ -588,7 +621,7 @@ class CandlesPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     // subtle grid like TradingView
     final grid = Paint()
-      ..color = theme.surfaceVariant.withOpacity(0.08)
+      ..color = theme.surfaceContainerHighest.withOpacity(0.08)
       ..strokeWidth = 1;
     for (int i = 1; i < 4; i++) {
       final x = size.width * i / 4;
@@ -622,7 +655,8 @@ class CandlesPainter extends CustomPainter {
         top = mid - 0.6;
         bottom = mid + 0.6;
       }
-      final r = RRect.fromLTRBR(bodyLeft, top, bodyRight, bottom, const Radius.circular(2));
+      final r = RRect.fromLTRBR(
+          bodyLeft, top, bodyRight, bottom, const Radius.circular(2));
       final bodyPaint = Paint()
         ..color = color.withOpacity(0.9)
         ..isAntiAlias = true;
@@ -641,7 +675,8 @@ class CandlesPainter extends CustomPainter {
 
     // Volume bars at bottom (20% height)
     if (showVolume) {
-      final volMax = volumes.isEmpty ? 0.0 : volumes.reduce((a, b) => a > b ? a : b);
+      final volMax =
+          volumes.isEmpty ? 0.0 : volumes.reduce((a, b) => a > b ? a : b);
       final volH = size.height * 0.2;
       final top = size.height - volH;
       final p = Paint()..strokeWidth = (candleW * 0.5).clamp(1.0, 4.0);
@@ -667,10 +702,17 @@ class CandlesPainter extends CustomPainter {
         }
         return out;
       }
+
       final ema20 = ema(closes, 20);
       final ema50 = ema(closes, 50);
-      final p20 = Paint()..color = theme.tertiary.withOpacity(0.9)..strokeWidth = 1.5..isAntiAlias = true;
-      final p50 = Paint()..color = theme.secondary.withOpacity(0.9)..strokeWidth = 1.5..isAntiAlias = true;
+      final p20 = Paint()
+        ..color = theme.tertiary.withOpacity(0.9)
+        ..strokeWidth = 1.5
+        ..isAntiAlias = true;
+      final p50 = Paint()
+        ..color = theme.secondary.withOpacity(0.9)
+        ..strokeWidth = 1.5
+        ..isAntiAlias = true;
       double lx = 0, ly = 0;
       for (int i = 0; i < n; i++) {
         final x = (i + 0.5) * candleW;
@@ -679,16 +721,19 @@ class CandlesPainter extends CustomPainter {
         if (i > 0) {
           canvas.drawLine(Offset(lx, ly), Offset(x, y20), p20);
         }
-        lx = x; ly = y20;
+        lx = x;
+        ly = y20;
       }
-      lx = 0; ly = 0;
+      lx = 0;
+      ly = 0;
       for (int i = 0; i < n; i++) {
         final x = (i + 0.5) * candleW;
         final v = y(ema50[i]);
         if (i > 0) {
           canvas.drawLine(Offset(lx, ly), Offset(x, v), p50);
         }
-        lx = x; ly = v;
+        lx = x;
+        ly = v;
       }
     }
   }
@@ -698,7 +743,6 @@ class CandlesPainter extends CustomPainter {
     return oldDelegate.klines != klines || oldDelegate.crossX != crossX;
   }
 }
- 
 
 Future<List<List<num>>> _fetchKlines(String symbol) async {
   final client = await DioBinanceClient.createFromPrefs();
@@ -716,11 +760,13 @@ Future<List<List<num>>> _fetchKlines(String symbol) async {
   }
 }
 
-Future<List<List<num>>> _fetchKlinesInterval(String symbol, String interval) async {
+Future<List<List<num>>> _fetchKlinesInterval(
+    String symbol, String interval) async {
   final client = await DioBinanceClient.createFromPrefs();
   final sym = _toBinanceSymbol(symbol);
   try {
-    return await client.klines(sym, interval, limit: interval == '5m' ? 240 : 120);
+    return await client.klines(sym, interval,
+        limit: interval == '5m' ? 240 : 120);
   } catch (e) {
     // conservative fallback
     return _fetchKlines(symbol);
@@ -758,7 +804,7 @@ String _toBinanceSymbol(String s) {
   // If it already ends with USDT, keep it
   if (up.endsWith('USDT')) return up;
   // If it ends with USD (but not USDT), convert to USDT
-  if (up.endsWith('USD')) return up.substring(0, up.length - 3) + 'USDT';
+  if (up.endsWith('USD')) return '${up.substring(0, up.length - 3)}USDT';
   return up;
 }
 

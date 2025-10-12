@@ -23,6 +23,3 @@ class DefaultPriceRestClient implements PriceRestClient {
   @override
   Future<double> tickerPrice(String symbol) => _client.tickerPrice(symbol);
 }
-
-
-

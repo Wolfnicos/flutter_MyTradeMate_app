@@ -107,6 +107,3 @@ class ExplanationBuilder {
     );
   }
 }
-
-
-

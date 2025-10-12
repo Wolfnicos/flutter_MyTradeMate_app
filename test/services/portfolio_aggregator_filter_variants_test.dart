@@ -23,6 +23,3 @@ void main() {
     expect(snap.totalUsdt, closeTo(400.0, 1e-9));
   });
 }
-
-
-

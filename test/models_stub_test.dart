@@ -15,6 +15,3 @@ void main() {
     expect(m.predictVolatility([List.filled(5, 1.0)]), 0.01);
   });
 }
-
-
-

@@ -24,6 +24,3 @@ class UiMarketSkeleton extends StatelessWidget {
     );
   }
 }
-
-
-

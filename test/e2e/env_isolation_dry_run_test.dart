@@ -8,6 +8,3 @@ void main() {
     expect(willSendNetwork, isFalse);
   });
 }
-
-
-

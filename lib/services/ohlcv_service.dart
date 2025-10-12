@@ -13,7 +13,7 @@ class OHLCVService {
 
   /// Fetch candles pentru un symbol (UI symbol, va fi normalizat)
   /// Returns empty list dacă symbol nu e disponibil (NEVER null!)
-  /// 
+  ///
   /// interval: '1m', '5m', '15m', '1h', '4h', '1d'
   /// limit: câte candles (max 1000 pe Binance)
   /// forceQuote: forțează USDT chiar dacă UI arată EUR/USD
@@ -25,12 +25,13 @@ class OHLCVService {
   }) async {
     try {
       // Normalizează simbolul la USDT (Binance default)
-      final feedSymbol = forceQuote 
+      final feedSymbol = forceQuote
           ? SymbolMapper.mapUiToFeed(uiSymbol, quote: 'USDT')
           : uiSymbol;
-      
-      debugPrint('📊 Fetching candles: $uiSymbol → $feedSymbol ($interval x$limit)');
-      
+
+      debugPrint(
+          '📊 Fetching candles: $uiSymbol → $feedSymbol ($interval x$limit)');
+
       // Binance limit per call is up to 1000 for klines. For >1000, batch by time.
       final target = limit;
       final batch = target > 1000 ? 1000 : target;
@@ -48,7 +49,7 @@ class OHLCVService {
         if (data.isEmpty) break;
         all.insertAll(0, data); // prepend older chunks at front later
         // Prepare next page: set endTime to first kline openTime - 1
-        final firstTs = (data.first[0] as num).toInt();
+        final firstTs = (data.first[0]).toInt();
         endTime = firstTs - 1;
         remaining -= data.length;
         if (data.length < take) break; // nothing more
@@ -56,20 +57,18 @@ class OHLCVService {
       final klines = all.isEmpty
           ? await client.klines(feedSymbol, interval, limit: limit)
           : all;
-      
+
       if (klines.isEmpty) {
         debugPrint('⚠️ No candles returned for $feedSymbol');
         return <Candle>[];
       }
-      
+
       final candles = klines.map((kline) {
         // Binance klines format:
         // [timestamp, open, high, low, close, volume, closeTime, ...]
         return Candle(
           time: DateTime.fromMillisecondsSinceEpoch(
-            kline[0] is int 
-                ? kline[0] as int 
-                : ((kline[0]).toInt()),
+            kline[0] is int ? kline[0] as int : ((kline[0]).toInt()),
           ),
           open: _toDouble(kline[1]),
           high: _toDouble(kline[2]),
@@ -78,7 +77,7 @@ class OHLCVService {
           volume: _toDouble(kline[5]),
         );
       }).toList();
-      
+
       debugPrint('✅ Fetched ${candles.length} candles for $feedSymbol');
       // If insufficient and interval != '5m', try resampling from lower timeframe
       if (candles.length < limit && interval != '5m') {
@@ -89,7 +88,8 @@ class OHLCVService {
           forceQuote: false,
         );
         if (resampled.isNotEmpty) {
-          debugPrint('↩️ Resampled ${resampled.length} candles for $feedSymbol ($interval)');
+          debugPrint(
+              '↩️ Resampled ${resampled.length} candles for $feedSymbol ($interval)');
           return resampled;
         }
       }
@@ -124,21 +124,33 @@ class OHLCVService {
     // Map higher TF to factor relative to 5m
     int factor5m(String itv) {
       switch (itv) {
-        case '15m': return 3;
-        case '1h': return 12;
-        case '4h': return 48;
-        case '1d': return 288;
-        default: return 1;
+        case '15m':
+          return 3;
+        case '1h':
+          return 12;
+        case '4h':
+          return 48;
+        case '1d':
+          return 288;
+        default:
+          return 1;
       }
     }
+
     Duration tfDuration(String itv) {
       switch (itv) {
-        case '5m': return const Duration(minutes: 5);
-        case '15m': return const Duration(minutes: 15);
-        case '1h': return const Duration(hours: 1);
-        case '4h': return const Duration(hours: 4);
-        case '1d': return const Duration(days: 1);
-        default: return const Duration(minutes: 5);
+        case '5m':
+          return const Duration(minutes: 5);
+        case '15m':
+          return const Duration(minutes: 15);
+        case '1h':
+          return const Duration(hours: 1);
+        case '4h':
+          return const Duration(hours: 4);
+        case '1d':
+          return const Duration(days: 1);
+        default:
+          return const Duration(minutes: 5);
       }
     }
 
@@ -147,9 +159,10 @@ class OHLCVService {
     final factor = factor5m(targetInterval);
     if (factor <= 1) return <Candle>[];
     final need5m = targetLimit * factor;
-    final cap5m = 50000; // hard cap
+    const cap5m = 50000; // hard cap
     final req5m = need5m > cap5m ? cap5m : need5m;
-    final base5m = await fetchCandles(uiSymbol, interval: '5m', limit: req5m, forceQuote: forceQuote);
+    final base5m = await fetchCandles(uiSymbol,
+        interval: '5m', limit: req5m, forceQuote: forceQuote);
     if (base5m.isEmpty) return <Candle>[];
     final out = _resample(base5m, tfDuration(targetInterval));
     return out.take(targetLimit).toList();
@@ -167,7 +180,13 @@ class OHLCVService {
     double volume = base.first.volume;
 
     void push() {
-      out.add(Candle(time: bucketStart, open: open, high: high, low: low, close: close, volume: volume));
+      out.add(Candle(
+          time: bucketStart,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: volume));
     }
 
     for (int i = 1; i < base.length; i++) {
@@ -203,4 +222,3 @@ class OHLCVService {
     return DateTime.fromMillisecondsSinceEpoch(floored).toLocal();
   }
 }
-

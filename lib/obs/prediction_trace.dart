@@ -4,7 +4,6 @@ import 'log_sink.dart';
 import 'package:mytrademate/ai/ai_config.dart';
 import 'package:mytrademate/ai/entities.dart' as ai;
 import 'package:mytrademate/ai/ai_locator.dart';
-import 'dart:math' as math;
 
 class PredictionTrace {
   final String symbol;
@@ -18,7 +17,8 @@ class PredictionTrace {
   final int seed;
   final int window;
   final String timeframe;
-  final Map<String, dynamic> meta; // e.g., {'fp16Fallbacks': {...}, 'featuresHash': '...'}
+  final Map<String, dynamic>
+      meta; // e.g., {'fp16Fallbacks': {...}, 'featuresHash': '...'}
   PredictionTrace({
     required this.symbol,
     required this.asOf,
@@ -35,23 +35,24 @@ class PredictionTrace {
   });
 
   Map<String, dynamic> toJson() => {
-    'ts': DateTime.now().toUtc().toIso8601String(),
-    'asOf': asOf.toUtc().toIso8601String(),
-    'symbol': symbol,
-    'modelRev': modelRev,
-    'pBuy': pBuy,
-    'expReturn': expReturn,
-    'annVol': annVol,
-    'action': action,
-    'confidence': confidence,
-    'seed': seed,
-    'window': window,
-    'timeframe': timeframe,
-    'meta': meta,
-  };
+        'ts': DateTime.now().toUtc().toIso8601String(),
+        'asOf': asOf.toUtc().toIso8601String(),
+        'symbol': symbol,
+        'modelRev': modelRev,
+        'pBuy': pBuy,
+        'expReturn': expReturn,
+        'annVol': annVol,
+        'action': action,
+        'confidence': confidence,
+        'seed': seed,
+        'window': window,
+        'timeframe': timeframe,
+        'meta': meta,
+      };
 
   static String featuresHash(List<double> features) {
-    final bytes = utf8.encode(features.map((e) => e.toStringAsFixed(8)).join(','));
+    final bytes =
+        utf8.encode(features.map((e) => e.toStringAsFixed(8)).join(','));
     return sha1.convert(bytes).toString();
   }
 }
@@ -66,7 +67,8 @@ class PredictionTracer {
     required List<double>? features, // dacă ai features; altfel treci null
     Map<String, dynamic>? fp16Flags, // {'dir': bool, 'ret': bool, 'vol': bool}
   }) async {
-    final finalAction = AILocator.I.isInitialized ? AILocator.I.decide(pred) : pred.action;
+    final finalAction =
+        AILocator.I.isInitialized ? AILocator.I.decide(pred) : pred.action;
     final confVal = predConfidence(pred);
     final probsVec = [pred.pSell, pred.pHold, pred.pBuy];
     final trace = PredictionTrace(
@@ -82,7 +84,8 @@ class PredictionTracer {
       window: AiConfig.window,
       timeframe: AiConfig.timeframe,
       meta: {
-        if (features != null) 'featuresHash': PredictionTrace.featuresHash(features),
+        if (features != null)
+          'featuresHash': PredictionTrace.featuresHash(features),
         if (fp16Flags != null) 'fp16Fallbacks': fp16Flags,
         'probs': probsVec,
         'action': finalAction,
@@ -101,5 +104,3 @@ double predConfidence(ai.Prediction p) {
   final maxProb = [p.pSell, p.pHold, p.pBuy].reduce((a, b) => a > b ? a : b);
   return maxProb.toDouble();
 }
-
-

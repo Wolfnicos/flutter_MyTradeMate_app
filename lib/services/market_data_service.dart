@@ -56,10 +56,10 @@ class MarketDataServiceImpl implements MarketDataService {
     bool jitterBackoff = false,
   })  : _pm = pm ?? PriceStreamManager(),
         _rest = rest ?? DefaultPriceRestClient(env: env),
-        throttleInterval =
-            throttleInterval ?? Duration(milliseconds: (1000 ~/ (uiHzCap <= 0 ? 10 : uiHzCap))),
-        reconnectBackoff =
-            reconnectBackoff ?? const [Duration(milliseconds: 80), Duration(milliseconds: 200)],
+        throttleInterval = throttleInterval ??
+            Duration(milliseconds: (1000 ~/ (uiHzCap <= 0 ? 10 : uiHzCap))),
+        reconnectBackoff = reconnectBackoff ??
+            const [Duration(milliseconds: 80), Duration(milliseconds: 200)],
         maxReconnects = maxReconnects ?? 1,
         jitterBackoff = jitterBackoff,
         _directWs = false;
@@ -82,7 +82,8 @@ class MarketDataServiceImpl implements MarketDataService {
         gapPollInterval = pollInterval,
         eventSource = eventSource,
         sleep = sleep,
-        reconnectBackoff = reconnects ?? const [Duration(milliseconds: 50), Duration(milliseconds: 120)],
+        reconnectBackoff = reconnects ??
+            const [Duration(milliseconds: 50), Duration(milliseconds: 120)],
         maxReconnects = maxReconnects ?? 1,
         jitterBackoff = jitterBackoff,
         _directWs = true;

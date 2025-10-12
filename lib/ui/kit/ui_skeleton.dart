@@ -10,11 +10,12 @@ class UiSkeleton extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(.6),
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(.6),
         borderRadius: BorderRadius.circular(radius),
       ),
     );
   }
 }
-
-

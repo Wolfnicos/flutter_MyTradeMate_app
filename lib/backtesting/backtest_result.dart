@@ -24,7 +24,7 @@ class BacktestResult {
   final double avgWin;
   final double avgLoss;
   final double maxDrawdown; // fraction
-  final double sharpe; // daily Sharpe 
+  final double sharpe; // daily Sharpe
   final double feesPaid;
 
   const BacktestResult({
@@ -96,5 +96,3 @@ class TradeRecord {
         'pnl': pnl,
       };
 }
-
-

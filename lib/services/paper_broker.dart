@@ -204,7 +204,7 @@ class PaperOrderReq {
         quantity: quantity,
         clientId: clientId,
       );
-  
+
   factory PaperOrderReq.stopLimit({
     required String symbol,
     required OrderSide side,
@@ -427,7 +427,8 @@ class PaperBroker {
 
   void _tryFill(PaperOrder o, models.Candle c) {
     if (!o.active) return;
-    if (o.status == OrderStatus.filled || o.status == OrderStatus.canceled) return;
+    if (o.status == OrderStatus.filled || o.status == OrderStatus.canceled)
+      return;
 
     switch (o.type) {
       case OrderType.market:

@@ -6,7 +6,8 @@ import '../_helpers/test_market_data.dart';
 Future<void> _noDelay(Duration _) async {}
 
 void main() {
-  test('Throttle 50ms collapses burst: leading-edge emits per window', () async {
+  test('Throttle 50ms collapses burst: leading-edge emits per window',
+      () async {
     final src = await ScriptedEventSource.fromFixture(
       'test/fixtures/binance_ws/burst_throttled.json',
     );
@@ -24,7 +25,8 @@ void main() {
     );
 
     // Expect two emissions: leading-edge of first window → 1000.0, then 1002.0 after 60ms
-    final emits = await svc.prices('BTCUSDT')
+    final emits = await svc
+        .prices('BTCUSDT')
         .take(2)
         .toList()
         .timeout(const Duration(seconds: 2));
@@ -37,5 +39,3 @@ void main() {
     await svc.dispose();
   }, timeout: const Timeout(Duration(seconds: 4)));
 }
-
-

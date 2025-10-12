@@ -33,6 +33,3 @@ class SparklineChart extends StatelessWidget {
     );
   }
 }
-
-
-

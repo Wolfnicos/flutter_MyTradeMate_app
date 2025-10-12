@@ -24,7 +24,8 @@ void main() {
       side: OrderSide.buy,
       quantity: 0.010000,
     )) as PaperOrder;
-    expect(buyMkt.status, anyOf(OrderStatus.filled, OrderStatus.partiallyFilled));
+    expect(
+        buyMkt.status, anyOf(OrderStatus.filled, OrderStatus.partiallyFilled));
 
     // Place a trailing stop SELL with distance 5.00 USDT (~0.5% at 1000).
     final ts = broker.place(PaperOrderReq.trailingStopSell(
@@ -56,5 +57,3 @@ void main() {
     expect(fillsForTs.first.price, closeTo(1006.50, 1e-9));
   });
 }
-
-

@@ -8,6 +8,9 @@ import '../services/ohlcv_service.dart';
 import '../services/symbol_mapper.dart';
 import 'strategies/hybrid_strategies.dart' as hs;
 import 'package:mytrademate/src/core/trading_prefs.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'predictors/vision_predictor.dart';
+import 'ensemble/ensemble_voter.dart';
 
 /// PredictionRepo - Repository pattern pentru predicții AI
 /// - Centralizează accesul la predicții
@@ -20,17 +23,17 @@ class PredictionRepo {
   final PredictionCache _cache = PredictionCache();
   late final IntelligentCacheManager _smartCache;
   final Map<String, String> _hybridAction = {};
-  
+
   PredictionRepo(this.ohlcvService) {
     _smartCache = IntelligentCacheManager(_cache);
   }
-  
+
   /// Get prediction pentru un UI symbol (ex: 'BTC/EUR', 'BTCUSDT', etc.)
   /// Returns null dacă:
   /// - AI not initialized
   /// - Not enough data
   /// - Error occurred
-  /// 
+  ///
   /// Never throws! Always safe to call.
   Future<Prediction?> getFor(String uiSymbol) async {
     try {
@@ -41,13 +44,13 @@ class PredictionRepo {
         }
         return null;
       }
-      
+
       // Map UI symbol → feed symbol (force USDT pentru Binance)
       final feedSymbol = SymbolMapper.mapUiToFeed(
         uiSymbol,
         quote: AiConfig.kDefaultQuote,
       );
-      
+
       // Fetch OHLCV data
       final candles = await ohlcvService.fetchCandles(
         feedSymbol,
@@ -55,21 +58,27 @@ class PredictionRepo {
         limit: AiConfig.kLimit,
         forceQuote: true,
       );
-      
+
       // Check minimum data
       if (candles.length < AiConfig.kWindow) {
         if (AiConfig.kDebugMode) {
-          debugPrint('⚠️ Not enough candles for $uiSymbol: ${candles.length}/${AiConfig.kWindow}');
+          debugPrint(
+              '⚠️ Not enough candles for $uiSymbol: ${candles.length}/${AiConfig.kWindow}');
         }
         return null;
       }
-      
+
       // Smart cache lookup (dynamic TTL & early invalidation)
       final lastCandleTime = candles.last.time;
       final latestClose = candles.last.close;
       final avgVolume = candles.length >= 20
-          ? candles.sublist(candles.length - 20).map((c) => c.volume).reduce((a, b) => a + b) / 20
-          : candles.map((c) => c.volume).reduce((a, b) => a + b) / candles.length;
+          ? candles
+                  .sublist(candles.length - 20)
+                  .map((c) => c.volume)
+                  .reduce((a, b) => a + b) /
+              20
+          : candles.map((c) => c.volume).reduce((a, b) => a + b) /
+              candles.length;
       final latestVolume = candles.last.volume;
       // We don't know annVol yet; pass 0 and let manager use meta if any
       final smart = _smartCache.get(
@@ -81,25 +90,64 @@ class PredictionRepo {
         estAnnVol: 0.0,
       );
       if (smart != null) {
-        if (AiConfig.kDebugMode) debugPrint('💾 Repo: smart-cache HIT for $feedSymbol');
+        if (AiConfig.kDebugMode)
+          debugPrint('💾 Repo: smart-cache HIT for $feedSymbol');
         return smart;
       }
-      
+
       // Predict cu AI engine (direct access)
-      final prediction = await AILocator.I.engine.predict(feedSymbol, candles);
-      
+      // If engine supports timeframe override, set before predict (PatchTstEngine)
+      try {
+        // ignore: avoid_dynamic_calls
+        (AILocator.I.engine as dynamic).setTimeframe?.call(AiConfig.kInterval);
+      } catch (_) {}
+      var prediction = await AILocator.I.engine.predict(feedSymbol, candles);
+
       if (prediction == null) {
         if (AiConfig.kDebugMode) {
           debugPrint('⚠️ Prediction failed for $uiSymbol');
         }
         return null;
       }
-      
+
+      // Optional: Vision vote (geometric mean) if enabled and prediction available
+      if (AiConfig.useVisionVote) {
+        try {
+          final vp = VisionPredictor();
+          final bytes = (await rootBundle.load('assets/images/chart_probe.png'))
+              .buffer
+              .asUint8List();
+          final vProbs =
+              await vp.predictChartImage(bytes); // [pBuy,pHold,pSell]
+          final tProbs = [prediction!.pBuy, prediction.pHold, prediction.pSell];
+          final voted = geometricVote(
+            timeSeriesProbs: tProbs,
+            visionProbs: vProbs,
+            visionWeight: AiConfig.visionWeight,
+          );
+          // ignore: avoid_print
+          print(
+              '[Ensemble] probs: pBuy=${voted[0].toStringAsFixed(3)}, pHold=${voted[1].toStringAsFixed(3)}, pSell=${voted[2].toStringAsFixed(3)}  (visionWeight=${AiConfig.visionWeight})');
+          prediction = Prediction(
+            symbol: prediction.symbol,
+            asOf: prediction.asOf,
+            pBuy: voted[0],
+            pHold: voted[1],
+            pSell: voted[2],
+            expReturn: prediction.expReturn,
+            annVol: prediction.annVol,
+            relVolume: prediction.relVolume,
+          );
+        } catch (_) {
+          // best-effort only
+        }
+      }
+
       // Cache result + smart metadata (needs annVol + volumes)
       _smartCache.put(
         feedSymbol,
         lastCandleTime,
-        prediction,
+        prediction!,
         baseClose: latestClose,
         avgVolume: avgVolume,
         latestVolume: latestVolume,
@@ -114,14 +162,31 @@ class PredictionRepo {
           // Load required timeframes
           final needs15m = strategy == 'hybrid3';
           final needs1h = strategy == 'hybrid2' || strategy == 'hybrid4';
-          final needs4h = strategy == 'hybrid1' || strategy == 'hybrid3' || strategy == 'hybrid5';
+          final needs4h = strategy == 'hybrid1' ||
+              strategy == 'hybrid3' ||
+              strategy == 'hybrid5';
           final needs5m = strategy != 'hybrid3';
-          final needs1d = true;
-          final tf5m = needs5m ? await ohlcvService.fetchCandles(feedSymbol, interval: '5m', limit: 2000) : <Candle>[];
-          final tf15m = needs15m ? await ohlcvService.fetchCandles(feedSymbol, interval: '15m', limit: 2000) : <Candle>[];
-          final tf1h = needs1h ? await ohlcvService.fetchCandles(feedSymbol, interval: '1h', limit: 2000) : <Candle>[];
-          final tf4h = needs4h ? await ohlcvService.fetchCandles(feedSymbol, interval: '4h', limit: 2000) : <Candle>[];
-          final tf1d = needs1d ? await ohlcvService.fetchCandles(feedSymbol, interval: '1d', limit: 2000) : <Candle>[];
+          const needs1d = true;
+          final tf5m = needs5m
+              ? await ohlcvService.fetchCandles(feedSymbol,
+                  interval: '5m', limit: 2000)
+              : <Candle>[];
+          final tf15m = needs15m
+              ? await ohlcvService.fetchCandles(feedSymbol,
+                  interval: '15m', limit: 2000)
+              : <Candle>[];
+          final tf1h = needs1h
+              ? await ohlcvService.fetchCandles(feedSymbol,
+                  interval: '1h', limit: 2000)
+              : <Candle>[];
+          final tf4h = needs4h
+              ? await ohlcvService.fetchCandles(feedSymbol,
+                  interval: '4h', limit: 2000)
+              : <Candle>[];
+          final tf1d = needs1d
+              ? await ohlcvService.fetchCandles(feedSymbol,
+                  interval: '1d', limit: 2000)
+              : <Candle>[];
           Map<String, dynamic> res;
           switch (strategy) {
             case 'hybrid1':
@@ -149,15 +214,16 @@ class PredictionRepo {
       } catch (_) {
         // ignore hybrid computation errors
       }
-      
+
       // Single consolidated log per symbol
       final action = AILocator.I.decide(prediction);
-      final conf = (prediction.confidence() * 100).toStringAsFixed(1);
+      final conf = (prediction!.confidence() * 100).toStringAsFixed(1);
       final ret = (prediction.expReturn * 100).toStringAsFixed(2);
       final vol = (prediction.annVol * 100).toStringAsFixed(1);
-      
-      debugPrint('🤖 AI ➜ $uiSymbol: action=$action conf=$conf% ret=$ret% vol=$vol%');
-      
+
+      debugPrint(
+          '🤖 AI ➜ $uiSymbol: action=$action conf=$conf% ret=$ret% vol=$vol%');
+
       return prediction;
     } catch (e, st) {
       // Never throw! Just log and return null
@@ -169,12 +235,13 @@ class PredictionRepo {
     }
   }
 
-  String _hyKey(String symbol, DateTime asOf) => '${symbol.toUpperCase()}@${asOf.millisecondsSinceEpoch}';
+  String _hyKey(String symbol, DateTime asOf) =>
+      '${symbol.toUpperCase()}@${asOf.millisecondsSinceEpoch}';
 
   String? hybridActionFor(Prediction p) {
     return _hybridAction[_hyKey(p.symbol, p.asOf)];
   }
-  
+
   /// Fetch a fresh prediction for a given UI symbol and interval, falling back to cache if valid.
   /// Returns null if AI not initialized or insufficient data.
   Future<Prediction?> getOrFetch({
@@ -184,7 +251,8 @@ class PredictionRepo {
   }) async {
     try {
       if (!AILocator.I.isInitialized) {
-        if (AiConfig.kDebugMode) debugPrint('⚠️ AI not initialized for $symbol');
+        if (AiConfig.kDebugMode)
+          debugPrint('⚠️ AI not initialized for $symbol');
         return null;
       }
 
@@ -202,7 +270,8 @@ class PredictionRepo {
 
       if (candles.length < AiConfig.kWindow) {
         if (AiConfig.kDebugMode) {
-          debugPrint('⚠️ Not enough candles for $symbol: ${candles.length}/${AiConfig.kWindow}');
+          debugPrint(
+              '⚠️ Not enough candles for $symbol: ${candles.length}/${AiConfig.kWindow}');
         }
         return null;
       }
@@ -215,7 +284,8 @@ class PredictionRepo {
                   .map((c) => c.volume)
                   .reduce((a, b) => a + b) /
               20
-          : candles.map((c) => c.volume).reduce((a, b) => a + b) / candles.length;
+          : candles.map((c) => c.volume).reduce((a, b) => a + b) /
+              candles.length;
       final latestVolume = candles.last.volume;
 
       final smart = _smartCache.get(
@@ -227,10 +297,13 @@ class PredictionRepo {
         estAnnVol: 0.0,
       );
       if (smart != null) {
-        if (AiConfig.kDebugMode) debugPrint('💾 Repo: smart-cache HIT for $feedSymbol');
+        if (AiConfig.kDebugMode)
+          debugPrint('💾 Repo: smart-cache HIT for $feedSymbol');
         return smart;
       }
 
+      // Pass timeframe context via engine’s default TF in PatchTstEngine.
+      // For multi-TF models, repo interval will be used by OHLCVService and engine logic.
       final prediction = await AILocator.I.engine.predict(feedSymbol, candles);
       if (prediction == null) return null;
 
@@ -249,7 +322,8 @@ class PredictionRepo {
         final conf = (prediction.confidence() * 100).toStringAsFixed(1);
         final ret = (prediction.expReturn * 100).toStringAsFixed(2);
         final vol = (prediction.annVol * 100).toStringAsFixed(1);
-        debugPrint('🤖 AI (fresh) ➜ $symbol@$interval: action=$action conf=$conf% ret=$ret% vol=$vol%');
+        debugPrint(
+            '🤖 AI (fresh) ➜ $symbol@$interval: action=$action conf=$conf% ret=$ret% vol=$vol% rev=${AiConfig.modelRev}');
       }
 
       return prediction;
@@ -259,20 +333,19 @@ class PredictionRepo {
       return null;
     }
   }
-  
+
   /// Clear cache pentru un symbol
   void clearCache(String symbol) {
     _cache.clearSymbol(symbol);
   }
-  
+
   /// Clear tot cache-ul
   void clearAllCache() {
     _cache.clearAll();
   }
-  
+
   /// Get cache stats (debugging)
   Map<String, dynamic> getCacheStats() {
     return _cache.getStats();
   }
 }
-

@@ -75,8 +75,8 @@ class IntelligentCacheManager {
       final change = (latestClose - base).abs() / base;
       if (change > 0.005) {
         if (kDebugMode) {
-          debugPrint('⚡ smart-cache invalidation (price ${
-              (change * 100).toStringAsFixed(2)}%) for $symbol');
+          debugPrint(
+              '⚡ smart-cache invalidation (price ${(change * 100).toStringAsFixed(2)}%) for $symbol');
         }
         invalidations++;
         return null;
@@ -116,7 +116,9 @@ class IntelligentCacheManager {
       latestVolume: latestVolume,
       annVol: annVol,
     );
-    if (kDebugMode) debugPrint('💾 smart-cache STORE for $symbol (ttl=${ttlForVol(annVol).inSeconds}s)');
+    if (kDebugMode)
+      debugPrint(
+          '💾 smart-cache STORE for $symbol (ttl=${ttlForVol(annVol).inSeconds}s)');
   }
 
   void clearSymbol(String symbol) {
@@ -136,7 +138,8 @@ class IntelligentCacheManager {
         'entries': _meta.length,
       };
 
-  String _key(String symbol, DateTime last) => '$symbol:${last.millisecondsSinceEpoch}';
+  String _key(String symbol, DateTime last) =>
+      '$symbol:${last.millisecondsSinceEpoch}';
 }
 
 class _Meta {
@@ -154,5 +157,3 @@ class _Meta {
     this.annVol,
   });
 }
-
-

@@ -20,6 +20,3 @@ void main() {
     expect(await prefs.getDefaultQuote(), 'USDT');
   });
 }
-
-
-

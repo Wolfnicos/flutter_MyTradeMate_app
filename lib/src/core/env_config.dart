@@ -4,6 +4,3 @@ class EnvConfig {
   static const int recvWindowMs =
       int.fromEnvironment('RECV_WINDOW_MS', defaultValue: 5000);
 }
-
-
-

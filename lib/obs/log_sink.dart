@@ -25,5 +25,3 @@ class FileJsonlSink implements LogSink {
     await file.writeAsString(line, mode: FileMode.append, flush: true);
   }
 }
-
-

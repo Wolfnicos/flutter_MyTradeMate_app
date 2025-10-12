@@ -118,6 +118,3 @@ class SignalPolicy {
 
   void resetForTest() => _state.clear();
 }
-
-
-

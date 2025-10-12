@@ -109,3 +109,6 @@ Future<List<Candle>> _loadData(String symbol, int days) async {
 }
 
 
+
+
+

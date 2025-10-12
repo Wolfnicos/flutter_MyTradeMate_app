@@ -58,54 +58,56 @@ class SignalEngine implements ISignalEngine {
     try {
       // Guard: check minimum data
       if (window == null || window.length < kMinWindow) {
-        debugPrint('⚠️ AI: not enough data for $symbol (got ${window?.length ?? 0}/$kMinWindow)');
+        debugPrint(
+            '⚠️ AI: not enough data for $symbol (got ${window?.length ?? 0}/$kMinWindow)');
         return null;
       }
-    _lastWindow = window; // keep reference for decision filters
-    List<double> probs;
-    double expReturn;
-    double vol;
-    double conf;
+      _lastWindow = window; // keep reference for decision filters
+      List<double> probs;
+      double expReturn;
+      double vol;
+      double conf;
 
-    if (ensemble != null) {
-      // Prefer ensemble if available
-      final EnsembleResult er = await ensemble!.predict(window);
-      probs = er.probs;
-      expReturn = er.expReturn;
-      // Optionally disable or soften volatility gating by blending with EWMA
-      final ew = ewmaVol(window.map((c) => c.close).toList(), lambda: 0.94);
-      vol = ((er.annVol.isFinite ? er.annVol : 0.0) * 0.7 + (ew.isFinite ? ew : 0.0) * 0.3)
-          .clamp(0.01, 3.0);
-      conf = er.confidence;
-      if (kDebugMode) {
-        debugPrint('🤝 Ensemble debug: ${er.debug}');
+      if (ensemble != null) {
+        // Prefer ensemble if available
+        final EnsembleResult er = await ensemble!.predict(window);
+        probs = er.probs;
+        expReturn = er.expReturn;
+        // Optionally disable or soften volatility gating by blending with EWMA
+        final ew = ewmaVol(window.map((c) => c.close).toList(), lambda: 0.94);
+        vol = ((er.annVol.isFinite ? er.annVol : 0.0) * 0.7 +
+                (ew.isFinite ? ew : 0.0) * 0.3)
+            .clamp(0.01, 3.0);
+        conf = er.confidence;
+        if (kDebugMode) {
+          debugPrint('🤝 Ensemble debug: ${er.debug}');
+        }
+      } else {
+        // Fallback to single-model pipeline
+        probs = await dirModel.predictProbs(window);
+        expReturn = returnModel != null
+            ? await returnModel!.predictReturn(window)
+            : _fallbackReturn(window);
+        vol = volatilityModel != null
+            ? await volatilityModel!.predictVolatility(window)
+            : _fallbackVolatility(window);
+        conf = [probs[0], probs[1], probs[2]].reduce((a, b) => a > b ? a : b);
       }
-    } else {
-      // Fallback to single-model pipeline
-      probs = await dirModel.predictProbs(window);
-      expReturn = returnModel != null
-          ? await returnModel!.predictReturn(window)
-          : _fallbackReturn(window);
-      vol = volatilityModel != null
-          ? await volatilityModel!.predictVolatility(window)
-          : _fallbackVolatility(window);
-      conf = [probs[0], probs[1], probs[2]].reduce((a, b) => a > b ? a : b);
-    }
-    
-    // Relative volume
-    final rv = relativeVolume(window, period: 20);
-    
-    final pred = Prediction(
-      symbol: symbol,
-      asOf: window.last.time,
-      pBuy: probs[0],
-      pHold: probs[1],
-      pSell: probs[2],
-      expReturn: expReturn,
-      annVol: vol,
-      relVolume: rv,
-    );
-    
+
+      // Relative volume
+      final rv = relativeVolume(window, period: 20);
+
+      final pred = Prediction(
+        symbol: symbol,
+        asOf: window.last.time,
+        pBuy: probs[0],
+        pHold: probs[1],
+        pSell: probs[2],
+        expReturn: expReturn,
+        annVol: vol,
+        relVolume: rv,
+      );
+
       // 🧪 DEBUG LOGS (shows prediction is actually running!)
       final action = decide(pred);
       final confPct = (pred.confidence() * 100).toStringAsFixed(1);
@@ -113,11 +115,11 @@ class SignalEngine implements ISignalEngine {
       final pHoldPct = (pred.pHold * 100).toStringAsFixed(0);
       final pSellPct = (pred.pSell * 100).toStringAsFixed(0);
       final volPct = (pred.annVol * 100).toStringAsFixed(1);
-      
+
       debugPrint('🤖 AI ➜ $symbol: $action conf=$confPct% '
           'p=[$pBuyPct $pHoldPct $pSellPct] vol=$volPct% '
           'ret=${(expReturn * 100).toStringAsFixed(2)}%');
-      
+
       return pred;
     } catch (e, stackTrace) {
       debugPrint('❌ AI predict error for $symbol: $e');
@@ -136,12 +138,14 @@ class SignalEngine implements ISignalEngine {
       final emaSlow = ema(closes, 26);
       return emaFast.isFinite && emaSlow.isFinite && emaFast > emaSlow;
     }
+
     bool strongDowntrend(List<Candle> win) {
       final closes = win.map((c) => c.close).toList();
       final emaFast = ema(closes, 12);
       final emaSlow = ema(closes, 26);
       return emaFast.isFinite && emaSlow.isFinite && emaFast < emaSlow;
     }
+
     double rsi14(List<Candle> win) {
       final closes = win.map((c) => c.close).toList();
       return rsi(closes, period: 14);
@@ -155,7 +159,8 @@ class SignalEngine implements ISignalEngine {
 
     // Global gating: volatility cap and minimum confidence
     if (p.annVol > settings.volCap) return 'HOLD';
-    if (dirConf < settings.confThresh || conf < settings.confThresh) return 'HOLD';
+    if (dirConf < settings.confThresh || conf < settings.confThresh)
+      return 'HOLD';
 
     // Expected return bias: avoid contrarian decisions
     final double er = p.expReturn; // fractional (e.g., 0.012 = +1.2%)
@@ -201,13 +206,13 @@ class SignalEngine implements ISignalEngine {
   double _fallbackReturn(List<Candle> window) {
     final closes = window.map((c) => c.close).toList();
     if (closes.length < 5) return 0.0;
-    
+
     // Simple momentum: average of last 5 returns
     final returns = <double>[];
     for (int i = closes.length - 5; i < closes.length - 1; i++) {
       returns.add((closes[i + 1] / closes[i]) - 1.0);
     }
-    
+
     final avgReturn = returns.reduce((a, b) => a + b) / returns.length;
     return avgReturn.clamp(-0.05, 0.05);
   }
@@ -226,4 +231,3 @@ class SignalEngine implements ISignalEngine {
     volatilityModel?.dispose();
   }
 }
-

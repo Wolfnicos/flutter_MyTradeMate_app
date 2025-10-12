@@ -64,12 +64,13 @@ class Candle {
 class Prediction {
   final String symbol;
   final DateTime asOf;
-  final double pBuy;   // Probability BUY (0-1)
-  final double pHold;  // Probability HOLD (0-1)
-  final double pSell;  // Probability SELL (0-1)
-  final double expReturn;   // Expected return (fracție: 0.012 = +1.2%)
-  final double annVol;      // Volatilitate anualizată (0.65 = 65%)
-  final double relVolume;   // Volum relativ vs SMA20
+  final double pBuy; // Probability BUY (0-1)
+  final double pHold; // Probability HOLD (0-1)
+  final double pSell; // Probability SELL (0-1)
+  final double expReturn; // Expected return (fracție: 0.012 = +1.2%)
+  final double annVol; // Volatilitate anualizată (0.65 = 65%)
+  final double relVolume; // Volum relativ vs SMA20
+  final String? reason; // Optional machine reason (e.g., 'model_missing')
 
   const Prediction({
     required this.symbol,
@@ -80,6 +81,7 @@ class Prediction {
     required this.expReturn,
     required this.annVol,
     required this.relVolume,
+    this.reason,
   });
 
   /// Action determinat din probabilități (multiclass softmax)
@@ -116,21 +118,22 @@ class Prediction {
         'relVolume': relVolume,
         'action': action,
         'confidence': confidence(),
+        if (reason != null) 'reason': reason,
       };
 }
 
 /// Strategy Settings - configurare thresholds și parametri
 class StrategySettings {
-  final double upThresh;     // Threshold pentru BUY (ex: 0.003 = +0.3%)
-  final double downThresh;   // Threshold pentru SELL (ex: -0.003 = -0.3%)
-  final double confThresh;   // Confidence minimum (ex: 0.6 = 60%)
-  final double volCap;       // Volatility cap anualizat (ex: 0.85 = 85%)
-  final double fee;          // Comision per trade (0.001 = 0.1%)
-  final double slippage;     // Slippage estimat (0.0005 = 0.05%)
-  final String timeframe;    // ex: '5m'
-  final int window;          // e.g., 64
-  final int history;         // e.g., 100
-  final int seed;            // global seed
+  final double upThresh; // Threshold pentru BUY (ex: 0.003 = +0.3%)
+  final double downThresh; // Threshold pentru SELL (ex: -0.003 = -0.3%)
+  final double confThresh; // Confidence minimum (ex: 0.6 = 60%)
+  final double volCap; // Volatility cap anualizat (ex: 0.85 = 85%)
+  final double fee; // Comision per trade (0.001 = 0.1%)
+  final double slippage; // Slippage estimat (0.0005 = 0.05%)
+  final String timeframe; // ex: '5m'
+  final int window; // e.g., 64
+  final int history; // e.g., 100
+  final int seed; // global seed
 
   const StrategySettings({
     this.upThresh = 0.01,
@@ -218,4 +221,3 @@ class Indicators {
         'relVolume': relVolume,
       };
 }
-

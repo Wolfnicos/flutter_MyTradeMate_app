@@ -18,7 +18,13 @@ class BacktestScreen extends StatefulWidget {
 }
 
 class _BacktestScreenState extends State<BacktestScreen> {
-  final List<String> _symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'WLFIUSDT', 'TRUMPUSDT'];
+  final List<String> _symbols = [
+    'BTCUSDT',
+    'ETHUSDT',
+    'BNBUSDT',
+    'WLFIUSDT',
+    'TRUMPUSDT'
+  ];
   String _selectedSymbol = 'BTCUSDT';
   String _selectedInterval = '5m';
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
@@ -27,8 +33,8 @@ class _BacktestScreenState extends State<BacktestScreen> {
   double _positionSize = 0.1; // 10% of capital per trade
   bool _useEnsemble = true;
   String _strategy = 'ensemble'; // ensemble | hybrid1..hybrid5
-  String _selectedStrategy = 'Hybrid 1: EMA+RSI+Cloud';
-  
+  final String _selectedStrategy = 'Hybrid 1: EMA+RSI+Cloud';
+
   bool _isRunning = false;
   BacktestResult? _result;
   bt.BacktestResult? _rawResult;
@@ -66,12 +72,52 @@ class _BacktestScreenState extends State<BacktestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              border: Border.all(color: Colors.blue),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info, color: Colors.blue),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Backtesting for Analysis',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Use backtest results to understand AI behavior. Current model shows 30% win rate - NOT ready for live trading.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (_result != null) _buildResultsCard(),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: _isRunning ? null : _runBacktest,
             icon: _isRunning
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.play_arrow),
             label: Text(_isRunning ? 'Running...' : 'Run Backtest'),
             style: ElevatedButton.styleFrom(
@@ -166,19 +212,26 @@ class _BacktestScreenState extends State<BacktestScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Configurare Backtest', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('Configurare Backtest',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedSymbol,
-                decoration: const InputDecoration(labelText: 'Symbol', border: OutlineInputBorder()),
-                items: _symbols.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                decoration: const InputDecoration(
+                    labelText: 'Symbol', border: OutlineInputBorder()),
+                items: _symbols
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
                 onChanged: (v) => setState(() => _selectedSymbol = v!),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedInterval,
-                decoration: const InputDecoration(labelText: 'Interval', border: OutlineInputBorder()),
-                items: ['5m', '15m', '1h', '4h', '1d'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                decoration: const InputDecoration(
+                    labelText: 'Interval', border: OutlineInputBorder()),
+                items: ['5m', '15m', '1h', '4h', '1d']
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
                 onChanged: (v) => setState(() => _selectedInterval = v!),
               ),
               const SizedBox(height: 16),
@@ -223,37 +276,62 @@ class _BacktestScreenState extends State<BacktestScreen> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _strategy,
-                decoration: const InputDecoration(labelText: 'Strategy', border: OutlineInputBorder()),
+                initialValue: _strategy,
+                decoration: const InputDecoration(
+                    labelText: 'Strategy', border: OutlineInputBorder()),
                 items: const [
-                  DropdownMenuItem(value: 'ensemble', child: Text('AI Ensemble (default)')),
-                  DropdownMenuItem(value: 'hybrid1', child: Text('Hybrid 1: EMA+RSI+Cloud')),
-                  DropdownMenuItem(value: 'hybrid2', child: Text('Hybrid 2: BB+ADX+Cloud')),
-                  DropdownMenuItem(value: 'hybrid3', child: Text('Hybrid 3: Trend+RSI')),
-                  DropdownMenuItem(value: 'hybrid4', child: Text('Hybrid 4: Breakout+DailyTrend')),
-                  DropdownMenuItem(value: 'hybrid5', child: Text('Hybrid 5: Vol-adaptive+Cloud')),
+                  DropdownMenuItem(
+                      value: 'ensemble', child: Text('AI Ensemble (default)')),
+                  DropdownMenuItem(
+                      value: 'hybrid1', child: Text('Hybrid 1: EMA+RSI+Cloud')),
+                  DropdownMenuItem(
+                      value: 'hybrid2', child: Text('Hybrid 2: BB+ADX+Cloud')),
+                  DropdownMenuItem(
+                      value: 'hybrid3', child: Text('Hybrid 3: Trend+RSI')),
+                  DropdownMenuItem(
+                      value: 'hybrid4',
+                      child: Text('Hybrid 4: Breakout+DailyTrend')),
+                  DropdownMenuItem(
+                      value: 'hybrid5',
+                      child: Text('Hybrid 5: Vol-adaptive+Cloud')),
                 ],
                 onChanged: (v) => setState(() => _strategy = v ?? 'ensemble'),
               ),
               const SizedBox(height: 8),
               TextField(
-                decoration: const InputDecoration(labelText: 'Initial Capital (USDT)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Initial Capital (USDT)',
+                    border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
-                controller: TextEditingController(text: _initialCapital.toString()),
-                onChanged: (v) { final val = double.tryParse(v); if (val != null) _initialCapital = val; },
+                controller:
+                    TextEditingController(text: _initialCapital.toString()),
+                onChanged: (v) {
+                  final val = double.tryParse(v);
+                  if (val != null) _initialCapital = val;
+                },
               ),
               const SizedBox(height: 16),
               TextField(
-                decoration: const InputDecoration(labelText: 'Position Size (fraction, e.g. 0.1 = 10%)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Position Size (fraction, e.g. 0.1 = 10%)',
+                    border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
-                controller: TextEditingController(text: _positionSize.toString()),
-                onChanged: (v) { final val = double.tryParse(v); if (val != null) _positionSize = val.clamp(0.01, 1.0); },
+                controller:
+                    TextEditingController(text: _positionSize.toString()),
+                onChanged: (v) {
+                  final val = double.tryParse(v);
+                  if (val != null) _positionSize = val.clamp(0.01, 1.0);
+                },
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _isRunning ? null : _runBacktest,
                 icon: _isRunning
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.play_arrow),
                 label: Text(_isRunning ? 'Running...' : 'Run Backtest'),
                 style: ElevatedButton.styleFrom(
@@ -271,7 +349,8 @@ class _BacktestScreenState extends State<BacktestScreen> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.red),
                   ),
-                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                  child:
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
                 ),
               ],
             ],
@@ -284,7 +363,8 @@ class _BacktestScreenState extends State<BacktestScreen> {
   Widget _buildResultsCard() {
     final r = _result!;
     final pnlColor = r.totalPnl >= 0 ? Colors.green : Colors.red;
-    final winRate = r.totalTrades > 0 ? (r.winningTrades / r.totalTrades) * 100 : 0.0;
+    final winRate =
+        r.totalTrades > 0 ? (r.winningTrades / r.totalTrades) * 100 : 0.0;
     final merit = mc.MetricsCalculator.meritFromBacktest(
       _rawResult?.equity ?? const [],
       totalReturn: r.returnPercent,
@@ -293,7 +373,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
       maxDd: r.maxDrawdown,
     );
     final decision = mc.MetricsCalculator.meritDecision(merit);
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -305,9 +385,10 @@ class _BacktestScreenState extends State<BacktestScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const Divider(height: 24),
-            
-            _buildResultRow('Capital Initial', '\$${r.initialCapital.toStringAsFixed(2)}'),
-            _buildResultRow('Capital Final', '\$${r.finalCapital.toStringAsFixed(2)}'),
+            _buildResultRow(
+                'Capital Initial', '\$${r.initialCapital.toStringAsFixed(2)}'),
+            _buildResultRow(
+                'Capital Final', '\$${r.finalCapital.toStringAsFixed(2)}'),
             _buildResultRow(
               'P&L Total',
               '\$${r.totalPnl.toStringAsFixed(2)} (${r.returnPercent.toStringAsFixed(2)}%)',
@@ -321,7 +402,9 @@ class _BacktestScreenState extends State<BacktestScreen> {
             const Divider(),
             _buildResultRow('Avg Win', '\$${r.avgWin.toStringAsFixed(2)}'),
             _buildResultRow('Avg Loss', '\$${r.avgLoss.toStringAsFixed(2)}'),
-            _buildResultRow('Max Drawdown', '${r.maxDrawdown.toStringAsFixed(2)}%', valueColor: Colors.red),
+            _buildResultRow(
+                'Max Drawdown', '${r.maxDrawdown.toStringAsFixed(2)}%',
+                valueColor: Colors.red),
             const Divider(),
             _buildResultRow('Sharpe Ratio', r.sharpeRatio.toStringAsFixed(2)),
             _buildResultRow('Fees Paid', '\$${r.totalFees.toStringAsFixed(2)}'),
@@ -336,11 +419,15 @@ class _BacktestScreenState extends State<BacktestScreen> {
                   await prefs.setDefaultStrategy(_strategy);
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Default strategy set to ${_strategy.toUpperCase()}')),
+                    SnackBar(
+                        content: Text(
+                            'Default strategy set to ${_strategy.toUpperCase()}')),
                   );
                 },
-                icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-                label: const Text('Set as Default Strategy', style: TextStyle(color: Colors.white)),
+                icon:
+                    const Icon(Icons.check_circle_outline, color: Colors.white),
+                label: const Text('Set as Default Strategy',
+                    style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
               )
             ],

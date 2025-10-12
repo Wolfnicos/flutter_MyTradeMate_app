@@ -21,6 +21,3 @@ void main() {
     expect(await p.getApiSecret(), 'very-secret');
   });
 }
-
-
-

@@ -19,6 +19,3 @@ void main() {
     expect(snap.holdings.map((e) => e.asset).toList(), ['BTC', 'USDT', 'ETH']);
   });
 }
-
-
-

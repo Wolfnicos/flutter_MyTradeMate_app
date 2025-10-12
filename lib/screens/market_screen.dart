@@ -80,7 +80,8 @@ class _MarketScreenState extends State<MarketScreen> {
         try {
           final t = await client.ticker24h(c.symbol);
           final raw = t['priceChangePercent'];
-          final v = raw is num ? raw.toDouble() : double.tryParse('$raw') ?? 0.0;
+          final v =
+              raw is num ? raw.toDouble() : double.tryParse('$raw') ?? 0.0;
           if (!mounted) continue;
           setState(() => _chg[c.symbol] = v);
         } catch (_) {}
@@ -105,7 +106,8 @@ class _MarketScreenState extends State<MarketScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Markets'), backgroundColor: Colors.transparent),
+      appBar: AppBar(
+          title: const Text('Markets'), backgroundColor: Colors.transparent),
       body: ListView.separated(
           padding: const EdgeInsets.all(16),
           separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -119,10 +121,12 @@ class _MarketScreenState extends State<MarketScreen> {
               name: c.symbol,
               price: price,
               changePercent: ch,
-              icon: Text(c.label.substring(0, 1), style: const TextStyle(color: kText)),
+              icon: Text(c.label.substring(0, 1),
+                  style: const TextStyle(color: kText)),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => MarketDetailsScreen(symbol: c.symbol)),
+                  MaterialPageRoute(
+                      builder: (_) => MarketDetailsScreen(symbol: c.symbol)),
                 );
               },
             );

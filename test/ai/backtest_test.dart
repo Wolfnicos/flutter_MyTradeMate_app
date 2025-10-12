@@ -9,7 +9,7 @@ void main() {
     test('Backtester produces equity curve', () async {
       final engine = SignalEngine(dirModel: DirectionModel());
       final backtester = Backtester(engine, const StrategySettings());
-      
+
       // Generate trending up data (simple)
       final data = List.generate(
         100,
@@ -22,14 +22,14 @@ void main() {
           volume: 1000.0,
         ),
       );
-      
+
       final result = await backtester.run(
         'BTCUSDT',
         data,
         initial: 10000,
         position: 0.1,
       );
-      
+
       expect(result.equity, isNotEmpty);
       expect(result.equity.first, greaterThan(0));
       expect(result.metrics.totalReturn, isA<double>());
@@ -38,7 +38,7 @@ void main() {
     test('Metrics are calculated correctly', () async {
       final engine = SignalEngine(dirModel: DirectionModel());
       final backtester = Backtester(engine, const StrategySettings());
-      
+
       final data = List.generate(
         80,
         (i) => Candle(
@@ -50,14 +50,14 @@ void main() {
           volume: 1000.0,
         ),
       );
-      
+
       final result = await backtester.run(
         'BTCUSDT',
         data,
         initial: 10000,
         position: 0.1,
       );
-      
+
       expect(result.metrics.sharpe, isA<double>());
       expect(result.metrics.sortino, isA<double>());
       expect(result.metrics.maxDD, greaterThanOrEqualTo(0));
@@ -69,13 +69,13 @@ void main() {
     test('Fees and slippage reduce returns', () async {
       final engineNoFee = SignalEngine(dirModel: DirectionModel());
       final engineWithFee = SignalEngine(dirModel: DirectionModel());
-      
+
       const settingsNoFee = StrategySettings(fee: 0.0, slippage: 0.0);
       const settingsWithFee = StrategySettings(fee: 0.001, slippage: 0.0005);
-      
+
       final backtesterNoFee = Backtester(engineNoFee, settingsNoFee);
       final backtesterWithFee = Backtester(engineWithFee, settingsWithFee);
-      
+
       // Trending up data
       final data = List.generate(
         70,
@@ -88,10 +88,10 @@ void main() {
           volume: 1000.0,
         ),
       );
-      
+
       final resultNoFee = await backtesterNoFee.run('BTCUSDT', data);
       final resultWithFee = await backtesterWithFee.run('BTCUSDT', data);
-      
+
       // With fees should have lower or equal returns
       expect(
         resultWithFee.metrics.totalReturn,
@@ -100,5 +100,3 @@ void main() {
     });
   });
 }
-
-

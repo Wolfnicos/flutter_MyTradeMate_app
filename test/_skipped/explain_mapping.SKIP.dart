@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/services/ai_service.dart';
 import 'package:test/test.dart' as test show Skip;
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('mapToExplain carries AI result and features', () {
     final seq = List.generate(64, (_) => <double>[1, 2, 3]);
@@ -22,5 +23,3 @@ void main() {
     expect(d.features.length, 64);
   });
 }
-
-

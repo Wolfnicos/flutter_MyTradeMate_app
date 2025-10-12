@@ -1,0 +1,11 @@
+{
+  "fees_bps": { "binance": { "maker": 1.0, "taker": 5.0 } },
+  "slippage_bps": { "default": 2.0 },
+  "spread_bps": {
+    "BTCUSDT": 0.5,
+    "BNBUSDT": 0.8,
+    "ETHUSDT": 0.6,
+    "TRUMPUSDT": 5.0,
+    "WLFIUSDT": 10.0
+  }
+}

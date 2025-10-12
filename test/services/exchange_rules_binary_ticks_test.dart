@@ -17,6 +17,3 @@ void main() {
     expect(roundPriceToTickForTest(10.055, 0.0625), 10.0625); // above midpoint
   });
 }
-
-
-

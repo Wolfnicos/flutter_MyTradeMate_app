@@ -26,6 +26,3 @@ class StatusPill extends StatelessWidget {
     );
   }
 }
-
-
-

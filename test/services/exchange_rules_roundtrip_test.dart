@@ -9,6 +9,3 @@ void main() {
     expect(qty * price, greaterThanOrEqualTo(10));
   });
 }
-
-
-

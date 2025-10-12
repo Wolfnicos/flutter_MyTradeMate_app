@@ -11,6 +11,3 @@ void main() {
     expect(c.normSymbolForTest('ADAUSDT'), 'ADAUSDT');
   });
 }
-
-
-

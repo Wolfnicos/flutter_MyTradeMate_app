@@ -34,8 +34,9 @@ class _FakeModels implements ModelsAdapter {
     return (probUp: 0.62, nextReturn: 0.01, volatility: 0.12);
   }
 }
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('AIService produces deterministic BUY with confidence & target',
       () async {
@@ -50,5 +51,3 @@ void main() {
     expect(res.targetPrice, greaterThan(0));
   });
 }
-
-

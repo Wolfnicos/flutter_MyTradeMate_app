@@ -13,6 +13,3 @@ void main() {
     expect(roundQtyToStepForTest(1.006, 0.01), 1.01);
   });
 }
-
-
-

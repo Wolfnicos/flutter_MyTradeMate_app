@@ -30,8 +30,9 @@ class _SellModels implements ModelsAdapter {
       predictAllFromSequence(List<List<double>> seq) async =>
           (probUp: 0.40, nextReturn: -0.01, volatility: 0.02);
 }
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('AIService selects SELL when probUp <= 0.45', () async {
     final svc = AIService(

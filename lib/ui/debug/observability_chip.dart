@@ -149,7 +149,8 @@ class _ChipShell extends StatelessWidget {
           avatar: const Icon(Icons.visibility),
           onPressed: null,
         ),
-        if (child != null) Padding(padding: const EdgeInsets.only(top: 6), child: child),
+        if (child != null)
+          Padding(padding: const EdgeInsets.only(top: 6), child: child),
       ],
     );
   }
@@ -183,8 +184,10 @@ class _TraceRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         dense: true,
-        title: Text('$symbol • ${action.isEmpty ? '—' : action} • ${(conf == null ? '—' : (conf * 100).toStringAsFixed(1))}%'),
-        subtitle: Text('ts: $ts\nrev: $modelRev\nr: ${_pct(expReturn)}  vol: ${_pct(annVol)}'),
+        title: Text(
+            '$symbol • ${action.isEmpty ? '—' : action} • ${(conf == null ? '—' : (conf * 100).toStringAsFixed(1))}%'),
+        subtitle: Text(
+            'ts: $ts\nrev: $modelRev\nr: ${_pct(expReturn)}  vol: ${_pct(annVol)}'),
         trailing: const Icon(Icons.info_outline),
       ),
     );
@@ -195,7 +198,5 @@ class _TraceRow extends StatelessWidget {
     if (v is num) return v;
     if (v is String) return num.tryParse(v);
     return null;
-    }
+  }
 }
-
-

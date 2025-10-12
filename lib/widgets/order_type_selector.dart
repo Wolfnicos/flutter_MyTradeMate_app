@@ -14,7 +14,7 @@ enum OrderType {
 class OrderTypeSelector extends StatelessWidget {
   final OrderType selected;
   final ValueChanged<OrderType> onChanged;
-  
+
   const OrderTypeSelector({
     super.key,
     required this.selected,
@@ -32,10 +32,10 @@ class OrderTypeSelector extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ...OrderType.values.map((type) => _OrderTypeTile(
-          type: type,
-          selected: type == selected,
-          onTap: () => onChanged(type),
-        )),
+              type: type,
+              selected: type == selected,
+              onTap: () => onChanged(type),
+            )),
       ],
     );
   }
@@ -45,7 +45,7 @@ class _OrderTypeTile extends StatelessWidget {
   final OrderType type;
   final bool selected;
   final VoidCallback onTap;
-  
+
   const _OrderTypeTile({
     required this.type,
     required this.selected,
@@ -55,14 +55,15 @@ class _OrderTypeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final info = _getOrderTypeInfo(type);
-    
+
     return InkWell(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? Colors.blue.withValues(alpha: 25) : Colors.transparent,
+          color:
+              selected ? Colors.blue.withValues(alpha: 25) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: selected ? Colors.blue : Colors.grey.withValues(alpha: 77),
@@ -100,8 +101,7 @@ class _OrderTypeTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (selected)
-              const Icon(Icons.check_circle, color: Colors.blue),
+            if (selected) const Icon(Icons.check_circle, color: Colors.blue),
           ],
         ),
       ),
@@ -138,19 +138,22 @@ class _OrderTypeTile extends StatelessWidget {
         return const _OrderTypeInfo(
           icon: Icons.show_chart,
           title: 'Trailing Stop',
-          description: 'Places an order when the price reaches the predefined point',
+          description:
+              'Places an order when the price reaches the predefined point',
         );
       case OrderType.oco:
         return const _OrderTypeInfo(
           icon: Icons.compare_arrows,
           title: 'OCO',
-          description: 'Places two orders at once. When either is triggered, the other is canceled',
+          description:
+              'Places two orders at once. When either is triggered, the other is canceled',
         );
       case OrderType.algoOrder:
         return const _OrderTypeInfo(
           icon: Icons.psychology,
           title: 'Algo Order',
-          description: 'Execute orders with intelligent algorithmic order strategies',
+          description:
+              'Execute orders with intelligent algorithmic order strategies',
         );
     }
   }
@@ -160,13 +163,10 @@ class _OrderTypeInfo {
   final IconData icon;
   final String title;
   final String description;
-  
+
   const _OrderTypeInfo({
     required this.icon,
     required this.title,
     required this.description,
   });
 }
-
-
-

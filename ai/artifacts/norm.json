@@ -1,0 +1,1 @@
+{"feature_order": ["open", "high", "low", "close", "volume", "ret_1", "ema9", "ema21", "atr"], "mean": {"open": 0, "high": 0, "low": 0, "close": 0, "volume": 0, "ret_1": 0, "ema9": 0, "ema21": 0, "atr": 0}, "std": {"open": 1, "high": 1, "low": 1, "close": 1, "volume": 1, "ret_1": 1, "ema9": 1, "ema21": 1, "atr": 1}}

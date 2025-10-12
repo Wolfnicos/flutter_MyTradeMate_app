@@ -1,4 +1,5 @@
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';

@@ -27,7 +27,9 @@ class MetricsCalculator {
     }
     if (rets.isEmpty) return 0.0;
     final mean = rets.reduce((a, b) => a + b) / rets.length;
-    final varr = rets.map((r) => (r - mean) * (r - mean)).reduce((a, b) => a + b) / rets.length;
+    final varr =
+        rets.map((r) => (r - mean) * (r - mean)).reduce((a, b) => a + b) /
+            rets.length;
     final std = varr <= 0 ? 0.0 : math.sqrt(varr);
     if (std == 0.0) return 0.0;
     return mean / std;
@@ -89,5 +91,3 @@ class MetricsCalculator {
     return 'Respinge';
   }
 }
-
-

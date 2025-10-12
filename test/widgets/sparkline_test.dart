@@ -12,6 +12,3 @@ void main() {
     expect(find.byType(Sparkline), findsOneWidget);
   });
 }
-
-
-

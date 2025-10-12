@@ -27,6 +27,3 @@ void main() {
     expect(iso.calibrate(1.5), 1.0);
   });
 }
-
-
-

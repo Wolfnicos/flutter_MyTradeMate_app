@@ -24,5 +24,3 @@ class FakeEngine implements ISignalEngine {
   @override
   void dispose() {}
 }
-
-

@@ -11,6 +11,3 @@ void main() {
     expect(c.get('BTCUSDT'), 61000);
   });
 }
-
-
-

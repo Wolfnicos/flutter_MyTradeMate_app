@@ -36,6 +36,3 @@ void main() {
     expect(find.textContaining('ETHUSDT'), findsOneWidget);
   });
 }
-
-
-

@@ -16,6 +16,3 @@ void main() {
     expect(find.byType(Card), findsWidgets);
   });
 }
-
-
-

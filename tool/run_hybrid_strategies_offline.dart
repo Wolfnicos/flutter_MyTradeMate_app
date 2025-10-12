@@ -54,11 +54,11 @@ void main(List<String> args) {
   final tf4h = _loadOrSynth(p4h, '4h');
   final tf1d = _loadOrSynth(p1d, '1d');
 
-  Map<String, dynamic> s1 = hs.hybridStrategy1(tf5m: tf5m, tf4h: tf4h, tf1d: tf1d);
-  Map<String, dynamic> s2 = hs.hybridStrategy2(tf5m: tf5m, tf1h: tf1h, tf1d: tf1d);
-  Map<String, dynamic> s3 = hs.hybridStrategy3(tf15m: tf5m, tf4h: tf4h, tf1d: tf1d); // reuse 5m as 15m if missing
-  Map<String, dynamic> s4 = hs.hybridStrategy4(tf5m: tf5m, tf1h: tf1h, tf1d: tf1d);
-  Map<String, dynamic> s5 = hs.hybridStrategy5(tf5m: tf5m, tf4h: tf4h, tf1d: tf1d);
+  final Map<String, dynamic> s1 = hs.hybridStrategy1(tf5m: tf5m, tf4h: tf4h, tf1d: tf1d);
+  final Map<String, dynamic> s2 = hs.hybridStrategy2(tf5m: tf5m, tf1h: tf1h, tf1d: tf1d);
+  final Map<String, dynamic> s3 = hs.hybridStrategy3(tf15m: tf5m, tf4h: tf4h, tf1d: tf1d); // reuse 5m as 15m if missing
+  final Map<String, dynamic> s4 = hs.hybridStrategy4(tf5m: tf5m, tf1h: tf1h, tf1d: tf1d);
+  final Map<String, dynamic> s5 = hs.hybridStrategy5(tf5m: tf5m, tf4h: tf4h, tf1d: tf1d);
 
   void printRes(String name, Map<String, dynamic> r) {
     final act = r['action'];

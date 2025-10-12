@@ -1,0 +1,9 @@
+{
+  "tfs": {
+    "5m":  { "seq": 512, "horizon": 20, "flat_band_bps": 8 },
+    "15m": { "seq": 512, "horizon": 16, "flat_band_bps": 10 },
+    "1h":  { "seq": 512, "horizon": 12, "flat_band_bps": 12 },
+    "4h":  { "seq": 384, "horizon": 8,  "flat_band_bps": 15 },
+    "1d":  { "seq": 256, "horizon": 3,  "flat_band_bps": 20 }
+  }
+}

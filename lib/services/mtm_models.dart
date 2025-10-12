@@ -37,9 +37,21 @@ class MtmModels {
   }
 
   Future<void> load({bool fp16 = false}) async {
-    featCols = List<String>.from(
-      json.decode(await rootBundle.loadString('assets/models/feat_cols.json')),
-    );
+    try {
+      final raw = await rootBundle.loadString('assets/models/feat_cols.json');
+      final decoded = json.decode(raw);
+      if (decoded is List) {
+        featCols = decoded.map((e) => e.toString()).toList();
+      } else if (decoded is Map) {
+        final fo = (decoded['feature_order'] as List?) ??
+            (decoded['features'] as List?);
+        featCols = (fo ?? const <dynamic>[]).map((e) => e.toString()).toList();
+      } else {
+        featCols = const <String>[];
+      }
+    } catch (_) {
+      featCols = const <String>[];
+    }
 
     Future<tfl.Interpreter> load(String base) async {
       final path = fp16

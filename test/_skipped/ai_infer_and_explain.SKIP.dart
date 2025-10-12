@@ -31,8 +31,8 @@ class SellM extends MtmModels {
 }
 
 List<List<double>> seq() => List.generate(64, (_) => <double>[1, 2, 3]);
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
-
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('BUY branch', () async {
     final inf = await inferAndExplainForTest(
@@ -68,5 +68,3 @@ void main() {
     expect(inf.result.targetPrice, closeTo(990.0, 1e-9));
   });
 }
-
-

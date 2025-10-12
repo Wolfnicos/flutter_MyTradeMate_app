@@ -17,6 +17,3 @@ void main() {
     expect(out['strict'], 'true');
   });
 }
-
-
-

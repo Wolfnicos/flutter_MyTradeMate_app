@@ -37,5 +37,3 @@ class PerformanceTracker {
   double get accVol => volTotal == 0 ? 0.5 : volHits / volTotal;
   double get accTech => techTotal == 0 ? 0.5 : techHits / techTotal;
 }
-
-

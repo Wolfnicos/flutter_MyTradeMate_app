@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mytrademate/screens/settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _wrap(Widget child, {double textScale = 1.0, TextDirection dir = TextDirection.ltr}) {
+Widget _wrap(Widget child,
+    {double textScale = 1.0, TextDirection dir = TextDirection.ltr}) {
   return MaterialApp(
     home: MediaQuery(
       data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
@@ -29,7 +30,8 @@ void main() {
       for (var i = 0; i < 6; i++) {
         await t.drag(find.byType(ListView).first, const Offset(0, -600));
         await t.pump(const Duration(milliseconds: 50));
-        if (find.byKey(AppKeys.settingsSendDiagnostics).evaluate().isNotEmpty) break;
+        if (find.byKey(AppKeys.settingsSendDiagnostics).evaluate().isNotEmpty)
+          break;
       }
       final diagnostics = find.byKey(AppKeys.settingsSendDiagnostics);
       if (diagnostics.evaluate().isNotEmpty) {
@@ -38,10 +40,12 @@ void main() {
       }
       // Bounded settle loop to avoid indefinite animations/timeouts
       for (var i = 0; i < 40; i++) {
-        if (find.byKey(AppKeys.settingsSendDiagnostics).evaluate().isNotEmpty) break;
+        if (find.byKey(AppKeys.settingsSendDiagnostics).evaluate().isNotEmpty)
+          break;
         await t.pump(const Duration(milliseconds: 25));
       }
     }
+
     for (final scale in [1.0, 1.6, 2.0]) {
       await pumpWithScale(scale);
       expect(find.byKey(AppKeys.settingsSendDiagnostics), findsOneWidget);
@@ -58,7 +62,8 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await t.drag(find.byType(ListView).first, const Offset(0, -600));
       await t.pump(const Duration(milliseconds: 50));
-      if (find.byKey(AppKeys.settingsSendDiagnostics).evaluate().isNotEmpty) break;
+      if (find.byKey(AppKeys.settingsSendDiagnostics).evaluate().isNotEmpty)
+        break;
     }
     final diagnostics = find.byKey(AppKeys.settingsSendDiagnostics);
     if (diagnostics.evaluate().isNotEmpty) {
@@ -66,11 +71,10 @@ void main() {
       await t.pumpAndSettle(const Duration(milliseconds: 50));
     }
     for (var i = 0; i < 40; i++) {
-      if (find.byKey(AppKeys.settingsSendDiagnostics).evaluate().isNotEmpty) break;
+      if (find.byKey(AppKeys.settingsSendDiagnostics).evaluate().isNotEmpty)
+        break;
       await t.pump(const Duration(milliseconds: 25));
     }
     expect(find.byKey(AppKeys.settingsSendDiagnostics), findsOneWidget);
   });
 }
-
-

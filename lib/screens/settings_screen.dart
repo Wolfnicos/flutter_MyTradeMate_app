@@ -78,11 +78,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_useTestnet) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Paper mode enabled – live balances hidden')),
+        const SnackBar(
+            content: Text('Paper mode enabled – live balances hidden')),
       );
     } else if ((_apiKey.isEmpty || _secret.isEmpty) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add API key in Settings to load balances')),
+        const SnackBar(
+            content: Text('Add API key in Settings to load balances')),
       );
     }
     if (!mounted) return;
@@ -94,13 +96,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       AppLogger.instance.info('settings.testConnection.start');
       final client = await DioBinanceClient.createFromPrefs();
       final ok = await client.testConnection();
-      AppLogger.instance.info('settings.testConnection.done', context: {'ok': ok});
+      AppLogger.instance
+          .info('settings.testConnection.done', context: {'ok': ok});
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(ok ? 'Connection OK' : 'Connection failed')),
       );
     } catch (e) {
-      AppLogger.instance.warn('settings.testConnection.error', context: {'error': e.toString()});
+      AppLogger.instance.warn('settings.testConnection.error',
+          context: {'error': e.toString()});
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Connection failed: $e')),
@@ -140,8 +144,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child:
-                            Text(MaterialLocalizations.of(context).okButtonLabel),
+                        child: Text(
+                            MaterialLocalizations.of(context).okButtonLabel),
                       ),
                     ],
                   ),
@@ -185,9 +189,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     button: true,
                     child: IconButton(
                       tooltip: _showSecret ? S.hide : S.show,
-                      icon: Icon(
-                          _showSecret ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () => setState(() => _showSecret = !_showSecret),
+                      icon: Icon(_showSecret
+                          ? Icons.visibility_off
+                          : Icons.visibility),
+                      onPressed: () =>
+                          setState(() => _showSecret = !_showSecret),
                     ),
                   ),
                 ),
@@ -201,7 +207,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // Telemetry opt-in toggle (opt-in only)
               SwitchListTile(
                 title: const Text('Share anonymous diagnostics'),
-                subtitle: const Text('Optional. Helps improve stability. No PII or keys.'),
+                subtitle: const Text(
+                    'Optional. Helps improve stability. No PII or keys.'),
                 value: _telemetryOptIn,
                 onChanged: (v) async {
                   setState(() => _telemetryOptIn = v);
@@ -214,29 +221,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   MergeSemantics(
                     child: Row(children: [
-                      Text(S.environment, softWrap: true, overflow: TextOverflow.fade),
+                      Text(S.environment,
+                          softWrap: true, overflow: TextOverflow.fade),
                     ]),
                   ),
                   const SizedBox(width: 12),
                   DropdownButton<bool>(
                     value: _useTestnet,
                     items: const [
-                      DropdownMenuItem(value: true, child: Text('Testnet (Paper)')),
+                      DropdownMenuItem(
+                          value: true, child: Text('Testnet (Paper)')),
                       DropdownMenuItem(value: false, child: Text('Live')),
                     ],
                     onChanged: (v) async {
                       final newVal = v ?? true;
                       setState(() => _useTestnet = newVal);
                       final prefs = await TradingPrefs.load();
-                      await prefs.save(env: newVal ? TradeEnv.testnet : TradeEnv.live);
+                      await prefs.save(
+                          env: newVal ? TradeEnv.testnet : TradeEnv.live);
                       if (!mounted) return;
                       if (newVal) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Paper mode enabled – live balances hidden')),
+                          const SnackBar(
+                              content: Text(
+                                  'Paper mode enabled – live balances hidden')),
                         );
                       } else if ((_apiKey.isEmpty || _secret.isEmpty)) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Add API key to load balances')),
+                          const SnackBar(
+                              content: Text('Add API key to load balances')),
                         );
                       }
                     },
@@ -245,9 +258,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(width: 12),
                   Flexible(
                     child: Text(
-                      _useTestnet
-                          ? S.envHelpTestnet
-                          : S.envHelpLive,
+                      _useTestnet ? S.envHelpTestnet : S.envHelpLive,
                       style: Theme.of(context).textTheme.bodySmall,
                       overflow: TextOverflow.ellipsis,
                     ),

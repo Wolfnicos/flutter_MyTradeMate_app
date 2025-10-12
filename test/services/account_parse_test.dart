@@ -36,6 +36,3 @@ void main() {
     expect(usdt['valueUsdt'], 30.0);
   });
 }
-
-
-

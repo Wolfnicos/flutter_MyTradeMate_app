@@ -6,7 +6,7 @@ import 'model_utils.dart';
 class DirectionModel {
   Interpreter? _interpreter;
   bool _initialized = false;
-  
+
   // Use F32 for best accuracy (or switch to fp16 for performance)
   // Model path reserved for future use when re-enabling TFLite
   // ignore: unused_field
@@ -19,7 +19,8 @@ class DirectionModel {
       _initialized = true;
       print('✅ DirectionModel initialized: $_modelPath');
     } catch (e) {
-      print('⚠️  DirectionModel failed to initialize, falling back to technical rules: $e');
+      print(
+          '⚠️  DirectionModel failed to initialize, falling back to technical rules: $e');
       _interpreter = null; // explicit
       _initialized = true;
     }
@@ -46,14 +47,19 @@ class DirectionModel {
       // Allocate output buffer; use ints for quantized tensors
       dynamic output;
       // Quantized tensor types in tflite_flutter are typically reported as kTfLiteUInt8/kTfLiteInt8
-      final isQuantized = outTensor.type.toString().contains('Int') || outTensor.type.toString().contains('UInt');
+      final isQuantized = outTensor.type.toString().contains('Int') ||
+          outTensor.type.toString().contains('UInt');
       if (isQuantized) {
         if (outShape.length == 1) {
           output = List.filled(outShape[0], 0);
         } else if (outShape.length == 2) {
-          output = List.generate(outShape[0], (_) => List.filled(outShape[1], 0));
+          output =
+              List.generate(outShape[0], (_) => List.filled(outShape[1], 0));
         } else if (outShape.length == 3) {
-          output = List.generate(outShape[0], (_) => List.generate(outShape[1], (_) => List.filled(outShape[2], 0)));
+          output = List.generate(
+              outShape[0],
+              (_) => List.generate(
+                  outShape[1], (_) => List.filled(outShape[2], 0)));
         } else {
           output = ModelUtils.emptyOutput(outShape);
         }
@@ -64,7 +70,9 @@ class DirectionModel {
       // ignore: avoid_print
       print('🔍 DirectionModel input shape: $inShape');
       // ignore: avoid_print
-      try { print('🔍 DirectionModel input sample: ${input[0][0]}'); } catch (_) {}
+      try {
+        print('🔍 DirectionModel input sample: ${input[0][0]}');
+      } catch (_) {}
 
       _interpreter!.run(input, output);
 
@@ -91,9 +99,9 @@ class DirectionModel {
         // ignore: avoid_print
         print('🔍 DirectionModel raw scalar: ${scalar.toStringAsFixed(6)}');
         final probs = _scalarToProbs(scalar);
-    // ignore: avoid_print
-        print('   probs: [${(probs[0]*100).toStringAsFixed(0)} ${
-            (probs[1]*100).toStringAsFixed(0)} ${(probs[2]*100).toStringAsFixed(0)}]%');
+        // ignore: avoid_print
+        print(
+            '   probs: [${(probs[0] * 100).toStringAsFixed(0)} ${(probs[1] * 100).toStringAsFixed(0)} ${(probs[2] * 100).toStringAsFixed(0)}]%');
         return probs;
       }
 
@@ -109,7 +117,10 @@ class DirectionModel {
           final qp = outTensor.params;
           final scale = qp.scale;
           final zero = qp.zeroPoint;
-          logits = output.first.map((q) => scale * (q - zero)).cast<double>().toList();
+          logits = output.first
+              .map((q) => scale * (q - zero))
+              .cast<double>()
+              .toList();
         } else if (outShape.length == 1) {
           logits = (output as List).cast<double>();
         } else {
@@ -119,7 +130,9 @@ class DirectionModel {
         final maxLogit = logits.reduce((a, b) => a > b ? a : b);
         final exps = logits.map((x) => math.exp(x - maxLogit)).toList();
         final sum = exps.fold<double>(0.0, (a, b) => a + b);
-        final probs = sum == 0.0 ? const [1/3, 1/3, 1/3] : exps.map((x) => x / sum).toList();
+        final probs = sum == 0.0
+            ? const [1 / 3, 1 / 3, 1 / 3]
+            : exps.map((x) => x / sum).toList();
         return probs.cast<double>();
       }
 
@@ -132,7 +145,7 @@ class DirectionModel {
   }
 
   /// Convert scalar [0, 1] to [buy, hold, sell] probabilities
-  /// 
+  ///
   /// Interpretation:
   /// - 0.0 - 0.35: Strong SELL
   /// - 0.35 - 0.45: Weak SELL / HOLD
@@ -142,9 +155,9 @@ class DirectionModel {
   List<double> _scalarToProbs(double scalar) {
     // Clamp to valid range
     scalar = scalar.clamp(0.0, 1.0);
-    
+
     double buy, hold, sell;
-    
+
     if (scalar < 0.35) {
       // Strong SELL zone
       final sellStrength = (0.35 - scalar) / 0.35; // [0, 1]
@@ -163,7 +176,7 @@ class DirectionModel {
       hold = 0.50 + (0.05 - centerDist) * 2; // Peak at 0.5
       hold = hold.clamp(0.40, 0.60);
       final remainder = 1.0 - hold;
-      
+
       if (scalar < 0.5) {
         sell = remainder * 0.6;
         buy = remainder * 0.4;
@@ -177,7 +190,7 @@ class DirectionModel {
       buy = 0.35 - position * 0.15; // Start building BUY
       hold = 0.50 - position * 0.25; // [0.50, 0.25]
       sell = 1.0 - buy - hold;
-      
+
       // Flip: we want buy to increase
       final temp = buy;
       buy = sell;
@@ -189,7 +202,7 @@ class DirectionModel {
       hold = 0.25 - buyStrength * 0.15; // [0.25, 0.10]
       sell = 1.0 - buy - hold;
     }
-    
+
     // Normalize to ensure sum = 1.0
     final sum = buy + hold + sell;
     return [buy / sum, hold / sum, sell / sum];
@@ -215,8 +228,13 @@ class DirectionModel {
     final rsi = _rsi(recent, 14);
 
     // Volume
-    final avgVol = recent.map((c) => c.volume).reduce((a, b) => a + b) / recent.length;
-    final recentVol = recent.sublist(recent.length - 3).map((c) => c.volume).reduce((a, b) => a + b) / 3;
+    final avgVol =
+        recent.map((c) => c.volume).reduce((a, b) => a + b) / recent.length;
+    final recentVol = recent
+            .sublist(recent.length - 3)
+            .map((c) => c.volume)
+            .reduce((a, b) => a + b) /
+        3;
     final volumeRatio = recentVol / avgVol;
 
     // Price momentum
@@ -226,11 +244,11 @@ class DirectionModel {
     if (emaDiff > 0.002 && rsi > 50 && rsi < 75 && volumeRatio > 0.9) {
       final strength = ((rsi - 50) / 25).clamp(0.0, 1.0);
       final volBoost = ((volumeRatio - 0.9) / 1.0).clamp(0.0, 0.2);
-      
+
       final buy = 0.40 + strength * 0.30 + volBoost;
       final hold = 0.35 - strength * 0.15;
       final sell = 1.0 - buy - hold;
-      
+
       return [buy, hold, sell];
     }
 
@@ -238,11 +256,11 @@ class DirectionModel {
     if (emaDiff < -0.002 && rsi > 25 && rsi < 50 && volumeRatio > 0.9) {
       final strength = ((50 - rsi) / 25).clamp(0.0, 1.0);
       final volBoost = ((volumeRatio - 0.9) / 1.0).clamp(0.0, 0.2);
-      
+
       final sell = 0.40 + strength * 0.30 + volBoost;
       final hold = 0.35 - strength * 0.15;
       final buy = 1.0 - sell - hold;
-      
+
       return [buy, hold, sell];
     }
 
@@ -261,7 +279,7 @@ class DirectionModel {
     } else if (rsi < 45) {
       return [0.25, 0.40, 0.35];
     }
-    
+
     return [0.30, 0.40, 0.30];
   }
 
@@ -310,4 +328,3 @@ class DirectionModel {
     _initialized = false;
   }
 }
-

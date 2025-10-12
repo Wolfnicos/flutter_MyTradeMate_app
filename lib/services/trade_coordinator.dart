@@ -57,7 +57,8 @@ class TradeCoordinator {
     // place as MARKET using quote sizing by converting to quantity by last target price approximation
     // In a real system, fetch real-time price for symbol here.
     final approxTarget = (1 + pred.expReturn);
-    final qty = (intent.quoteAmount / (approxTarget > 0 ? approxTarget : 1.0)).abs();
+    final qty =
+        (intent.quoteAmount / (approxTarget > 0 ? approxTarget : 1.0)).abs();
 
     // Pre-trade risk checks
     if (risk != null) {

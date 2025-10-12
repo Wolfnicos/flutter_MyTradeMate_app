@@ -10,6 +10,3 @@ void main() {
     expect(sumUsdtForTest(h), closeTo(700.0, 1e-9));
   });
 }
-
-
-

@@ -16,7 +16,8 @@ Future<void> _sleepSlow(Duration _) async => Future.value();
 
 @Tags(['ws'])
 void main() {
-  test('Burst updates throttled, reconnect OK, REST fills gaps (fixture)', () async {
+  test('Burst updates throttled, reconnect OK, REST fills gaps (fixture)',
+      () async {
     final src = await ScriptedEventSource.fromFixture(
       'test/fixtures/binance_ws/burst_spike_gap.json',
     );
@@ -42,7 +43,8 @@ void main() {
     });
 
     // Collect exactly three ticks matching the fixture sequence
-    final seen = await svc.prices('BTCUSDT')
+    final seen = await svc
+        .prices('BTCUSDT')
         .take(3)
         .toList()
         .timeout(const Duration(seconds: 2));
@@ -52,5 +54,3 @@ void main() {
     expect(src.connects, inInclusiveRange(1, 2));
   }, timeout: const Timeout(Duration(seconds: 6)));
 }
-
-

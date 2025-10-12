@@ -8,6 +8,3 @@ void main() {
     expect(c.normSymbolForTest('Eth Usdt'), 'ETHUSDT');
   });
 }
-
-
-

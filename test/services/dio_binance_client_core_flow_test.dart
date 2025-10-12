@@ -49,6 +49,3 @@ void main() {
         cli.supportsSymbolForTest(['BTCUSDT', 'ETHUSDT'], 'ABCUSDT'), isFalse);
   });
 }
-
-
-

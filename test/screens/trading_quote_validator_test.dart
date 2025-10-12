@@ -9,6 +9,3 @@ void main() {
     expect(validateQuoteForTest(10), isNull);
   });
 }
-
-
-

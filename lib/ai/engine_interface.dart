@@ -6,5 +6,3 @@ abstract class ISignalEngine {
   String decide(Prediction p);
   void dispose();
 }
-
-

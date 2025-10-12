@@ -11,14 +11,15 @@ abstract class MarketExecution {
 class OrderParams {
   final String symbol;
   final String side; // 'BUY' | 'SELL'
-  final String type; // 'MARKET' | 'LIMIT' | 'STOP_LOSS' | 'STOP_LOSS_LIMIT' | 'TAKE_PROFIT' | 'TAKE_PROFIT_LIMIT' | 'OCO' | 'TRAILING_STOP_MARKET'
+  final String
+      type; // 'MARKET' | 'LIMIT' | 'STOP_LOSS' | 'STOP_LOSS_LIMIT' | 'TAKE_PROFIT' | 'TAKE_PROFIT_LIMIT' | 'OCO' | 'TRAILING_STOP_MARKET'
   final double? price;
   final double quantity;
   final double? stopPrice; // For STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, etc.
   final double? stopLimitPrice; // For OCO
   final double? callbackRate; // For TRAILING_STOP_MARKET (0.1 to 5.0)
   final String? timeInForce; // GTC, IOC, FOK
-  
+
   const OrderParams({
     required this.symbol,
     required this.side,
@@ -87,25 +88,26 @@ class RealBroker implements MarketExecution {
   final DioBinanceClient dio;
   final ExchangeRules rules;
   RealBroker(this.dio, this.rules);
-  
+
   @override
   Future<String> placeOrder(OrderParams p) async {
     // Apply exchange rules for quantity precision if available
     final qty = p.quantity;
-    
+
     Map<String, dynamic> result;
-    
+
     switch (p.type.toUpperCase()) {
       case 'MARKET':
         // Use quoteOrderQty for market orders (amount in USDT)
-        final quoteQty = p.price != null ? qty * p.price! : qty * 100; // fallback estimate
+        final quoteQty =
+            p.price != null ? qty * p.price! : qty * 100; // fallback estimate
         result = await dio.newMarketOrderQuote(
           symbol: p.symbol,
           side: p.side,
           quoteOrderQty: quoteQty,
         );
         break;
-        
+
       case 'LIMIT':
         if (p.price == null) {
           throw ArgumentError('LIMIT order requires price');
@@ -118,7 +120,7 @@ class RealBroker implements MarketExecution {
           timeInForce: p.timeInForce ?? 'GTC',
         );
         break;
-        
+
       case 'STOP_LOSS':
         if (p.stopPrice == null) {
           throw ArgumentError('STOP_LOSS order requires stopPrice');
@@ -130,10 +132,11 @@ class RealBroker implements MarketExecution {
           stopPrice: p.stopPrice!,
         );
         break;
-        
+
       case 'STOP_LOSS_LIMIT':
         if (p.price == null || p.stopPrice == null) {
-          throw ArgumentError('STOP_LOSS_LIMIT order requires price and stopPrice');
+          throw ArgumentError(
+              'STOP_LOSS_LIMIT order requires price and stopPrice');
         }
         result = await dio.newStopLossLimitOrder(
           symbol: p.symbol,
@@ -144,7 +147,7 @@ class RealBroker implements MarketExecution {
           timeInForce: p.timeInForce ?? 'GTC',
         );
         break;
-        
+
       case 'TAKE_PROFIT':
         if (p.stopPrice == null) {
           throw ArgumentError('TAKE_PROFIT order requires stopPrice');
@@ -156,10 +159,11 @@ class RealBroker implements MarketExecution {
           stopPrice: p.stopPrice!,
         );
         break;
-        
+
       case 'TAKE_PROFIT_LIMIT':
         if (p.price == null || p.stopPrice == null) {
-          throw ArgumentError('TAKE_PROFIT_LIMIT order requires price and stopPrice');
+          throw ArgumentError(
+              'TAKE_PROFIT_LIMIT order requires price and stopPrice');
         }
         result = await dio.newTakeProfitLimitOrder(
           symbol: p.symbol,
@@ -170,10 +174,13 @@ class RealBroker implements MarketExecution {
           timeInForce: p.timeInForce ?? 'GTC',
         );
         break;
-        
+
       case 'OCO':
-        if (p.price == null || p.stopPrice == null || p.stopLimitPrice == null) {
-          throw ArgumentError('OCO order requires price, stopPrice, and stopLimitPrice');
+        if (p.price == null ||
+            p.stopPrice == null ||
+            p.stopLimitPrice == null) {
+          throw ArgumentError(
+              'OCO order requires price, stopPrice, and stopLimitPrice');
         }
         result = await dio.newOCOOrder(
           symbol: p.symbol,
@@ -185,10 +192,11 @@ class RealBroker implements MarketExecution {
           stopLimitTimeInForce: p.timeInForce ?? 'GTC',
         );
         break;
-        
+
       case 'TRAILING_STOP_MARKET':
         if (p.callbackRate == null) {
-          throw ArgumentError('TRAILING_STOP_MARKET order requires callbackRate (0.1 to 5.0)');
+          throw ArgumentError(
+              'TRAILING_STOP_MARKET order requires callbackRate (0.1 to 5.0)');
         }
         result = await dio.newTrailingStopOrder(
           symbol: p.symbol,
@@ -197,15 +205,15 @@ class RealBroker implements MarketExecution {
           callbackRate: p.callbackRate!,
         );
         break;
-        
+
       default:
         throw UnsupportedError('Order type ${p.type} not supported');
     }
-    
+
     // Return orderId or orderListId (for OCO)
-    final orderId = result['orderId']?.toString() ?? 
-                    result['orderListId']?.toString() ??
-                    'unknown-${DateTime.now().microsecondsSinceEpoch}';
+    final orderId = result['orderId']?.toString() ??
+        result['orderListId']?.toString() ??
+        'unknown-${DateTime.now().microsecondsSinceEpoch}';
     return orderId;
   }
 }

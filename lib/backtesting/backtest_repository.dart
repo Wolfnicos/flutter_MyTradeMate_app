@@ -32,7 +32,8 @@ class BacktestRepository {
     final sb = StringBuffer();
     sb.writeln('time,equity');
     for (int i = 0; i < r.times.length; i++) {
-      sb.writeln('${r.times[i].toIso8601String()},${r.equity[i].toStringAsFixed(6)}');
+      sb.writeln(
+          '${r.times[i].toIso8601String()},${r.equity[i].toStringAsFixed(6)}');
     }
     await f.writeAsString(sb.toString());
     if (kDebugMode) debugPrint('💾 Saved CSV: ${f.path}');
@@ -53,5 +54,3 @@ class BacktestRepository {
     return base.toString();
   }
 }
-
-

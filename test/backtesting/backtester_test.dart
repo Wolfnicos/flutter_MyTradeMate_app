@@ -80,7 +80,8 @@ void main() {
     final bt = Backtester(
       engine: engine,
       ohlcv: await OHLCVService.createFromPrefs(),
-      sim: const TradeSimulator(feeRate: 0.001, slippageRate: 0.0005, maxRiskPerTrade: 0.02),
+      sim: const TradeSimulator(
+          feeRate: 0.001, slippageRate: 0.0005, maxRiskPerTrade: 0.02),
     );
 
     final res = await bt.run(
@@ -96,5 +97,3 @@ void main() {
     expect(res.maxDrawdown, inExclusiveRange(0.0, 1.0));
   });
 }
-
-

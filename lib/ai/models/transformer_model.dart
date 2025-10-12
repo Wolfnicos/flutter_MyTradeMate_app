@@ -61,7 +61,9 @@ class TransformerDirectionModel extends DirectionModel {
       // ignore: avoid_print
       print('🔍 Transformer input shape: $inShape');
       // ignore: avoid_print
-      try { print('🔍 Transformer input sample: ${input[0][0]}'); } catch (_) {}
+      try {
+        print('🔍 Transformer input sample: ${input[0][0]}');
+      } catch (_) {}
 
       _it!.run(input, output);
 
@@ -110,5 +112,3 @@ class TransformerDirectionModel extends DirectionModel {
 /// Training script (Python)
 /// Saved under tool/train_transformer.py
 /// ----------------------------
-
-

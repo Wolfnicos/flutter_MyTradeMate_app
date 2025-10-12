@@ -25,6 +25,3 @@ void main() {
     expect(p.fixedQuote, 25.0);
   });
 }
-
-
-

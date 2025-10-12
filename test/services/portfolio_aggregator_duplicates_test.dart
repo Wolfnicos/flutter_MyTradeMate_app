@@ -21,6 +21,3 @@ void main() {
     expect(btcPositions[1].priceUsdt, 60000.0);
   });
 }
-
-
-

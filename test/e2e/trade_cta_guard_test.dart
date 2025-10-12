@@ -8,6 +8,3 @@ void main() {
     expect(ctaEnabled, isFalse);
   });
 }
-
-
-

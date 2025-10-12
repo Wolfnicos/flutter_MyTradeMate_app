@@ -30,7 +30,8 @@ class CsvLoader {
       // Try parse integer (ms or s)
       final asInt = int.tryParse(p0);
       if (asInt != null) {
-        final ts = asInt > 1e12 ? asInt : asInt * 1000; // assume seconds if small
+        final ts =
+            asInt > 1e12 ? asInt : asInt * 1000; // assume seconds if small
         time = DateTime.fromMillisecondsSinceEpoch(ts, isUtc: true).toLocal();
       } else {
         // Try ISO8601
@@ -38,14 +39,20 @@ class CsvLoader {
       }
       if (time == null) continue;
 
-      double _num(String s) => double.tryParse(s.trim()) ?? 0.0;
-      final open = _num(parts[1]);
-      final high = _num(parts[2]);
-      final low = _num(parts[3]);
-      final close = _num(parts[4]);
-      final volume = parts.length > 5 ? _num(parts[5]) : 0.0;
+      double num(String s) => double.tryParse(s.trim()) ?? 0.0;
+      final open = num(parts[1]);
+      final high = num(parts[2]);
+      final low = num(parts[3]);
+      final close = num(parts[4]);
+      final volume = parts.length > 5 ? num(parts[5]) : 0.0;
 
-      candles.add(Candle(time: time, open: open, high: high, low: low, close: close, volume: volume));
+      candles.add(Candle(
+          time: time,
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: volume));
     }
 
     if (candles.isEmpty) return candles;
@@ -58,5 +65,3 @@ class CsvLoader {
     return candles;
   }
 }
-
-

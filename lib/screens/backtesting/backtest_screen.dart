@@ -65,8 +65,10 @@ class _BacktestScreenState extends State<BacktestScreen> {
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
-              controller: TextEditingController(text: _initialCapital.toStringAsFixed(2)),
-              onChanged: (v) => _initialCapital = double.tryParse(v) ?? _initialCapital,
+              controller: TextEditingController(
+                  text: _initialCapital.toStringAsFixed(2)),
+              onChanged: (v) =>
+                  _initialCapital = double.tryParse(v) ?? _initialCapital,
             ),
             const SizedBox(height: 12),
             ElevatedButton(
@@ -82,9 +84,11 @@ class _BacktestScreenState extends State<BacktestScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (_lastPathJson != null)
-                        Text('JSON: $_lastPathJson', style: const TextStyle(fontSize: 12)),
+                        Text('JSON: $_lastPathJson',
+                            style: const TextStyle(fontSize: 12)),
                       if (_lastPathCsv != null)
-                        Text('CSV:  $_lastPathCsv', style: const TextStyle(fontSize: 12)),
+                        Text('CSV:  $_lastPathCsv',
+                            style: const TextStyle(fontSize: 12)),
                     ],
                   ),
                 ),
@@ -115,7 +119,8 @@ class _BacktestScreenState extends State<BacktestScreen> {
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Backtest saved: ${jsonF.path.split('/').last}')),
+        SnackBar(
+            content: Text('Backtest saved: ${jsonF.path.split('/').last}')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -127,5 +132,3 @@ class _BacktestScreenState extends State<BacktestScreen> {
     }
   }
 }
-
-

@@ -15,15 +15,18 @@ class DirectionModelDebug {
     try {
       print('🔧 [DirectionModel] Loading TFLite model...');
       // Use an existing asset from this project
-      _interpreter = await tfl.Interpreter.fromAsset('assets/models/direction_f32_builtin.tflite');
+      _interpreter = await tfl.Interpreter.fromAsset(
+          'assets/models/direction_f32_builtin.tflite');
 
       // Log model details (best-effort)
       try {
         final in0 = _interpreter!.getInputTensor(0);
         final out0 = _interpreter!.getOutputTensor(0);
         print('📊 MODEL INFO:');
-        print('   Input[0]: shape=${in0.shape}, type=${in0.type}, name=${in0.name}');
-        print('   Output[0]: shape=${out0.shape}, type=${out0.type}, name=${out0.name}');
+        print(
+            '   Input[0]: shape=${in0.shape}, type=${in0.type}, name=${in0.name}');
+        print(
+            '   Output[0]: shape=${out0.shape}, type=${out0.type}, name=${out0.name}');
       } catch (e) {
         print('⚠️  Could not enumerate tensors: $e');
       }
@@ -54,11 +57,14 @@ class DirectionModelDebug {
       for (int featIdx = 0; featIdx < min(5, feats[0].length); featIdx++) {
         final values = feats.map((row) => row[featIdx]).toList();
         final mean = values.reduce((a, b) => a + b) / values.length;
-        final std = sqrt(values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) / values.length);
+        final std = sqrt(
+            values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
+                values.length);
         final minVal = values.reduce((a, b) => a < b ? a : b);
         final maxVal = values.reduce((a, b) => a > b ? a : b);
-        print('   Feature $featIdx: mean=${mean.toStringAsFixed(6)}, std=${std.toStringAsFixed(6)}, '
-              'range=[${minVal.toStringAsFixed(6)}, ${maxVal.toStringAsFixed(6)}]');
+        print(
+            '   Feature $featIdx: mean=${mean.toStringAsFixed(6)}, std=${std.toStringAsFixed(6)}, '
+            'range=[${minVal.toStringAsFixed(6)}, ${maxVal.toStringAsFixed(6)}]');
       }
       print('   ... (${feats[0].length - 5} more features)');
 
@@ -73,11 +79,14 @@ class DirectionModelDebug {
           values.add(flat[t * feats[0].length + featIdx]);
         }
         final mean = values.reduce((a, b) => a + b) / values.length;
-        final std = sqrt(values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) / values.length);
+        final std = sqrt(
+            values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
+                values.length);
         final minVal = values.reduce((a, b) => a < b ? a : b);
         final maxVal = values.reduce((a, b) => a > b ? a : b);
-        print('   Feature $featIdx: mean=${mean.toStringAsFixed(6)}, std=${std.toStringAsFixed(6)}, '
-              'range=[${minVal.toStringAsFixed(6)}, ${maxVal.toStringAsFixed(6)}]');
+        print(
+            '   Feature $featIdx: mean=${mean.toStringAsFixed(6)}, std=${std.toStringAsFixed(6)}, '
+            'range=[${minVal.toStringAsFixed(6)}, ${maxVal.toStringAsFixed(6)}]');
       }
 
       // Check for NaN/Inf
@@ -99,7 +108,8 @@ class DirectionModelDebug {
         _interpreter!.run(input1, output);
         print('   ✅ Success with [1, 64, 15]');
         final raw = _flatten(output);
-        print('\n📤 RAW OUTPUT (logits): ${raw.map((x) => x.toStringAsFixed(6)).toList()}');
+        print(
+            '\n📤 RAW OUTPUT (logits): ${raw.map((x) => x.toStringAsFixed(6)).toList()}');
         final probs = _softmax(raw);
         _printProbs(probs);
         return probs;
@@ -111,7 +121,8 @@ class DirectionModelDebug {
           _interpreter!.run(input2, output);
           print('   ✅ Success with [1, 64, 15, 1]');
           final raw = _flatten(output);
-          print('\n📤 RAW OUTPUT (logits): ${raw.map((x) => x.toStringAsFixed(6)).toList()}');
+          print(
+              '\n📤 RAW OUTPUT (logits): ${raw.map((x) => x.toStringAsFixed(6)).toList()}');
           final probs = _softmax(raw);
           _printProbs(probs);
           return probs;
@@ -132,7 +143,8 @@ class DirectionModelDebug {
     final expectedSize = targetShape.reduce((a, b) => a * b);
     List<double> data = flat;
     if (data.length != expectedSize) {
-      print('   ⚠️  Size mismatch: flat has ${data.length}, need $expectedSize');
+      print(
+          '   ⚠️  Size mismatch: flat has ${data.length}, need $expectedSize');
       if (data.length < expectedSize) {
         data = [...data, ...List.filled(expectedSize - data.length, 0.0)];
       } else {
@@ -181,11 +193,11 @@ class DirectionModelDebug {
   }
 
   List<double> _softmax(List<double> logits) {
-    if (logits.isEmpty) return const [1/3, 1/3, 1/3];
+    if (logits.isEmpty) return const [1 / 3, 1 / 3, 1 / 3];
     final maxLogit = logits.reduce((a, b) => a > b ? a : b);
     final exps = logits.map((x) => exp(x - maxLogit)).toList();
     final sum = exps.fold<double>(0.0, (a, b) => a + b);
-    if (sum == 0) return const [1/3, 1/3, 1/3];
+    if (sum == 0) return const [1 / 3, 1 / 3, 1 / 3];
     return exps.map((x) => x / sum).toList();
   }
 
@@ -213,6 +225,7 @@ class DirectionModelDebug {
         out.add(node.toDouble());
       }
     }
+
     walk(tensor);
     return out;
   }
@@ -225,5 +238,3 @@ class DirectionModelDebug {
     }
   }
 }
-
-

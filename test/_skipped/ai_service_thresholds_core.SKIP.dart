@@ -46,8 +46,9 @@ class _FixedModels implements ModelsAdapter {
     return (probUp: prob, nextReturn: 0.02, volatility: 0.05);
   }
 }
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('BUY branch (p >= 0.60 crypto threshold)', () async {
     final svc =
@@ -78,5 +79,3 @@ void main() {
     expect(res.action, 'HOLD');
   });
 }
-
-

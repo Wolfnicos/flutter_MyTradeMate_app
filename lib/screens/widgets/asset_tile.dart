@@ -83,17 +83,47 @@ class _AssetTileState extends State<AssetTile> {
   Map<String, dynamic> _getCryptoInfo(String sym) {
     final s = sym.toUpperCase();
     if (s.contains('BTC')) {
-      return {'icon': Icons.currency_bitcoin, 'color': const Color(0xFFF7931A), 'label': 'BTC', 'name': 'Bitcoin'};
+      return {
+        'icon': Icons.currency_bitcoin,
+        'color': const Color(0xFFF7931A),
+        'label': 'BTC',
+        'name': 'Bitcoin'
+      };
     } else if (s.contains('ETH')) {
-      return {'icon': Icons.diamond, 'color': const Color(0xFF627EEA), 'label': 'ETH', 'name': 'Ethereum'};
+      return {
+        'icon': Icons.diamond,
+        'color': const Color(0xFF627EEA),
+        'label': 'ETH',
+        'name': 'Ethereum'
+      };
     } else if (s.contains('BNB')) {
-      return {'icon': Icons.toll, 'color': const Color(0xFFF3BA2F), 'label': 'BNB', 'name': 'BNB'};
+      return {
+        'icon': Icons.toll,
+        'color': const Color(0xFFF3BA2F),
+        'label': 'BNB',
+        'name': 'BNB'
+      };
     } else if (s.contains('TRUMP')) {
-      return {'icon': Icons.flag, 'color': const Color(0xFFDC143C), 'label': 'TRUMP', 'name': 'TRUMP'};
+      return {
+        'icon': Icons.flag,
+        'color': const Color(0xFFDC143C),
+        'label': 'TRUMP',
+        'name': 'TRUMP'
+      };
     } else if (s.contains('WLFI')) {
-      return {'icon': Icons.token, 'color': const Color(0xFF1E88E5), 'label': 'WLFI', 'name': 'WLFI'};
+      return {
+        'icon': Icons.token,
+        'color': const Color(0xFF1E88E5),
+        'label': 'WLFI',
+        'name': 'WLFI'
+      };
     } else {
-      return {'icon': Icons.currency_exchange, 'color': Colors.grey, 'label': 'CRYPTO', 'name': 'Crypto'};
+      return {
+        'icon': Icons.currency_exchange,
+        'color': Colors.grey,
+        'label': 'CRYPTO',
+        'name': 'Crypto'
+      };
     }
   }
 
@@ -110,35 +140,34 @@ class _AssetTileState extends State<AssetTile> {
     final String cryptoName = cryptoInfo['name'] as String;
 
     return Semantics(
-      label:
-          'Asset ${widget.symbol}, price $priceStr, change ${widget.change}',
+      label: 'Asset ${widget.symbol}, price $priceStr, change ${widget.change}',
       child: ListTile(
-      leading: CircleAvatar(
-        backgroundColor: cryptoColor.withOpacity(0.2),
-        child: Icon(
-          cryptoIcon,
-          color: cryptoColor,
-          size: 28,
+        leading: CircleAvatar(
+          backgroundColor: cryptoColor.withOpacity(0.2),
+          child: Icon(
+            cryptoIcon,
+            color: cryptoColor,
+            size: 28,
+          ),
         ),
-      ),
-      title: Text(
-        '$cryptoName ($cryptoLabel)',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text(
-        widget.symbol,
-        style: const TextStyle(color: Colors.white60, fontSize: 12),
-      ),
-      trailing: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('\$$priceStr',
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          Text(widget.change, style: TextStyle(color: color, fontSize: 14)),
-        ],
-      ),
+        title: Text(
+          '$cryptoName ($cryptoLabel)',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          widget.symbol,
+          style: const TextStyle(color: Colors.white60, fontSize: 12),
+        ),
+        trailing: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('\$$priceStr',
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(widget.change, style: TextStyle(color: color, fontSize: 14)),
+          ],
+        ),
         onTap: () {
           HapticFeedback.selectionClick();
           widget.onTap?.call();

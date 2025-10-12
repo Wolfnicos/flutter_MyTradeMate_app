@@ -28,6 +28,3 @@ void main() {
     expect(eb.onPressed, isNotNull);
   });
 }
-
-
-

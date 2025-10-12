@@ -29,7 +29,8 @@ class AppLogger {
   String get sessionId => _sessionId;
   bool get optInTelemetry => _optInTelemetry;
 
-  void log(LogLevel level, String message, {Map<String, Object?> context = const {}}) {
+  void log(LogLevel level, String message,
+      {Map<String, Object?> context = const {}}) {
     final now = DateTime.now().toUtc().toIso8601String();
     final sanitized = _sanitize(context);
     final rec = {
@@ -43,11 +44,16 @@ class AppLogger {
     _sink?.writeln(line);
   }
 
-  void trace(String m, {Map<String, Object?> context = const {}}) => log(LogLevel.trace, m, context: context);
-  void debug(String m, {Map<String, Object?> context = const {}}) => log(LogLevel.debug, m, context: context);
-  void info(String m, {Map<String, Object?> context = const {}}) => log(LogLevel.info, m, context: context);
-  void warn(String m, {Map<String, Object?> context = const {}}) => log(LogLevel.warn, m, context: context);
-  void error(String m, {Map<String, Object?> context = const {}}) => log(LogLevel.error, m, context: context);
+  void trace(String m, {Map<String, Object?> context = const {}}) =>
+      log(LogLevel.trace, m, context: context);
+  void debug(String m, {Map<String, Object?> context = const {}}) =>
+      log(LogLevel.debug, m, context: context);
+  void info(String m, {Map<String, Object?> context = const {}}) =>
+      log(LogLevel.info, m, context: context);
+  void warn(String m, {Map<String, Object?> context = const {}}) =>
+      log(LogLevel.warn, m, context: context);
+  void error(String m, {Map<String, Object?> context = const {}}) =>
+      log(LogLevel.error, m, context: context);
 
   Future<void> dispose() async {
     await _sink?.flush();
@@ -77,7 +83,9 @@ class AppLogger {
     final out = <String, Object?>{};
     ctx.forEach((k, v) {
       final key = k.toLowerCase();
-      if (key.contains('secret') || key.contains('apikey') || key.contains('key')) {
+      if (key.contains('secret') ||
+          key.contains('apikey') ||
+          key.contains('key')) {
         out[k] = '[REDACTED]';
       } else if (v is String && v.length > 24) {
         out[k] = _mask(v);
@@ -103,8 +111,3 @@ class AppLogger {
     return '$head********$tail';
   }
 }
-
-
-
-
-

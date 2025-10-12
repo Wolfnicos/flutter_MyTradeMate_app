@@ -45,6 +45,3 @@ class KpiTile extends StatelessWidget {
     );
   }
 }
-
-
-

@@ -31,6 +31,3 @@ void main() {
     expect(snap.totalUsdt, 123.0);
   });
 }
-
-
-

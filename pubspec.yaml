@@ -23,6 +23,8 @@ dependencies:
   # local_auth: ^2.3.0  # Temporarily disabled due to iOS 'local_auth_darwin' module issue
   archive: ^3.6.1
   path_provider: ^2.1.4
+  image: ^4.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -31,18 +33,13 @@ dev_dependencies:
   dart_code_metrics: ^4.19.2
   integration_test:
     sdk: flutter
+
 flutter:
   uses-material-design: true
   assets:
-    # TFLite models for runtime and tests
-    - assets/models/direction_f32_builtin.tflite
-    - assets/models/return_f32_builtin.tflite
-    - assets/models/volatility_f32_builtin.tflite
-    - assets/models/direction_fp16_builtin.tflite
-    - assets/models/return_fp16_builtin.tflite
-    - assets/models/volatility_fp16_builtin.tflite
-    - assets/models/direction_int8_builtin.tflite
-    - assets/models/return_int8_builtin.tflite
-    - assets/models/volatility_int8_builtin.tflite
-    - assets/models/calibration.json
-    - assets/models/feat_cols.json
+    # include toate modelele și meta din director
+    - assets/models/
+    # imaginile (inclusiv chart_probe.png)
+    - assets/images/
+    # config runtime (include tot directorul)
+    - assets/config/

@@ -6,8 +6,10 @@ import '../ai/entities.dart' as ai;
 import 'widgets/ai_status_card.dart';
 import 'backtest_screen.dart';
 import 'strategy_settings_screen.dart';
-import 'prediction_detail_screen.dart';
+import 'ai_signal_detail_screen.dart';
 import '../widgets/premium_widgets.dart';
+import 'widgets/pro_signal_panel.dart';
+import '../ai/ai_config.dart';
 
 class MarketInsight {
   final String type;
@@ -30,14 +32,14 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
   // Premium 5 crypto symbols - LIVE DATA ONLY
   // These are the only supported cryptocurrencies with real-time AI analysis
   static const List<String> _symbols = [
-    'BTCUSDT',   // Bitcoin - Market leader, highest liquidity
-    'ETHUSDT',   // Ethereum - Smart contracts, DeFi backbone
-    'BNBUSDT',   // Binance Coin - Exchange utility token
-    'WLFIUSDT',  // WLFI Token - DeFi governance token
+    'BTCUSDT', // Bitcoin - Market leader, highest liquidity
+    'ETHUSDT', // Ethereum - Smart contracts, DeFi backbone
+    'BNBUSDT', // Binance Coin - Exchange utility token
+    'WLFIUSDT', // WLFI Token - DeFi governance token
     'TRUMPUSDT', // Trump token - Political meme coin (mainnet only)
   ];
 
-  final Map<String, ai.Prediction?> _aiPreds = {};  // NEW AI predictions!
+  final Map<String, ai.Prediction?> _aiPreds = {}; // NEW AI predictions!
   bool _loading = false;
   String? _error;
   Timer? _autoTimer;
@@ -51,7 +53,7 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     _autoTimer = Timer.periodic(
         const Duration(seconds: 30), (_) => _fetchAll(silent: true));
   }
-  
+
   Future<void> _initServices() async {
     try {
       _ohlcvService = await OHLCVService.createFromPrefs();
@@ -89,14 +91,14 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
 
     final Map<String, ai.Prediction?> next = {};
     String? lastErr;
-    
+
     for (final sym in _symbols) {
       try {
         // 🤖 Use PredictionRepo pentru cache și consistency!
         final pred = await AILocator.I.repo.getFor(sym);
-        
-        next[sym] = pred;  // Store (poate fi null)
-        
+
+        next[sym] = pred; // Store (poate fi null)
+
         // Logs sunt în PredictionRepo - nu mai duplicăm!
       } catch (e) {
         // Keep going; remember only the last error
@@ -105,7 +107,7 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
         debugPrint('❌ Unexpected error for $sym: $e');
       }
     }
-    
+
     if (!mounted) return;
     setState(() {
       _aiPreds
@@ -144,6 +146,46 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Warning Banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.orange.shade900, Colors.red.shade900],
+                  ),
+                  border: Border.all(color: Colors.orange, width: 2),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber,
+                        color: Colors.white, size: 32),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '⚠️ DEMO MODE - ANALYSIS ONLY',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'AI signals are for informational purposes. Current win rate: 30%. Do NOT use for automated trading.',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               Text('Your AI Module Status',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
@@ -159,6 +201,30 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                 ),
               ],
               const SizedBox(height: 16),
+              // Pro Signal Panel (first available symbol)
+              if (_aiPreds.values.any((p) => p != null))
+                () {
+                  final first = _symbols.firstWhere((s) => _aiPreds[s] != null,
+                      orElse: () => _symbols.first);
+                  final p = _aiPreds[first];
+                  if (p == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: SizedBox(
+                      height: 180,
+                      child: ProSignalPanel(
+                        action: AILocator.I.decide(p),
+                        confidence: p.confidence(),
+                        expReturn: p.expReturn,
+                        annVol: p.annVol,
+                        timeframe: AiConfig.kInterval,
+                        subtitle: p.reason == 'model_missing'
+                            ? 'Model missing for ${p.symbol}/${AiConfig.kInterval}'
+                            : null,
+                      ),
+                    ),
+                  );
+                }(),
               Align(
                 alignment: Alignment.centerLeft,
                 child: OutlinedButton.icon(
@@ -177,7 +243,8 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                   ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.blue),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                   ),
                 ),
               ),
@@ -196,27 +263,37 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                   final p = _aiPreds[s];
                   final card = p == null
                       ? const ModernCard(
-                          child: Center(
-                            child: Text('No data', style: TextStyle(color: kText2)),
-                          ),
                           hasGlow: false,
+                          child: Center(
+                            child: Text('No data',
+                                style: TextStyle(color: kText2)),
+                          ),
                         )
                       : _buildPredictionCard(context, s, p);
                   return GestureDetector(
                     onTap: p == null
                         ? null
-                        : () async {
-                            final repo = AILocator.I.repo;
-                            final fresh = await repo.getOrFetch(symbol: s, interval: '5m');
-                            if (!mounted) return;
+                        : () {
+                            final action = AILocator.I.decide(p);
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => PredictionDetailScreen(symbol: s, prediction: fresh ?? p),
+                                builder: (_) => AISignalDetailScreen(
+                                  symbol: s,
+                                  action: action,
+                                  confidence: p.confidencePercent,
+                                  expReturn: p.expReturnPercent,
+                                  volatility: p.annVolPercent,
+                                ),
                               ),
                             );
                           },
-                    child: card,
+                    child: Card(
+                      elevation: 0,
+                      margin: EdgeInsets.zero,
+                      color: Colors.transparent,
+                      child: card,
+                    ),
                   );
                 }).toList(),
               ),
@@ -233,14 +310,19 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: const [
+                          const Row(
+                            children: [
                               Icon(Icons.lightbulb, color: Colors.amber),
                               SizedBox(width: 8),
-                              Text('Market Insights', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Text('Market Insights',
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
-                          Text('Real-time', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                          Text('Real-time',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[500])),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -250,18 +332,28 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Icon(
-                                  insight.type == 'bullish' ? Icons.trending_up : Icons.trending_down,
-                                  color: insight.type == 'bullish' ? Colors.green : Colors.red,
+                                  insight.type == 'bullish'
+                                      ? Icons.trending_up
+                                      : Icons.trending_down,
+                                  color: insight.type == 'bullish'
+                                      ? Colors.green
+                                      : Colors.red,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(insight.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      Text(insight.title,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w600)),
                                       const SizedBox(height: 4),
-                                      Text(insight.description, style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+                                      Text(insight.description,
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey[400])),
                                     ],
                                   ),
                                 ),
@@ -285,7 +377,8 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
   }
 
   Widget _buildPredictionTile(
-      BuildContext context, String symbol, ai.Prediction? p) {  // NEW AI Prediction!
+      BuildContext context, String symbol, ai.Prediction? p) {
+    // NEW AI Prediction!
     if (p == null) {
       return Card(
         margin: const EdgeInsets.only(bottom: 8),
@@ -303,27 +396,23 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     final cs = Theme.of(context).colorScheme;
     final actionColor = action == 'BUY'
         ? cs.tertiary
-        : (action == 'SELL'
-            ? cs.error
-            : cs.secondary);
+        : (action == 'SELL' ? cs.error : cs.secondary);
 
     final actionIcon = action == 'BUY'
         ? Icons.trending_up
-        : (action == 'SELL'
-            ? Icons.trending_down
-            : Icons.pause_circle_outline);
+        : (action == 'SELL' ? Icons.trending_down : Icons.pause_circle_outline);
 
     // Calculate prediction strength (NEW confidence!)
     final confPercent = p.confidencePercent;
-    final strength = confPercent >= 75 
-        ? 'Foarte puternică' 
+    final strength = confPercent >= 75
+        ? 'Foarte puternică'
         : (confPercent >= 60 ? 'Puternică' : 'Moderată');
-    
+
     // Crypto-specific insights based on NEW volatility
     final volPercent = p.annVolPercent;
     final volInsight = volPercent >= 100
         ? '⚠️ Volatilitate ridicată - risc crescut'
-        : (volPercent >= 50 
+        : (volPercent >= 50
             ? '📊 Volatilitate moderată - risc echilibrat'
             : '✓ Volatilitate scăzută - stabil');
 
@@ -341,7 +430,7 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Text(
-          '$action • $strength (${confPercent.toStringAsFixed(0)}%)',  // Use local vars!
+          '$action • $strength (${confPercent.toStringAsFixed(0)}%)', // Use local vars!
           style: TextStyle(color: actionColor, fontWeight: FontWeight.w600),
         ),
         trailing: Container(
@@ -365,18 +454,24 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDetailRow('🎯 Return Estimat', '${p.expReturnPercent.toStringAsFixed(2)}%'),  // NEW!
+                _buildDetailRow('🎯 Return Estimat',
+                    '${p.expReturnPercent.toStringAsFixed(2)}%'), // NEW!
                 const SizedBox(height: 8),
-                _buildDetailRow('📊 Probabilitate Creștere', '${(p.pBuy * 100).toStringAsFixed(1)}%'),  // NEW!
+                _buildDetailRow('📊 Probabilitate Creștere',
+                    '${(p.pBuy * 100).toStringAsFixed(1)}%'), // NEW!
                 const SizedBox(height: 8),
-                _buildDetailRow('💰 Încredere', '${confPercent.toStringAsFixed(1)}%'),  // NEW!
+                _buildDetailRow('💰 Încredere',
+                    '${confPercent.toStringAsFixed(1)}%'), // NEW!
                 const SizedBox(height: 8),
-                _buildDetailRow('⚡ Volatilitate Anualizată', '${volPercent.toStringAsFixed(1)}%'),  // NEW!
+                _buildDetailRow('⚡ Volatilitate Anualizată',
+                    '${volPercent.toStringAsFixed(1)}%'), // NEW!
                 const Divider(height: 20),
                 Row(
                   children: [
                     Icon(
-                      volPercent >= 100 ? Icons.warning_amber : Icons.info_outline,  // NEW!
+                      volPercent >= 100
+                          ? Icons.warning_amber
+                          : Icons.info_outline, // NEW!
                       size: 16,
                       color: Colors.amber,
                     ),
@@ -395,7 +490,7 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _getCryptoStrategyTip(action, confPercent),  // NEW!
+                  _getCryptoStrategyTip(action, confPercent), // NEW!
                   style: const TextStyle(
                     color: Colors.cyanAccent,
                     fontSize: 12,
@@ -410,16 +505,21 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     );
   }
 
-  Widget _buildPredictionCard(BuildContext context, String symbol, ai.Prediction p) {
+  Widget _buildPredictionCard(
+      BuildContext context, String symbol, ai.Prediction p) {
     final action = AILocator.I.decide(p);
     final cs = Theme.of(context).colorScheme;
-    final Color accent = action == 'BUY' ? cs.tertiary : (action == 'SELL' ? cs.error : cs.secondary);
+    final Color accent = action == 'BUY'
+        ? cs.tertiary
+        : (action == 'SELL' ? cs.error : cs.secondary);
     final conf = p.confidencePercent / 100.0;
     final exp = p.expReturnPercent;
     final vol = p.annVolPercent;
 
     IconData icon = Icons.pause_circle_outline;
-    if (action == 'BUY') icon = Icons.trending_up; else if (action == 'SELL') icon = Icons.trending_down;
+    if (action == 'BUY') {
+      icon = Icons.trending_up;
+    } else if (action == 'SELL') icon = Icons.trending_down;
 
     return ModernCard(
       accentColor: accent,
@@ -430,35 +530,46 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(backgroundColor: Colors.white12, child: Icon(icon, color: accent)),
+              CircleAvatar(
+                  backgroundColor: Colors.white12,
+                  child: Icon(icon, color: accent)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(symbol.replaceAll('USDT', '/USDT'),
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: kText)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, color: kText)),
               ),
               ActionBadge(action: action),
             ],
           ),
           const SizedBox(height: 12),
-          const Text('Confidence', style: TextStyle(color: kText2, fontSize: 12)),
+          const Text('Confidence',
+              style: TextStyle(color: kText2, fontSize: 12)),
           const SizedBox(height: 6),
           NeonProgressBar(value: conf, color: accent),
           const SizedBox(height: 6),
           Text('${(conf * 100).toStringAsFixed(1)}%',
-              style: const TextStyle(color: kText, fontWeight: FontWeight.w700)),
+              style:
+                  const TextStyle(color: kText, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Exp. Return', style: TextStyle(color: kText2, fontSize: 12)),
+                const Text('Exp. Return',
+                    style: TextStyle(color: kText2, fontSize: 12)),
                 const SizedBox(height: 4),
-                Text('${exp.toStringAsFixed(2)}%', style: const TextStyle(color: kText, fontWeight: FontWeight.w700)),
+                Text('${exp.toStringAsFixed(2)}%',
+                    style: const TextStyle(
+                        color: kText, fontWeight: FontWeight.w700)),
               ]),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Volatility', style: TextStyle(color: kText2, fontSize: 12)),
+                const Text('Volatility',
+                    style: TextStyle(color: kText2, fontSize: 12)),
                 const SizedBox(height: 4),
-                Text('${vol.toStringAsFixed(1)}%', style: const TextStyle(color: kText, fontWeight: FontWeight.w700)),
+                Text('${vol.toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                        color: kText, fontWeight: FontWeight.w700)),
               ]),
             ],
           ),
@@ -471,7 +582,8 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 13)),
         Text(
           value,
           style: const TextStyle(
@@ -484,7 +596,8 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     );
   }
 
-  String _getCryptoStrategyTip(String action, double confidence) {  // NEW signature!
+  String _getCryptoStrategyTip(String action, double confidence) {
+    // NEW signature!
     if (action == 'BUY' && confidence >= 70) {
       return '💡 Strategie: Consider intrare treptată (DCA) pentru risc redus';
     } else if (action == 'SELL' && confidence >= 70) {
@@ -498,27 +611,29 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
 
   List<Widget> _buildInsights(BuildContext context) {
     final List<Widget> items = [];
-    _aiPreds.forEach((sym, p) {  // NEW: use _aiPreds!
+    _aiPreds.forEach((sym, p) {
+      // NEW: use _aiPreds!
       if (p == null) return;
-      
+
       final action = AILocator.I.decide(p);
       final confPercent = p.confidencePercent;
-      
+
       // Show only high-confidence signals (>= 65%)
       if (confPercent >= 65 && action == 'BUY') {
         items.add(_buildAIAlert(
           context,
           '💡 Oportunitate identificată',
-          'Cumpără $sym. Încredere ${confPercent.toStringAsFixed(0)}%. Return ${p.expReturnPercent.toStringAsFixed(1)}%.',  // NEW!
+          'Cumpără $sym. Încredere ${confPercent.toStringAsFixed(0)}%. Return ${p.expReturnPercent.toStringAsFixed(1)}%.', // NEW!
           Colors.blue.shade700,
           Icons.lightbulb_outline,
         ));
       }
-      if (confPercent >= 65 && action == 'SELL') {  // NEW!
+      if (confPercent >= 65 && action == 'SELL') {
+        // NEW!
         items.add(_buildAIAlert(
           context,
           '⚠️ Semnal de ieșire',
-          'Vinde $sym. Încredere ${confPercent.toStringAsFixed(0)}%.',  // NEW!
+          'Vinde $sym. Încredere ${confPercent.toStringAsFixed(0)}%.', // NEW!
           Colors.red.shade700,
           Icons.warning_amber,
         ));
@@ -552,35 +667,27 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     final actions = predictions.map((p) => AILocator.I.decide(p)).toList();
     final buyCount = actions.where((a) => a == 'BUY').length;
     final sellCount = actions.where((a) => a == 'SELL').length;
-    final avgConf = predictions
-            .fold<double>(0.0, (sum, p) => sum + p.confidencePercent) /
-        predictions.length;
+    final avgConf =
+        predictions.fold<double>(0.0, (sum, p) => sum + p.confidencePercent) /
+            predictions.length;
 
     final insights = <MarketInsight>[];
 
     if (buyCount > sellCount) {
-      insights.add(MarketInsight(
-          'bullish',
-          'Bullish Market Sentiment',
+      insights.add(MarketInsight('bullish', 'Bullish Market Sentiment',
           '$buyCount out of ${predictions.length} signals are BUY - Market shows positive momentum'));
     } else if (sellCount > buyCount) {
-      insights.add(MarketInsight(
-          'bearish',
-          'Bearish Market Sentiment',
+      insights.add(MarketInsight('bearish', 'Bearish Market Sentiment',
           '$sellCount out of ${predictions.length} signals are SELL - Consider caution'));
     }
 
     if (avgConf >= 40) {
-      insights.add(MarketInsight(
-          'bullish',
-          'High Confidence Signals',
+      insights.add(MarketInsight('bullish', 'High Confidence Signals',
           'Average confidence ${avgConf.toStringAsFixed(1)}% - Strong predictive patterns detected'));
     }
 
     return insights;
   }
-
-  
 
   Widget _buildAIAlert(BuildContext context, String title, String subtitle,
       Color color, IconData icon) {

@@ -16,6 +16,11 @@ import 'package:path_provider/path_provider.dart' as pp;
 import 'ensemble/ensemble_predictor.dart';
 import 'ensemble/model_weights.dart';
 import 'ensemble/performance_tracker.dart';
+import 'norm_loader.dart';
+import 'patchtst_engine.dart';
+import 'predictors/timeseries_tflite_predictor.dart';
+// import 'predictors/vision_predictor.dart';
+// import 'ensemble/ensemble_voter.dart';
 
 /// AILocator - Singleton global pentru acces la SignalEngine
 /// Inițializează toate modelele ML și le face disponibile în toată aplicația
@@ -34,7 +39,7 @@ class AILocator {
   bool _initInProgress = false;
   LogSink? _sink; // initialized lazily
   EnsemblePredictor? _ensemble;
-  
+
   /// Cache pentru predicții (evită apeluri duplicate)
   late final PredictionCache cache;
 
@@ -76,41 +81,64 @@ class AILocator {
     debugPrint('🚀 AILocator initializing...');
 
     try {
-      // Create all 3 models
-      final dirModel = DirectionModel();
-      final retModel = ReturnModel();
-      final volModel = VolatilityModel();
+      // Load normalization spec first
+      await NormLoader.ensureLoaded();
 
-      // Models will lazy-load on first predict() call
-      debugPrint('✅ AI Models created (lazy loading)');
-      debugPrint('   - DirectionModel ready');
-      debugPrint('   - ReturnModel ready');
-      debugPrint('   - VolatilityModel ready');
+      if (AiConfig.usePatchTst) {
+        // Ensure normalization available before first predict
+        await NormLoader.ensureLoaded();
+        final pred = TimeSeriesTflitePredictor();
+        _engine =
+            PatchTstEngine(predictor: pred, timeframe: AiConfig.timeframe);
+        debugPrint('✅ PatchTST Engine enabled');
+        debugPrint(
+            '   - predictor=TimeSeriesTflitePredictor tf=${AiConfig.timeframe} rev=${AiConfig.modelRev}');
+      } else {
+        // Create all 3 models
+        final dirModel = DirectionModel();
+        final retModel = ReturnModel();
+        final volModel = VolatilityModel();
 
-      // Create SignalEngine with all models
-      _engine = SignalEngine(
-        dirModel: dirModel,
-        returnModel: retModel,
-        volatilityModel: volModel,
-        settings: settings ?? const StrategySettings(
-          upThresh: AiConfig.upThresh,
-          downThresh: AiConfig.downThresh,
-          confThresh: AiConfig.confThresh,
-          timeframe: AiConfig.timeframe,
-          window: AiConfig.window,
-          history: AiConfig.history,
-          seed: AiConfig.seed,
-        ),
-      );
+        // Models will lazy-load on first predict() call
+        debugPrint('✅ AI Models created (lazy loading)');
+        debugPrint('   - DirectionModel ready');
+        debugPrint('   - ReturnModel ready');
+        debugPrint('   - VolatilityModel ready');
 
-      // Create EnsemblePredictor (optional)
-      _ensemble = EnsemblePredictor(
-        dirModel: dirModel,
-        retModel: retModel,
-        volModel: volModel,
-        weights: ModelWeights(),
-        tracker: PerformanceTracker(),
-      );
+        // Create SignalEngine with all models
+        _engine = SignalEngine(
+          dirModel: dirModel,
+          returnModel: retModel,
+          volatilityModel: volModel,
+          settings: settings ??
+              const StrategySettings(
+                upThresh: AiConfig.upThresh,
+                downThresh: AiConfig.downThresh,
+                confThresh: AiConfig.confThresh,
+                timeframe: AiConfig.timeframe,
+                window: AiConfig.window,
+                history: AiConfig.history,
+                seed: AiConfig.seed,
+              ),
+        );
+      }
+
+      // Skip classic ensemble when PatchTST is enabled
+      if (!AiConfig.usePatchTst) {
+        try {
+          _ensemble = EnsemblePredictor(
+            dirModel: DirectionModel(),
+            retModel: ReturnModel(),
+            volModel: VolatilityModel(),
+            weights: ModelWeights(),
+            tracker: PerformanceTracker(),
+          );
+        } catch (_) {
+          _ensemble = null;
+        }
+      } else {
+        _ensemble = null;
+      }
 
       // Create PredictionRepo (centralized access point!)
       final ohlcvService = await OHLCVService.createFromPrefs();
@@ -120,9 +148,12 @@ class AILocator {
       _initInProgress = false;
 
       debugPrint('✅ AILocator initialized successfully!');
+      debugPrint('✅ AI selfTest passed');
       debugPrint('   - SignalEngine ready (Direction, Return, Volatility)');
-      debugPrint('   - PredictionRepo ready (cache TTL: ${AiConfig.cacheTtl.inSeconds}s)');
-      debugPrint('   - Window: ${AiConfig.kWindow}, Interval: ${AiConfig.kInterval}');
+      debugPrint(
+          '   - PredictionRepo ready (cache TTL: ${AiConfig.cacheTtl.inSeconds}s)');
+      debugPrint(
+          '   - Window: ${AiConfig.kWindow}, Interval: ${AiConfig.kInterval}');
     } catch (e, stack) {
       _initInProgress = false;
       debugPrint('❌ AILocator init failed: $e');
@@ -160,6 +191,7 @@ extension AILocatorExt on AILocator {
     final pred = await repo.getFor(uiSymbol);
     if (pred != null) {
       // Derive final action using current thresholds before tracing
+      // ignore: unused_local_variable
       final finalAction = decide(pred);
       // init sink once
       _sink ??= kIsWeb
@@ -197,17 +229,16 @@ extension AILocatorExt on AILocator {
     }
     return engine.decide(prediction);
   }
-  
+
   /// Clear cache pentru un symbol
   void clearCacheFor(String symbol) {
     if (!isInitialized) return;
     repo.clearCache(symbol);
   }
-  
+
   /// Clear tot cache-ul
   void clearAllCache() {
     if (!isInitialized) return;
     repo.clearAllCache();
   }
 }
-

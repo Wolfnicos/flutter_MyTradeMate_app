@@ -5,7 +5,8 @@ import 'package:mytrademate/screens/widgets/ai_prediction_card.dart';
 import '../fakes/fake_engine.dart';
 
 void main() {
-  testWidgets('AIPredictionCard renders metrics deterministically', (tester) async {
+  testWidgets('AIPredictionCard renders metrics deterministically',
+      (tester) async {
     AILocator.I.overrideEngineForTests(FakeEngine());
 
     await tester.pumpWidget(const MaterialApp(
@@ -20,5 +21,3 @@ void main() {
     expect(find.textContaining('Volatility'), findsWidgets);
   });
 }
-
-

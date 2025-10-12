@@ -31,7 +31,9 @@ class ExplainData {
   }
 }
 
-ExplainData mapToExplain(String symbol, List<List<double>> seq, {
+ExplainData mapToExplain(
+  String symbol,
+  List<List<double>> seq, {
   required DateTime asOf,
   required double pBuy,
   required double expReturn,

@@ -77,6 +77,3 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     Navigator.pop(context);
   }
 }
-
-
-

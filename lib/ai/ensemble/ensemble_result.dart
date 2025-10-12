@@ -1,8 +1,8 @@
 class EnsembleResult {
   final List<double> probs; // [pBuy, pHold, pSell]
-  final double expReturn;   // expected return (fraction per period)
-  final double annVol;      // annualized volatility (fraction)
-  final double confidence;  // [0..1]
+  final double expReturn; // expected return (fraction per period)
+  final double annVol; // annualized volatility (fraction)
+  final double confidence; // [0..1]
   final Map<String, dynamic> debug; // optional per-model details
 
   const EnsembleResult({
@@ -13,5 +13,3 @@ class EnsembleResult {
     this.debug = const {},
   });
 }
-
-

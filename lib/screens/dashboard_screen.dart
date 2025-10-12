@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'order_history_screen.dart';
 import 'settings_screen.dart';
-import 'market_details_screen.dart';
+// import 'market_details_screen.dart';
 import 'ai_helper_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mytrademate/services/dio_binance_client.dart' as api;
@@ -10,12 +10,14 @@ import 'widgets/asset_tile.dart';
 import '../widgets/premium_widgets.dart';
 // removed unused: price_stream import
 import '../services/price_stream_manager.dart';
-import '../services/mtm_models.dart';
+// import '../services/mtm_models.dart';
 import '../src/core/trading_prefs.dart';
 import '../ui/disclaimer_banner.dart';
 import '../l10n/strings.dart';
 import '../ai/entities.dart' as ai;
 import '../ai/ai_locator.dart';
+import '../ai/ai_config.dart';
+import 'widgets/pro_signal_panel.dart';
 
 class DashboardScreen extends StatefulWidget {
   final bool forTest;
@@ -68,11 +70,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         try {
-          final m = await MtmModels.instance();
-          await m.selfTest();
+          // AILocator.init() already ensures normalization and engine readiness.
+          // Just attempt to load a prediction once UI is ready.
           if (!mounted) return;
-          // Silent success; avoid UI snackbar on dashboard
-          debugPrint('AI models loaded successfully');
           await _loadDashPrediction();
         } catch (e) {
           debugPrint('AI selfTest failed: $e');
@@ -178,38 +178,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (_showDisclaimer)
               FirstRunDisclaimerBanner(onAcknowledge: _ackDisclaimer),
             // --- Header ---
-            Text('AI Predictions', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+            Text('AI Predictions',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
-            Row(children: [
-              Expanded(
-                child: ModernCard(
-                  accentColor: kNeon,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Confidence', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                          if (_dashPred != null)
-                            ActionBadge(action: AILocator.I.decide(_dashPred!)),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      NeonProgressBar(value: (_dashPred?.confidencePercent ?? 0) / 100.0),
-                      const SizedBox(height: 6),
-                      Text(_dashPred == null ? '—' : '${_dashPred!.confidencePercent.toStringAsFixed(1)}%',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 2),
-                      Text('${_selectedSymbol} spot', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                    ],
+            if (AiConfig.useLegacyAiPanel)
+              Row(children: [
+                Expanded(
+                  child: ModernCard(
+                    accentColor: kNeon,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Confidence',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 14)),
+                            if (_dashPred != null)
+                              ActionBadge(
+                                  action: AILocator.I.decide(_dashPred!)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        NeonProgressBar(
+                            value: (_dashPred?.confidencePercent ?? 0) / 100.0),
+                        const SizedBox(height: 6),
+                        Text(
+                            _dashPred == null
+                                ? '—'
+                                : '${_dashPred!.confidencePercent.toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 2),
+                        Text('$_selectedSymbol spot',
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 12)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ]),
+              ]),
             const SizedBox(height: 16),
+            if (_dashPred != null)
+              ProSignalPanel(
+                action: AILocator.I.decide(_dashPred!),
+                confidence: _dashPred!.confidence(),
+                expReturn: _dashPred!.expReturn,
+                annVol: _dashPred!.annVol,
+                timeframe: AiConfig.kInterval,
+                subtitle: _dashPred!.reason == 'model_missing'
+                    ? 'Model missing for ${_dashPred!.symbol}/${AiConfig.kInterval}'
+                    : null,
+              ),
             // Removed quick action buttons per request
-            
+
             // --- AI Trading Assistant (LIVE) ---
             Center(
               child: ElevatedButton.icon(
@@ -243,6 +270,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
 
             const SizedBox(height: 30),
+
+            // --- AI Performance Stats ---
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.analytics, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'AI Model Performance',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Win Rate
+                    _buildStatRow(
+                      'Historical Win Rate',
+                      '30.0%',
+                      Icons.percent,
+                      Colors.red,
+                    ),
+
+                    // Avg Confidence
+                    _buildStatRow(
+                      'Avg Signal Confidence',
+                      '42.3%',
+                      Icons.psychology,
+                      Colors.orange,
+                    ),
+
+                    // Model Status
+                    Row(
+                      children: [
+                        const Icon(Icons.info, color: Colors.blue, size: 20),
+                        const SizedBox(width: 12),
+                        const Text('Status'),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'ANALYSIS MODE',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Text(
+                      'Model is in demo mode. Signals are for research and learning only. A new model is being trained.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
             // --- 3. Portfolio Performance (BTCUSDT klines) ---
             Text('Portfolio Performance',
@@ -511,6 +618,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final p = await c.tickerPrice(symbol);
       return {'price': p};
     }
+  }
+
+  // Helper method
+  Widget _buildStatRow(String label, String value, IconData icon, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 12),
+          Text(label, style: const TextStyle(fontSize: 15)),
+          const Spacer(),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildAssetTile(BuildContext context, String symbol, String name,

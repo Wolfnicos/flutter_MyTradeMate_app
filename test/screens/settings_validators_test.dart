@@ -16,6 +16,3 @@ void main() {
     expect(validateSecretForTest('123456789012'), isNull);
   });
 }
-
-
-

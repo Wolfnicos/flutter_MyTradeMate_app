@@ -63,7 +63,10 @@ class EnsemblePredictor {
     final volC = models.length > 2 ? asBuy(models[2]) : 0.33;
     final techC = asBuy(fallback);
 
-    final base = weights.dir * dirC + weights.ret * retC + weights.vol * volC + weights.tech * techC;
+    final base = weights.dir * dirC +
+        weights.ret * retC +
+        weights.vol * volC +
+        weights.tech * techC;
 
     final allDirs = models.map((m) => m.direction.toUpperCase()).toSet();
     double conf = base;
@@ -80,7 +83,12 @@ class EnsemblePredictor {
       'base': base,
       'boost_applied': boost,
       'penalty_applied': penalty,
-      'weights': {'dir': weights.dir, 'ret': weights.ret, 'vol': weights.vol, 'tech': weights.tech},
+      'weights': {
+        'dir': weights.dir,
+        'ret': weights.ret,
+        'vol': weights.vol,
+        'tech': weights.tech
+      },
     });
   }
 
@@ -122,14 +130,18 @@ class EnsemblePredictor {
       wDir * pDir[2] + wTech * techProbs[2],
     ];
     final dirSum = dirVec.fold<double>(0.0, (a, b) => a + b);
-    final pEns = dirSum == 0.0 ? const [1 / 3, 1 / 3, 1 / 3] : dirVec.map((x) => x / dirSum).toList();
+    final pEns = dirSum == 0.0
+        ? const [1 / 3, 1 / 3, 1 / 3]
+        : dirVec.map((x) => x / dirSum).toList();
 
     // Weighted averaging for return & vol
     final wRet = weights.ret * (retOk ? 1.0 : 0.0);
     final wVol = weights.vol * (volOk ? 1.0 : 0.0);
     final denom = (wRet + wVol).clamp(1e-9, 1e9);
-    final expRet = (wRet * eRet + wVol * (0.0)) / denom; // no tech return, keep 0.0 baseline
-    final annVol = (wVol * aVol + wRet * 0.3) / denom; // bias towards 30% if return dominates
+    final expRet = (wRet * eRet + wVol * (0.0)) /
+        denom; // no tech return, keep 0.0 baseline
+    final annVol = (wVol * aVol + wRet * 0.3) /
+        denom; // bias towards 30% if return dominates
 
     // Agreement boosting / disagreement penalty
     final maxP = pEns.reduce((a, b) => a > b ? a : b);
@@ -147,7 +159,12 @@ class EnsemblePredictor {
         'dirOk': dirOk,
         'retOk': retOk,
         'volOk': volOk,
-        'weights': {'dir': weights.dir, 'ret': weights.ret, 'vol': weights.vol, 'tech': weights.tech},
+        'weights': {
+          'dir': weights.dir,
+          'ret': weights.ret,
+          'vol': weights.vol,
+          'tech': weights.tech
+        },
         'agree': agree,
       },
     );
@@ -157,9 +174,13 @@ class EnsemblePredictor {
     if (probs.isEmpty) return 0.0;
     final avg = List<double>.filled(3, 0.0);
     for (final p in probs) {
-      for (int i = 0; i < 3; i++) avg[i] += p[i];
+      for (int i = 0; i < 3; i++) {
+        avg[i] += p[i];
+      }
     }
-    for (int i = 0; i < 3; i++) avg[i] /= probs.length;
+    for (int i = 0; i < 3; i++) {
+      avg[i] /= probs.length;
+    }
     // Measure concentration via max probability
     return avg.reduce((a, b) => a > b ? a : b);
   }
@@ -179,7 +200,9 @@ class EnsemblePredictor {
     if (v.isEmpty) return 0.0;
     final k = 2.0 / (period + 1);
     double e = v.first;
-    for (final x in v.skip(1)) e = x * k + e * (1 - k);
+    for (final x in v.skip(1)) {
+      e = x * k + e * (1 - k);
+    }
     return e;
   }
 
@@ -199,5 +222,3 @@ class EnsemblePredictor {
     return 100.0 - (100.0 / (1.0 + rs));
   }
 }
-
-

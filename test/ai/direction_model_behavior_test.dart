@@ -46,5 +46,3 @@ List<Candle> _generateBullishCandles(int count) {
 
   return candles;
 }
-
-

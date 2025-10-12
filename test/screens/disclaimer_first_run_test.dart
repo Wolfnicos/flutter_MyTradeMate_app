@@ -7,7 +7,8 @@ import 'package:mytrademate/screens/dashboard_screen.dart';
 Widget wrapWithApp(Widget child) => MaterialApp(home: child);
 
 void main() {
-  testWidgets('First-run disclaimer shows then hides on acknowledge', (t) async {
+  testWidgets('First-run disclaimer shows then hides on acknowledge',
+      (t) async {
     SharedPreferences.setMockInitialValues({'has_seen_disclaimer_v1': false});
     await t.pumpWidget(wrapWithApp(const DashboardScreen(forTest: true)));
     await t.pump();
@@ -17,8 +18,3 @@ void main() {
     expect(find.byKey(const Key('btnDisclaimerAcknowledge')), findsNothing);
   });
 }
-
-
-
-
-

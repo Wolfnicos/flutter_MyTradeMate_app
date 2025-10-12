@@ -291,7 +291,7 @@ class DioBinanceClient {
     String interval, {
     int limit = 200,
     int? startTime, // ms
-    int? endTime,   // ms
+    int? endTime, // ms
   }) async {
     final data = await _get('/api/v3/klines', query: {
       'symbol': _normSymbol(symbol),

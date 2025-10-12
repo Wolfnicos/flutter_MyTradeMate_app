@@ -33,7 +33,7 @@ void main() {
       ensemble: null,
     );
     
-    print('\n' + '=' * 80);
+    print('\n${'=' * 80}');
     print('📈 RESULTS');
     print('=' * 80);
     print('Total Return: ${(result.totalReturn * 100).toStringAsFixed(2)}%');

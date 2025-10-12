@@ -24,11 +24,11 @@ Future<void> main() async {
   AppLogger.init(optInTelemetry: optIn);
   final obs = AppLifecycleObserver();
   WidgetsBinding.instance.addObserver(obs);
-  
+
   // Initialize locale for L10n (EN/RO support)
   final locale = ui.PlatformDispatcher.instance.locale;
   L10n.setLocale(locale.languageCode);
-  
+
   // 🤖 Initialize AI Pipeline (CRITICAL!)
   try {
     await AILocator.I.init();
@@ -36,7 +36,7 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('⚠️ AI Pipeline init failed (fallback will be used): $e');
   }
-  
+
   runApp(const MyTradeMateApp());
 }
 

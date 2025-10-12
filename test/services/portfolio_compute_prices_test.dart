@@ -17,6 +17,3 @@ void main() {
     expect(btc.priceUsdt, 60000.0);
   });
 }
-
-
-

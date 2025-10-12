@@ -301,3 +301,6 @@ flutter run -d "iPhone 17 Pro Max"
 Și totul ar trebui să funcționeze perfect! 😊
 
 
+
+
+

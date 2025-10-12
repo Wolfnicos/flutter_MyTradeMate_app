@@ -46,6 +46,3 @@ void main() {
     expect(calibrated, inInclusiveRange(1e-9, 1 - 1e-9));
   });
 }
-
-
-

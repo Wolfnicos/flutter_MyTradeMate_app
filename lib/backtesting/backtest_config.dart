@@ -21,5 +21,3 @@ class BacktestConfig {
     this.maxRiskPerTrade = 0.02,
   });
 }
-
-

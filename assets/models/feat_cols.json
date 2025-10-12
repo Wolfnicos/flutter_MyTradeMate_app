@@ -1,1 +1,1 @@
-["open","high","low","close","volume","rsi14","macd","macd_sig","bb_high","bb_low","ema20","ema50","ret1","hl_spread","vol_z"]
+{"feature_order":["open","high","low","close","volume","ret_1","ema9","ema21","atr"]}

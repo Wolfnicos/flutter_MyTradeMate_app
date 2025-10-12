@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class UiMarketError extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
-  const UiMarketError({super.key, required this.message, required this.onRetry});
+  const UiMarketError(
+      {super.key, required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +23,3 @@ class UiMarketError extends StatelessWidget {
     );
   }
 }
-
-
-

@@ -6,7 +6,8 @@ import 'package:mytrademate/services/market_data_service.dart';
 Future<void> noDelay(Duration _) async {}
 
 void main() {
-  test('pause/resume with single reconnect yields two ticks deterministically', () async {
+  test('pause/resume with single reconnect yields two ticks deterministically',
+      () async {
     final src = await ScriptedEventSource.fromFixture(
       'test/fixtures/binance_ws/reconnect_then_resume.json',
     );
@@ -23,7 +24,8 @@ void main() {
     );
 
     // Collect exactly two ticks deterministically
-    final ticks = await svc.prices('BTCUSDT')
+    final ticks = await svc
+        .prices('BTCUSDT')
         .take(2)
         .toList()
         .timeout(const Duration(seconds: 2));

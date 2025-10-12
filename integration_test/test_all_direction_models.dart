@@ -19,7 +19,7 @@ void main() {
   group('🔬 Test All Direction Model Variants', () {
     for (final modelPath in modelPaths) {
       test('Test $modelPath', () async {
-        print('\n' + '=' * 70);
+        print('\n${'=' * 70}');
         print('📦 TESTING: $modelPath');
         print('=' * 70);
 
@@ -116,7 +116,7 @@ void main() {
 
           interpreter.close();
 
-          print('\n' + '=' * 70 + '\n');
+          print('\n${'=' * 70}\n');
         } catch (e, stack) {
           print('❌ ERROR testing $modelPath:');
           print('   $e');
@@ -126,7 +126,7 @@ void main() {
     }
 
     test('🏆 RECOMMENDATION', () {
-      print('\n' + '=' * 70);
+      print('\n${'=' * 70}');
       print('🏆 FINAL RECOMMENDATION');
       print('=' * 70);
       print('\nBased on the tests above:');
@@ -140,7 +140,7 @@ void main() {
       print('   → Models are broken (normalization mismatch)');
       print('   → Use fallback technical rules temporarily');
       print('   → Retrain models with correct normalization');
-      print('\n' + '=' * 70 + '\n');
+      print('\n${'=' * 70}\n');
     });
   });
 }

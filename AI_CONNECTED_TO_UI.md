@@ -432,3 +432,6 @@ Dacă vezi:
 Run app și vezi predicțiile AI REALE! 🤖✨
 
 
+
+
+

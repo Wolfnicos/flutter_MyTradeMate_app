@@ -24,6 +24,3 @@ void main() {
     expect(order.data['status'], anyOf('FILLED', 'PARTIALLY_FILLED', 'NEW'));
   });
 }
-
-
-

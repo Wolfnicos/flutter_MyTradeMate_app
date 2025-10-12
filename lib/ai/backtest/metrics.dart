@@ -2,15 +2,15 @@ import 'dart:math';
 
 /// Metrics - Performance metrics pentru backtesting
 class Metrics {
-  final double totalReturn;   // Total return (ex: 0.25 = +25%)
-  final double cagr;           // Compound Annual Growth Rate
-  final double sharpe;         // Sharpe Ratio (risk-adjusted return)
-  final double sortino;        // Sortino Ratio (downside risk)
-  final double maxDD;          // Maximum Drawdown (worst peak-to-trough)
-  final double winRate;        // Win rate (% profitable periods)
-  final int totalTrades;       // Total number of trades
-  final int winningTrades;     // Number of winning trades
-  final int losingTrades;      // Number of losing trades
+  final double totalReturn; // Total return (ex: 0.25 = +25%)
+  final double cagr; // Compound Annual Growth Rate
+  final double sharpe; // Sharpe Ratio (risk-adjusted return)
+  final double sortino; // Sortino Ratio (downside risk)
+  final double maxDD; // Maximum Drawdown (worst peak-to-trough)
+  final double winRate; // Win rate (% profitable periods)
+  final int totalTrades; // Total number of trades
+  final int winningTrades; // Number of winning trades
+  final int losingTrades; // Number of losing trades
 
   const Metrics({
     required this.totalReturn,
@@ -55,28 +55,30 @@ class Metrics {
     }
 
     // Mean daily return
-    final meanRet = rets.isEmpty 
-        ? 0.0 
-        : rets.reduce((a, b) => a + b) / rets.length;
+    final meanRet =
+        rets.isEmpty ? 0.0 : rets.reduce((a, b) => a + b) / rets.length;
 
     // Volatility (std dev of returns)
     final variance = rets.isEmpty
         ? 0.0
-        : rets.map((r) => pow(r - meanRet, 2)).reduce((a, b) => a + b) / rets.length;
+        : rets.map((r) => pow(r - meanRet, 2)).reduce((a, b) => a + b) /
+            rets.length;
     final vol = sqrt(variance);
 
     // Downside deviation (only negative returns)
     final downsideReturns = rets.where((r) => r < 0).toList();
     final downsideVariance = downsideReturns.isEmpty
         ? 0.0
-        : downsideReturns.map((r) => pow(r, 2)).reduce((a, b) => a + b) / downsideReturns.length;
+        : downsideReturns.map((r) => pow(r, 2)).reduce((a, b) => a + b) /
+            downsideReturns.length;
     final downsideVol = sqrt(downsideVariance);
 
     // Sharpe Ratio (anualizat, assume rf = 0)
     final sharpe = vol == 0 ? 0.0 : (meanRet * 365) / (vol * sqrt(365));
 
     // Sortino Ratio (anualizat)
-    final sortino = downsideVol == 0 ? 0.0 : (meanRet * 365) / (downsideVol * sqrt(365));
+    final sortino =
+        downsideVol == 0 ? 0.0 : (meanRet * 365) / (downsideVol * sqrt(365));
 
     // Maximum Drawdown
     double peak = equity.first;
@@ -94,7 +96,8 @@ class Metrics {
     // CAGR (Compound Annual Growth Rate)
     final nDays = equity.length;
     final years = nDays / 365.0;
-    final cagr = years > 0 ? pow(equity.last / equity.first, 1.0 / years) - 1.0 : 0.0;
+    final cagr =
+        years > 0 ? pow(equity.last / equity.first, 1.0 / years) - 1.0 : 0.0;
 
     return Metrics(
       totalReturn: totalRet,
@@ -136,5 +139,3 @@ Backtest Metrics:
     ''';
   }
 }
-
-

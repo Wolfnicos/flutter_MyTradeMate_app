@@ -25,6 +25,3 @@ void main() {
     expect(out.volatility, closeTo(0.081, 1e-12));
   });
 }
-
-
-

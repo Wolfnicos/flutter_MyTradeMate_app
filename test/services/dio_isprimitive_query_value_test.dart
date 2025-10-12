@@ -14,6 +14,3 @@ void main() {
     expect(DioBinanceClient.isPrimitiveQueryValueForTest(Object()), isFalse);
   });
 }
-
-
-

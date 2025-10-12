@@ -28,8 +28,9 @@ class _HoldModels implements ModelsAdapter {
       predictAllFromSequence(List<List<double>> seq) async =>
           (probUp: 0.50, nextReturn: 0.0, volatility: 0.05);
 }
-@test.Skip('Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 
+@test.Skip(
+    'Legacy AIService pipeline — to be reworked to AILocator. TODO(#migrate-ai-legacy)')
 void main() {
   test('AIService selects HOLD when 0.40 < probUp < 0.60 (crypto)', () async {
     final svc = AIService(

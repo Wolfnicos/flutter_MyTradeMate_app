@@ -27,6 +27,3 @@ void main() {
     expect(foo.priceUsdt, 0.0);
   });
 }
-
-
-

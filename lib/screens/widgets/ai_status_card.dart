@@ -22,15 +22,17 @@ class AIStatusCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Strategy: Crypto AI',
-                        style:
-                            TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                     SizedBox(height: 4),
                     Text('TensorFlow Lite • 3 Models',
                         style: TextStyle(fontSize: 11, color: Colors.white54)),
                   ],
                 ),
                 Switch(
-                    value: active, onChanged: (_) {}, activeThumbColor: Colors.cyan),
+                    value: active,
+                    onChanged: (_) {},
+                    activeThumbColor: Colors.cyan),
               ],
             ),
             const SizedBox(height: 8),
@@ -71,5 +73,3 @@ class AIStatusCard extends StatelessWidget {
     );
   }
 }
-
-

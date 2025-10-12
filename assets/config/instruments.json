@@ -1,0 +1,6 @@
+{
+  "exchange": "BINANCE",
+  "quote": "USDT",
+  "symbols": ["BTCUSDT", "BNBUSDT", "ETHUSDT", "TRUMPUSDT", "WLFIUSDT"],
+  "timezone": "UTC"
+}

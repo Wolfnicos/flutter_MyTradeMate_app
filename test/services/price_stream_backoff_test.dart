@@ -18,6 +18,3 @@ void main() {
     expect(PriceStream.shouldTripCircuit(10, maxFailures: 6), isTrue);
   });
 }
-
-
-

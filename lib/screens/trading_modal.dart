@@ -140,7 +140,10 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
         holdings = m.map((k, v) => MapEntry(k, (v as num).toDouble()));
       } catch (_) {}
     }
-    final asset = widget.assetSymbol.replaceAll('/USDT', '').replaceAll('USDT', '').toUpperCase();
+    final asset = widget.assetSymbol
+        .replaceAll('/USDT', '')
+        .replaceAll('USDT', '')
+        .toUpperCase();
     setState(() {
       _availableBalance = holdings['USDT'] ?? 0.0;
       _availableAssetQty = holdings[asset] ?? 0.0;
@@ -163,7 +166,10 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
         holdings = m.map((k, v) => MapEntry(k, (v as num).toDouble()));
       } catch (_) {}
     }
-    final asset = widget.assetSymbol.replaceAll('/USDT', '').replaceAll('USDT', '').toUpperCase();
+    final asset = widget.assetSymbol
+        .replaceAll('/USDT', '')
+        .replaceAll('USDT', '')
+        .toUpperCase();
     final priceRef = () {
       final lim = double.tryParse(_limitPriceCtrl.text.trim()) ?? 0.0;
       if (_tradeType == 'Limit' && lim > 0) return lim;
@@ -347,7 +353,8 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
         ),
         if (_tradeType == 'Limit' || _tradeType == 'Stop-Loss') ...[
           const SizedBox(height: 12),
-          const Text('Limit price (USDT)', style: TextStyle(color: Colors.white70)),
+          const Text('Limit price (USDT)',
+              style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 6),
           TextField(
             controller: _limitPriceCtrl,
@@ -365,7 +372,8 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
         ],
         if (_tradeType == 'Stop-Loss') ...[
           const SizedBox(height: 12),
-          const Text('Stop price (USDT)', style: TextStyle(color: Colors.white70)),
+          const Text('Stop price (USDT)',
+              style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 6),
           TextField(
             controller: _stopPriceCtrl,
@@ -418,7 +426,8 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
   Widget _buildSummaryDetails() {
     final price = _currentPrice ?? 0;
     final limitPrice = double.tryParse(_limitPriceCtrl.text.trim()) ?? 0.0;
-    final usePrice = _tradeType == 'Limit' && limitPrice > 0 ? limitPrice : price;
+    final usePrice =
+        _tradeType == 'Limit' && limitPrice > 0 ? limitPrice : price;
     final double estimatedUnits =
         (_amount > 0 && usePrice > 0) ? _amount / usePrice : 0.0;
     final double fee = _amount * 0.001;
@@ -487,7 +496,10 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
                   final ok = await _placePaperOrder();
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(ok ? 'Paper order placed' : 'Paper order failed')),
+                      SnackBar(
+                          content: Text(ok
+                              ? 'Paper order placed'
+                              : 'Paper order failed')),
                     );
                     if (ok) Navigator.of(context).maybePop();
                   }
@@ -495,9 +507,11 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
                   return;
                 }
                 // Only Market orders are supported for now
-                
+
                 // Optional: simple balance check in paper mode
-                if (_paperMode && _availableBalance > 0 && _amount > _availableBalance) {
+                if (_paperMode &&
+                    _availableBalance > 0 &&
+                    _amount > _availableBalance) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -533,7 +547,8 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
                   final prefs = await tp.TradingPrefs.load();
                   if ((prefs.apiKey?.isEmpty ?? true) ||
                       (prefs.apiSecret?.isEmpty ?? true)) {
-                    throw Exception('API keys missing. Open Settings and add your Binance API key & secret.');
+                    throw Exception(
+                        'API keys missing. Open Settings and add your Binance API key & secret.');
                   }
                   final client = await DioBinanceClient.createFromPrefs();
                   // Normalize symbol
@@ -576,7 +591,8 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
                       setState(() => _submitting = false);
                       return;
                     }
-                    final qty = (_amount / limitPrice).clamp(0, double.infinity);
+                    final qty =
+                        (_amount / limitPrice).clamp(0, double.infinity);
                     final qRound = double.parse(qty.toStringAsFixed(8));
                     res = await client.newLimitOrder(
                       symbol: sym,
@@ -604,14 +620,16 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
                     if (refPrice <= 0) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Live price unavailable.')),
+                          const SnackBar(
+                              content: Text('Live price unavailable.')),
                         );
                       }
                       setState(() => _submitting = false);
                       return;
                     }
-                    final qty = (_amount / (limitPrice > 0 ? limitPrice : refPrice))
-                        .clamp(0, double.infinity);
+                    final qty =
+                        (_amount / (limitPrice > 0 ? limitPrice : refPrice))
+                            .clamp(0, double.infinity);
                     final qRound = double.parse(qty.toStringAsFixed(8));
                     if (limitPrice > 0) {
                       res = await client.newStopLossLimitOrder(
@@ -648,7 +666,9 @@ class _TradingModalState extends State<TradingModal> with RestorationMixin {
                   HapticFeedback.lightImpact();
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Order sent (${_tradeType.toUpperCase()})')),
+                      SnackBar(
+                          content:
+                              Text('Order sent (${_tradeType.toUpperCase()})')),
                     );
                     Navigator.of(context).maybePop();
                   }

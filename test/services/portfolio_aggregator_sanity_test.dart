@@ -17,6 +17,3 @@ void main() {
     expect(snap.holdings.single.priceUsdt, 1.0);
   });
 }
-
-
-

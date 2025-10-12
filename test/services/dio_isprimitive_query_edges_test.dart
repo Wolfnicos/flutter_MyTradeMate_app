@@ -18,6 +18,3 @@ void main() {
     expect(DioBinanceClient.isPrimitiveQueryValueForTest({}), isFalse); // map
   });
 }
-
-
-

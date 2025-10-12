@@ -3,7 +3,8 @@ import 'package:mytrademate/services/exchange_rules.dart';
 import 'package:mytrademate/services/paper_broker.dart';
 
 void main() {
-  test('gap then wick: stop-limit buy should not execute across gap; stop triggers on wick',
+  test(
+      'gap then wick: stop-limit buy should not execute across gap; stop triggers on wick',
       () async {
     final rules = ExchangeRulesForTest.forTest(
       minNotional: 10.0,
@@ -31,9 +32,12 @@ void main() {
 
     // Gap directly to 1020 (no wick crossing the 1012 limit)
     broker.tick('BTCUSDT', 1020.00, high: 1020.00, low: 1020.00);
-    expect(o1.status == OrderStatus.new_ || o1.status == OrderStatus.partiallyFilled,
+    expect(
+        o1.status == OrderStatus.new_ ||
+            o1.status == OrderStatus.partiallyFilled,
         isTrue,
-        reason: 'stop-limit should not market fill across gap if limit not crossed');
+        reason:
+            'stop-limit should not market fill across gap if limit not crossed');
 
     // Now a wick back down to 1015 (still above 1012), then to 1015 high/low crossing 1012
     broker.tick('BTCUSDT', 1015.00, high: 1015.00, low: 1011.50);
@@ -58,5 +62,3 @@ void main() {
     expect(o2.status, OrderStatus.filled);
   });
 }
-
-

@@ -5,7 +5,7 @@ import '../models/grid_bot.dart';
 /// Ecran detalii bot (conform screenshot-ului Binance 2025)
 class GridBotDetailsScreen extends StatefulWidget {
   final GridBot bot;
-  
+
   const GridBotDetailsScreen({super.key, required this.bot});
 
   @override
@@ -17,7 +17,7 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
   Widget build(BuildContext context) {
     final bot = widget.bot;
     final stats = bot.stats;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalii bot'),
@@ -41,7 +41,8 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
             children: [
               Text(
                 bot.symbol,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: 12),
               _StatusChip(status: bot.status),
@@ -52,20 +53,22 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
             'Grilă Spot  ${bot.gridCount}',
             style: TextStyle(color: Colors.grey[400], fontSize: 14),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Profitability Card
           Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Profituri istorice', 
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const Text('Profituri istorice',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -73,14 +76,16 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
                         child: _StatTile(
                           label: 'ROI',
                           value: '${stats.roi.toStringAsFixed(2)} %',
-                          valueColor: stats.roi >= 0 ? Colors.green : Colors.red,
+                          valueColor:
+                              stats.roi >= 0 ? Colors.green : Colors.red,
                         ),
                       ),
                       Expanded(
                         child: _StatTile(
                           label: 'PNL (USD)',
                           value: '+\$${stats.pnlUsd.toStringAsFixed(2)}',
-                          valueColor: stats.pnlUsd >= 0 ? Colors.green : Colors.red,
+                          valueColor:
+                              stats.pnlUsd >= 0 ? Colors.green : Colors.red,
                         ),
                       ),
                     ],
@@ -95,25 +100,36 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Previzualizare bot Card
           Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Previzualizare bot',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
                   // Timeframe selector
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: ['4 h', '6 h', '8 h', '12 h', '1 z', '3 z', '1 s', '1 L']
+                    children: [
+                      '4 h',
+                      '6 h',
+                      '8 h',
+                      '12 h',
+                      '1 z',
+                      '3 z',
+                      '1 s',
+                      '1 L'
+                    ]
                         .map((tf) => _TimeframeChip(
                               label: tf,
                               selected: tf == '1 s',
@@ -127,9 +143,12 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _BollingerIndicator(label: 'BOLL:(20, 2)', value: ''),
-                      _BollingerIndicator(label: 'UP:', value: '0.2896', color: Colors.orange),
-                      _BollingerIndicator(label: 'MB:', value: '0.2302', color: Colors.yellow),
-                      _BollingerIndicator(label: 'DN:', value: '0.1707', color: Colors.blue),
+                      _BollingerIndicator(
+                          label: 'UP:', value: '0.2896', color: Colors.orange),
+                      _BollingerIndicator(
+                          label: 'MB:', value: '0.2302', color: Colors.yellow),
+                      _BollingerIndicator(
+                          label: 'DN:', value: '0.1707', color: Colors.blue),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -142,38 +161,52 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Informații de bază Card
           Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Informații de bază',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
-                  _InfoRow(label: 'Durată de executare', value: _formatDuration(stats.executionTime)),
-                  _InfoRow(label: '24H/Total tranzacții asociate', 
-                    value: '${stats.transactions24h}/${stats.totalTransactions}'),
-                  _InfoRow(label: 'Interval de preț (ETH)', 
-                    value: '${bot.minPrice.toStringAsFixed(4)} - ${bot.maxPrice.toStringAsFixed(4)}'),
-                  _InfoRow(label: 'Numărul de grile', value: '${bot.gridCount}'),
-                  _InfoRow(label: 'Mod', value: bot.stats.executionTime.inHours > 0 ? 'Geometric' : 'Arithmetic'),
-                  _InfoRow(label: 'Profit/grilă (taxe deduse)', 
-                    value: '${bot.profitPerGrid.toStringAsFixed(2)} %', 
-                    valueColor: Colors.green),
+                  _InfoRow(
+                      label: 'Durată de executare',
+                      value: _formatDuration(stats.executionTime)),
+                  _InfoRow(
+                      label: '24H/Total tranzacții asociate',
+                      value:
+                          '${stats.transactions24h}/${stats.totalTransactions}'),
+                  _InfoRow(
+                      label: 'Interval de preț (ETH)',
+                      value:
+                          '${bot.minPrice.toStringAsFixed(4)} - ${bot.maxPrice.toStringAsFixed(4)}'),
+                  _InfoRow(
+                      label: 'Numărul de grile', value: '${bot.gridCount}'),
+                  _InfoRow(
+                      label: 'Mod',
+                      value: bot.stats.executionTime.inHours > 0
+                          ? 'Geometric'
+                          : 'Arithmetic'),
+                  _InfoRow(
+                      label: 'Profit/grilă (taxe deduse)',
+                      value: '${bot.profitPerGrid.toStringAsFixed(2)} %',
+                      valueColor: Colors.green),
                 ],
               ),
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Action buttons
           Row(
             children: [
@@ -183,7 +216,9 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: Text(bot.status == GridBotStatus.running ? 'Pauză' : 'Reluare'),
+                  child: Text(bot.status == GridBotStatus.running
+                      ? 'Pauză'
+                      : 'Reluare'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -230,7 +265,10 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.green.withValues(alpha: 77), Colors.transparent],
+                colors: [
+                  Colors.green.withValues(alpha: 77),
+                  Colors.transparent
+                ],
               ),
             ),
           ),
@@ -295,7 +333,8 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
   }
 
   String _formatDuration(Duration d) {
-    if (d.inDays > 0) return '${d.inDays}z ${d.inHours % 24}h ${d.inMinutes % 60}m';
+    if (d.inDays > 0)
+      return '${d.inDays}z ${d.inHours % 24}h ${d.inMinutes % 60}m';
     if (d.inHours > 0) return '${d.inHours}h ${d.inMinutes % 60}m';
     return '${d.inMinutes}m';
   }
@@ -338,9 +377,9 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
   void _pauseBot(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(widget.bot.status == GridBotStatus.running 
-          ? 'Bot pus în pauză' 
-          : 'Bot reluat'),
+        content: Text(widget.bot.status == GridBotStatus.running
+            ? 'Bot pus în pauză'
+            : 'Bot reluat'),
       ),
     );
     // TODO: implement pause/resume logic
@@ -376,7 +415,7 @@ class _GridBotDetailsScreenState extends State<GridBotDetailsScreen> {
 
 class _StatusChip extends StatelessWidget {
   final GridBotStatus status;
-  
+
   const _StatusChip({required this.status});
 
   @override
@@ -397,7 +436,7 @@ class _StatusChip extends StatelessWidget {
         label = 'Oprit';
         break;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -407,7 +446,8 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -417,7 +457,7 @@ class _StatTile extends StatelessWidget {
   final String label;
   final String value;
   final Color? valueColor;
-  
+
   const _StatTile({
     required this.label,
     required this.value,
@@ -448,7 +488,7 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
   final Color? valueColor;
-  
+
   const _InfoRow({
     required this.label,
     required this.value,
@@ -480,7 +520,7 @@ class _TimeframeChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  
+
   const _TimeframeChip({
     required this.label,
     required this.selected,
@@ -494,7 +534,9 @@ class _TimeframeChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? Colors.amber.withValues(alpha: 77) : Colors.transparent,
+          color: selected
+              ? Colors.amber.withValues(alpha: 77)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: selected ? Colors.amber : Colors.grey.withValues(alpha: 77),
@@ -516,7 +558,7 @@ class _BollingerIndicator extends StatelessWidget {
   final String label;
   final String value;
   final Color? color;
-  
+
   const _BollingerIndicator({
     required this.label,
     required this.value,
@@ -541,6 +583,3 @@ class _BollingerIndicator extends StatelessWidget {
     );
   }
 }
-
-
-

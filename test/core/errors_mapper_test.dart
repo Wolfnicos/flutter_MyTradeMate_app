@@ -20,6 +20,3 @@ void main() {
     expect(e.type, AppErrorType.network);
   });
 }
-
-
-

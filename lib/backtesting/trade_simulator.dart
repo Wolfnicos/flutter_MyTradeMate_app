@@ -55,46 +55,53 @@ class TradeSimulator {
   }) {
     if (futureCandles.isEmpty) return 0.0;
     final fees = feeRate; // apply on exit only here
-    debugPrint('🎯 TRADE START: $action @ \$${entryPrice.toStringAsFixed(2)}, posVal=\$${positionValue.toStringAsFixed(2)}');
+    debugPrint(
+        '🎯 TRADE START: $action @ \$${entryPrice.toStringAsFixed(2)}, posVal=\$${positionValue.toStringAsFixed(2)}');
     for (int i = 0; i < futureCandles.length; i++) {
       final candle = futureCandles[i];
-      final highChange = (candle.high - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
-      final lowChange = (candle.low - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
+      final highChange =
+          (candle.high - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
+      final lowChange =
+          (candle.low - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
       if (action == 'BUY') {
         if (lowChange <= -stopLossPercent) {
           final loss = positionValue * stopLossPercent;
           final pnl = -loss - (positionValue * fees);
-          debugPrint('  ❌ SL HIT at candle $i: low=${(lowChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+          debugPrint(
+              '  ❌ SL HIT at candle $i: low=${(lowChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
           return pnl;
         }
         if (highChange >= takeProfitPercent) {
           final profit = positionValue * takeProfitPercent;
           final pnl = profit - (positionValue * fees);
-          debugPrint('  ✅ TP HIT at candle $i: high=${(highChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+          debugPrint(
+              '  ✅ TP HIT at candle $i: high=${(highChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
           return pnl;
         }
       } else if (action == 'SELL') {
         if (highChange >= stopLossPercent) {
           final loss = positionValue * stopLossPercent;
           final pnl = -loss - (positionValue * fees);
-          debugPrint('  ❌ SL HIT at candle $i: high=${(highChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+          debugPrint(
+              '  ❌ SL HIT at candle $i: high=${(highChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
           return pnl;
         }
         if (lowChange <= -takeProfitPercent) {
           final profit = positionValue * takeProfitPercent;
           final pnl = profit - (positionValue * fees);
-          debugPrint('  ✅ TP HIT at candle $i: low=${(lowChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+          debugPrint(
+              '  ✅ TP HIT at candle $i: low=${(lowChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
           return pnl;
         }
       }
     }
     final last = futureCandles.last.close;
-    final finalChange = (last - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
+    final finalChange =
+        (last - entryPrice) / (entryPrice == 0 ? 1 : entryPrice);
     final dir = (action == 'BUY') ? 1.0 : -1.0;
     final pnl = positionValue * (dir * finalChange) - (positionValue * fees);
-    debugPrint('  ⏰ TIME EXIT: priceChange=${(finalChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
+    debugPrint(
+        '  ⏰ TIME EXIT: priceChange=${(finalChange * 100).toStringAsFixed(2)}%, PnL=\$${pnl.toStringAsFixed(2)}');
     return pnl;
   }
 }
-
-

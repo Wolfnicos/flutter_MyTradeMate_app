@@ -38,6 +38,3 @@ void main() {
     expect(delta2, 0.0);
   });
 }
-
-
-

@@ -27,5 +27,3 @@ void main() {
 class IntelligentCacheManagerFake extends IntelligentCacheManager {
   IntelligentCacheManagerFake() : super(PredictionCache());
 }
-
-
