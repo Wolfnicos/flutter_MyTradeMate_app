@@ -210,18 +210,15 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                   if (p == null) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: SizedBox(
-                      height: 180,
-                      child: ProSignalPanel(
-                        action: AILocator.I.decide(p),
-                        confidence: p.confidence(),
-                        expReturn: p.expReturn,
-                        annVol: p.annVol,
-                        timeframe: AiConfig.kInterval,
-                        subtitle: p.reason == 'model_missing'
-                            ? 'Model missing for ${p.symbol}/${AiConfig.kInterval}'
-                            : null,
-                      ),
+                    child: ProSignalPanel(
+                      action: AILocator.I.decide(p),
+                      confidence: p.confidence(),
+                      expReturn: p.expReturn,
+                      annVol: p.annVol,
+                      timeframe: AiConfig.kInterval,
+                      subtitle: p.reason == 'model_missing'
+                          ? 'Model missing for ${p.symbol}/${AiConfig.kInterval}'
+                          : null,
                     ),
                   );
                 }(),

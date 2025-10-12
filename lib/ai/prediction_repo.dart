@@ -8,8 +8,9 @@ import '../services/ohlcv_service.dart';
 import '../services/symbol_mapper.dart';
 import 'strategies/hybrid_strategies.dart' as hs;
 import 'package:mytrademate/src/core/trading_prefs.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'predictors/vision_predictor.dart';
+import 'dart:math' as math;
+import '../vision/chart_capture_service.dart';
+import 'vision_predictor.dart';
 import 'ensemble/ensemble_voter.dart';
 
 /// PredictionRepo - Repository pattern pentru predicții AI
@@ -113,27 +114,34 @@ class PredictionRepo {
       // Optional: Vision vote (geometric mean) if enabled and prediction available
       if (AiConfig.useVisionVote) {
         try {
-          final vp = VisionPredictor();
-          final bytes = (await rootBundle.load('assets/images/chart_probe.png'))
-              .buffer
-              .asUint8List();
-          final vProbs =
-              await vp.predictChartImage(bytes); // [pBuy,pHold,pSell]
-          final tProbs = [prediction!.pBuy, prediction.pHold, prediction.pSell];
-          final voted = geometricVote(
-            timeSeriesProbs: tProbs,
-            visionProbs: vProbs,
-            visionWeight: AiConfig.visionWeight,
+          final cap = await ChartCaptureService.renderCandlesImage(candles: candles);
+          await VisionPredictor.I.ensureLoaded();
+          final vProbs = await VisionPredictor.I.predictProbsRGB(
+            rgbBytes: cap.bytes,
+            width: cap.width,
+            height: cap.height,
           );
+          final w = AiConfig.visionWeight.clamp(0.0, 1.0);
+          List<double> mix(List<double> a, List<double> b) {
+            final r = <double>[];
+            for (var i = 0; i < a.length; i++) {
+              final g = math.pow(a[i].clamp(1e-6, 1.0), (1.0 - w)) *
+                  math.pow(b[i].clamp(1e-6, 1.0), w);
+              r.add(g.toDouble());
+            }
+            final s = r.fold<double>(0.0, (p, c) => p + c);
+            return r.map((e) => e / (s == 0 ? 1.0 : s)).toList();
+          }
+          final tProbs = [prediction!.pBuy, prediction.pHold, prediction.pSell];
+          final probs = mix(tProbs, vProbs);
           // ignore: avoid_print
-          print(
-              '[Ensemble] probs: pBuy=${voted[0].toStringAsFixed(3)}, pHold=${voted[1].toStringAsFixed(3)}, pSell=${voted[2].toStringAsFixed(3)}  (visionWeight=${AiConfig.visionWeight})');
+          print('[Ensemble] probs: pBuy=${probs[0].toStringAsFixed(3)}, pHold=${probs[1].toStringAsFixed(3)}, pSell=${probs[2].toStringAsFixed(3)}  (visionWeight=${AiConfig.visionWeight})');
           prediction = Prediction(
             symbol: prediction.symbol,
             asOf: prediction.asOf,
-            pBuy: voted[0],
-            pHold: voted[1],
-            pSell: voted[2],
+            pBuy: probs[0],
+            pHold: probs[1],
+            pSell: probs[2],
             expReturn: prediction.expReturn,
             annVol: prediction.annVol,
             relVolume: prediction.relVolume,

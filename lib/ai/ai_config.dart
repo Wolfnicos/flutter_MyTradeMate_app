@@ -9,6 +9,10 @@ class AiConfig {
   static const double confThresh = 0.40; // 40% (more selective)
   static const double volCap =
       1.00; // 100% (relax cap to avoid over-filtering trades)
+  // Ensemble/decision thresholds (ensure these exist)
+  static const double probBuyThresh = 0.60;   // BUY if pBuy >= 0.60 (with gates)
+  static const double probSellThresh = 0.60;  // SELL if pSell >= 0.60 (with gates)
+  static const double minAbsRet = 0.0030;     // 0.30% minimum absolute expected return
 
   /// Additional global filters (optional usage by strategies/backtester)
   static const double minExpReturn = 0.015; // +1.5% minimum expected return
