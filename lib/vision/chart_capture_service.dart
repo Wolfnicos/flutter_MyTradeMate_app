@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:io' show File;
 import 'dart:ui' as ui;
 
 import 'package:mytrademate/ai/entities.dart';
@@ -13,15 +14,18 @@ class ChartCaptureService {
     int height = 200,
     bool drawEma9 = true,
     bool drawEma21 = true,
+    int upscaleFactor = 2,
   }) async {
     final int w = width;
     final int h = height;
+    final int hiW = w * upscaleFactor;
+    final int hiH = h * upscaleFactor;
     final ui.PictureRecorder recorder = ui.PictureRecorder();
-    final ui.Canvas canvas = ui.Canvas(recorder, ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
+    final ui.Canvas canvas = ui.Canvas(recorder, ui.Rect.fromLTWH(0, 0, hiW.toDouble(), hiH.toDouble()));
 
-    // Background (dark)
-    final ui.Paint bg = ui.Paint()..color = const ui.Color(0xFF0B0E14);
-    canvas.drawRect(ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), bg);
+    // Background (white) to match training/test rendering
+    final ui.Paint bg = ui.Paint()..color = const ui.Color(0xFFFFFFFF);
+    canvas.drawRect(ui.Rect.fromLTWH(0, 0, hiW.toDouble(), hiH.toDouble()), bg);
 
     if (candles.isEmpty) {
       final ui.Image img = await recorder.endRecording().toImage(w, h);
@@ -47,13 +51,13 @@ class ChartCaptureService {
     }
 
     // Paddings
-    const double leftPad = 8;
-    const double rightPad = 8;
-    const double topPad = 6;
-    const double bottomPad = 12;
+    final double leftPad = 8.0 * upscaleFactor;
+    final double rightPad = 8.0 * upscaleFactor;
+    final double topPad = 6.0 * upscaleFactor;
+    final double bottomPad = 12.0 * upscaleFactor;
 
-    final double plotW = w - leftPad - rightPad;
-    final double plotH = h - topPad - bottomPad;
+    final double plotW = hiW - leftPad - rightPad;
+    final double plotH = hiH - topPad - bottomPad;
 
     double yFor(double price) {
       final double t = (price - minP) / (maxP - minP);
@@ -65,15 +69,26 @@ class ChartCaptureService {
     final double step = n > 1 ? plotW / (n - 1) : plotW;
 
     // Candle paints
-    final ui.Paint upBody = ui.Paint()..color = const ui.Color(0xFF16C784);
-    final ui.Paint dnBody = ui.Paint()..color = const ui.Color(0xFFEA3943);
+    final ui.Paint upBody = ui.Paint()
+      ..color = const ui.Color(0xFF0DBA5E)
+      ..isAntiAlias = true;
+    final ui.Paint dnBody = ui.Paint()
+      ..color = const ui.Color(0xFFD73A49)
+      ..isAntiAlias = true;
     final ui.Paint wick = ui.Paint()
-      ..color = const ui.Color(0xFFE6E6E6)
-      ..strokeWidth = 1.0
-      ..style = ui.PaintingStyle.stroke;
+      ..color = const ui.Color(0xFF2B2B2B)
+      ..strokeWidth = (1.0 * upscaleFactor)
+      ..style = ui.PaintingStyle.stroke
+      ..isAntiAlias = true
+      ..strokeCap = ui.StrokeCap.round;
+    final ui.Paint bodyOutline = ui.Paint()
+      ..color = const ui.Color(0xFF000000).withOpacity(0.08)
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = (0.75 * upscaleFactor)
+      ..isAntiAlias = true;
 
     // Draw wicks and bodies
-    final double bodyWidth = math.max(1.0, step * 0.5);
+    final double bodyWidth = math.max(1.0 * upscaleFactor, step * 0.6);
     for (int i = 0; i < n; i++) {
       final Candle c = seq[i];
       final double x = leftPad + i * step;
@@ -85,8 +100,9 @@ class ChartCaptureService {
       final double yClose = yFor(c.close);
       final double top = up ? yClose : yOpen;
       final double bottom = up ? yOpen : yClose;
-      final ui.Rect r = ui.Rect.fromCenter(center: ui.Offset(x, (top + bottom) * 0.5), width: bodyWidth, height: (bottom - top).abs() + 1.0);
+      final ui.Rect r = ui.Rect.fromCenter(center: ui.Offset(x, (top + bottom) * 0.5), width: bodyWidth, height: (bottom - top).abs() + 1.0 * upscaleFactor);
       canvas.drawRect(r, up ? upBody : dnBody);
+      canvas.drawRect(r, bodyOutline);
     }
 
     // Optional EMA lines
@@ -109,22 +125,51 @@ class ChartCaptureService {
       }
       final ui.Paint p = ui.Paint()
         ..color = color
-        ..strokeWidth = 1.5
+        ..strokeWidth = (2.0 * upscaleFactor)
         ..style = ui.PaintingStyle.stroke
-        ..isAntiAlias = true;
+        ..isAntiAlias = true
+        ..strokeCap = ui.StrokeCap.round;
       canvas.drawPath(path, p);
     }
 
     if (ema21 != null) drawLine(ema21, const ui.Color(0xFF4DA3FF));
     if (ema9 != null) drawLine(ema9, const ui.Color(0xFFFFC857));
 
-    final ui.Image image = await recorder.endRecording().toImage(w, h);
+    // Supersample downscale for clarity
+    final ui.Image hiImage = await recorder.endRecording().toImage(hiW, hiH);
+    final ui.PictureRecorder downRec = ui.PictureRecorder();
+    final ui.Canvas downCanvas = ui.Canvas(downRec, ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
+    final ui.Paint downPaint = ui.Paint()
+      ..isAntiAlias = true
+      ..filterQuality = ui.FilterQuality.high;
+    downCanvas.drawImageRect(
+      hiImage,
+      ui.Rect.fromLTWH(0, 0, hiW.toDouble(), hiH.toDouble()),
+      ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
+      downPaint,
+    );
+    final ui.Image image = await downRec.endRecording().toImage(w, h);
     final ByteData? bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
     final Uint8List rgba = bytes!.buffer.asUint8List();
     final Uint8List rgb = _rgbaToRgb(rgba);
 
     // ignore: avoid_print
-    print('[Vision-Capture] rendered ${w}x${h}');
+    print('[Vision-Capture] rendered ${w}x${h} (upscale=$upscaleFactor)');
+
+    // Optionally persist some images for debugging (10% chance), debug builds only
+    assert(() {
+      final r = math.Random();
+      if (r.nextDouble() < 0.10) {
+        try {
+          final ts = DateTime.now().millisecondsSinceEpoch;
+          final path = '/tmp/debug_chart_$ts.rgb';
+          File(path).writeAsBytesSync(rgb, flush: true);
+          // ignore: avoid_print
+          print('[Vision-Capture] saved debug RGB to $path');
+        } catch (_) {}
+      }
+      return true;
+    }());
     return (bytes: rgb, width: w, height: h);
   }
 

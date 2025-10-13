@@ -1,8 +1,12 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/widgets.dart';
 import 'package:mytrademate/ai/entities.dart';
 import 'package:mytrademate/ai/signal_engine.dart';
 import 'package:mytrademate/ai/backtest/backtester.dart';
+import 'package:mytrademate/ai/ai_locator.dart';
+import 'package:mytrademate/ai/prediction_repo.dart';
+import 'package:mytrademate/services/ohlcv_service.dart';
 
 /// Standalone script pentru a rula backtest și a genera raport
 void main(List<String> args) async {
@@ -12,13 +16,36 @@ void main(List<String> args) async {
   final symbol = args.isNotEmpty ? args[0] : 'BTCUSDT';
   final days = args.length > 1 ? int.tryParse(args[1]) ?? 30 : 30;
   final capital = args.length > 2 ? double.tryParse(args[2]) ?? 10000 : 10000.0;
+  final useNewTs = args.contains('--new-ts');
 
   print('Symbol: $symbol');
   print('Period: $days days');
   print('Initial Capital: \$${capital.toStringAsFixed(2)}');
   print('');
 
-  // Create SignalEngine with all models
+  if (useNewTs) {
+    // New TS+Vision ensemble quick run (snapshot style)
+    WidgetsFlutterBinding.ensureInitialized();
+    await AILocator.I.init();
+    final ohlcv = await OHLCVService.createFromPrefs();
+    final repo = PredictionRepo(ohlcv);
+
+    print('🔬 New TS+Vision (ensemble, multi-TF) snapshot...');
+    final pred = await repo.getFor(symbol);
+    if (pred == null) {
+      print('❌ No prediction available');
+      exit(1);
+    }
+    final action = AILocator.I.decide(pred);
+    final conf = (pred.confidence() * 100).toStringAsFixed(1);
+    final ret = (pred.expReturn * 100).toStringAsFixed(2);
+    final vol = (pred.annVol * 100).toStringAsFixed(1);
+    print('🤖 Ensemble ➜ $symbol: action=$action conf=$conf% ret=$ret% vol=$vol%');
+    print('Done.');
+    return;
+  }
+
+  // Legacy full-engine backtest
   final engine = SignalEngine.full(
     settings: const StrategySettings(
       upThresh: 0.003,
@@ -30,7 +57,7 @@ void main(List<String> args) async {
     ),
   );
 
-  final backtester = Backtester(engine, engine.settings);
+  final backtester = Backtester(engine: engine, ohlcv: await OHLCVService.createFromPrefs());
 
   // Load or generate demo data
   print('📊 Loading historical data...');
@@ -47,10 +74,11 @@ void main(List<String> args) async {
   // Run backtest
   print('🤖 Running backtest...');
   final result = await backtester.run(
-    symbol,
-    data,
-    initial: capital,
-    position: 0.1, // 10% per trade
+    symbol: symbol,
+    interval: '1h',
+    initialCapital: capital,
+    preloaded: data,
+    positionSize: 0.1,
   );
 
   // Display results

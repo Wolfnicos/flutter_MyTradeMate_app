@@ -70,6 +70,10 @@ class Backtester {
     double entryPrice = 0.0;
     double totalFees = 0.0;
 
+    // Circuit breaker state
+    int consecutiveLosses = 0;
+    DateTime? pauseUntil;
+
     int trades = 0;
     int wins = 0;
     int losses = 0;
@@ -88,6 +92,18 @@ class Backtester {
     for (int i = window; i < candles.length; i++) {
       final look = candles.sublist(i - window, i);
       final close = candles[i].close;
+      final nowT = candles[i].time;
+
+      // Circuit breaker: pause opening new positions while active
+      if (pauseUntil != null && nowT.isBefore(pauseUntil!) && positionQty == 0.0) {
+        final curEquity = capital + positionQty * close;
+        times.add(candles[i].time);
+        equity.add(curEquity);
+        if (kDebugMode) {
+          debugPrint('⛔ CircuitBreaker active until $pauseUntil — skipping new entries');
+        }
+        continue;
+      }
 
       try {
         String action;
@@ -233,9 +249,18 @@ class Backtester {
           if (pnl > 0) {
             wins++;
             totalWin += pnl;
+            consecutiveLosses = 0;
           } else {
             losses++;
             totalLoss += -pnl;
+            consecutiveLosses++;
+            if (consecutiveLosses > 3) {
+              pauseUntil = nowT.add(const Duration(hours: 1));
+              if (kDebugMode) {
+                debugPrint('⛔ CircuitBreaker triggered: $consecutiveLosses consecutive losses → pause until $pauseUntil');
+              }
+              consecutiveLosses = 0; // reset after triggering
+            }
           }
           positionQty = 0.0;
           tradeLog.add(TradeRecord(

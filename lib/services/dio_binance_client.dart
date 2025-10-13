@@ -10,6 +10,7 @@ import 'package:mytrademate/src/core/trading_prefs.dart'
     show TradeEnv, TradingPrefs;
 import 'package:mytrademate/core/errors.dart';
 import 'package:mytrademate/services/price_cache.dart';
+import 'package:mytrademate/services/rate_limiter.dart';
 
 class DioBinanceClient {
   final Dio _dio;
@@ -17,6 +18,7 @@ class DioBinanceClient {
   final String? secretKey;
   final TradeEnv env;
   final PriceCache? priceCache;
+  final RateLimiter _rateLimiter = RateLimiter(maxRequests: 1200, window: const Duration(minutes: 1));
 
   DioBinanceClient({
     required this.env,
@@ -170,6 +172,7 @@ class DioBinanceClient {
     bool signed = false,
   }) async {
     try {
+      await _rateLimiter.acquire();
       final qp = <String, dynamic>{...?query};
       if (signed) {
         if (secretKey == null || secretKey!.isEmpty) {
@@ -198,6 +201,7 @@ class DioBinanceClient {
     bool signed = false,
   }) async {
     try {
+      await _rateLimiter.acquire();
       final qp = <String, dynamic>{...?query};
       if (signed) {
         if (secretKey == null || secretKey!.isEmpty) {
@@ -227,6 +231,7 @@ class DioBinanceClient {
     bool signed = false,
   }) async {
     try {
+      await _rateLimiter.acquire();
       final qp = <String, dynamic>{...?query};
       if (signed) {
         if (secretKey == null || secretKey!.isEmpty) {

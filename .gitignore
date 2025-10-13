@@ -62,3 +62,12 @@ app.*.map.json
 /macos/Flutter/Flutter.podspec
 /macos/ServiceDefinitions.json
 /macos/Runner/GeneratedPluginRegistrant.*
+
+# Python virtual environments and artifacts
+.venv/
+venv/
+env/
+*.pkl
+*.ipynb
+**/__pycache__/
+ai/**/outputs/

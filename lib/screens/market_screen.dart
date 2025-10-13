@@ -4,6 +4,7 @@ import 'package:mytrademate/services/price_stream_manager.dart';
 import 'market_details_screen.dart';
 import '../services/dio_binance_client.dart' as api;
 import '../widgets/premium_widgets.dart';
+import 'widgets/asset_tile.dart';
 
 class MarketScreen extends StatefulWidget {
   const MarketScreen({super.key});
@@ -116,13 +117,14 @@ class _MarketScreenState extends State<MarketScreen> {
             final c = _coins[index];
             final price = _lastPrice[c.symbol] ?? 0.0;
             final ch = _chg[c.symbol] ?? 0.0;
-            return AssetListTile(
-              symbol: '${c.label}/USDT',
-              name: c.symbol,
-              price: price,
-              changePercent: ch,
-              icon: Text(c.label.substring(0, 1),
-                  style: const TextStyle(color: kText)),
+            final changeStr =
+                '${ch >= 0 ? '+' : ''}${ch.toStringAsFixed(3)}%';
+            return AssetTile(
+              symbol: c.symbol,
+              name: c.label,
+              price: price == 0.0 ? '0.00' : price.toStringAsFixed(2),
+              change: changeStr,
+              isUp: ch >= 0,
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(

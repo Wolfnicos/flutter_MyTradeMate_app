@@ -108,6 +108,7 @@ class IntelligentCacheManager {
     required double annVol,
   }) {
     final key = _key(symbol, lastCandleTime);
+    // Use underlying cache with timeframe-aware TTL (best effort: use engine interval on prediction.asOf context)
     _cache.put(symbol, lastCandleTime, prediction);
     _meta[key] = _Meta(
       timestamp: _now(),

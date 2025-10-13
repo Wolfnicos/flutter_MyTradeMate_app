@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:mytrademate/services/symbol_mapper.dart';
 import 'ai_config.dart';
 
 /// Candle (OHLCV) - unitatea de bază pentru date de piață
@@ -71,6 +72,9 @@ class Prediction {
   final double annVol; // Volatilitate anualizată (0.65 = 65%)
   final double relVolume; // Volum relativ vs SMA20
   final String? reason; // Optional machine reason (e.g., 'model_missing')
+  // Optional per-model probabilities for UI/diagnostics
+  final List<double>? tsProbs; // [pBuy, pHold, pSell] after TF voting
+  final List<double>? visionProbs; // [pBuy, pHold, pSell] from Vision
 
   const Prediction({
     required this.symbol,
@@ -82,6 +86,8 @@ class Prediction {
     required this.annVol,
     required this.relVolume,
     this.reason,
+    this.tsProbs,
+    this.visionProbs,
   });
 
   /// Action determinat din probabilități (multiclass softmax)
@@ -94,9 +100,21 @@ class Prediction {
   /// Confidence score calibrat cu volatilitate
   double confidence({double volCap = 0.85}) {
     final maxProb = [pBuy, pHold, pSell].reduce((a, b) => a > b ? a : b);
-    final volPenalty = (1.0 - min(1.0, annVol / volCap)).clamp(0.0, 1.0);
+    final symBase = SymbolMapper.getBase(symbol);
+    final categoryCap = _volCapForSymbol(symBase, defaultCap: volCap);
+    final volPenalty = max(0.2, 1.0 - min(1.0, annVol / categoryCap));
     final volumeBoost = min(1.2, max(0.8, relVolume)); // Boost dacă volum mare
     return (maxProb * volPenalty * (volumeBoost / 1.2)).clamp(0.0, 1.0);
+  }
+
+  double _volCapForSymbol(String base, {double defaultCap = 0.85}) {
+    const majors = {'BTC', 'ETH'};
+    const alts = {'BNB', 'ADA', 'XRP', 'SOL', 'DOT', 'LTC', 'MATIC', 'DOGE'};
+    const memes = {'WLFI', 'TRUMP', 'PEPE', 'SHIB'};
+    if (majors.contains(base)) return 1.0; // 100%
+    if (memes.contains(base)) return 2.5; // 250%
+    if (alts.contains(base)) return 1.5; // 150%
+    return defaultCap;
   }
 
   /// Target price bazat pe expected return
@@ -106,6 +124,19 @@ class Prediction {
   double get confidencePercent => confidence() * 100.0;
   double get expReturnPercent => expReturn * 100.0;
   double get annVolPercent => annVol * 100.0;
+
+  double? get tsConfidence => _confidenceFrom(tsProbs);
+  double? get visionConfidence => _confidenceFrom(visionProbs);
+
+  double? _confidenceFrom(List<double>? probs) {
+    if (probs == null || probs.length != 3) return null;
+    final maxProb = probs.reduce((a, b) => a > b ? a : b);
+    final symBase = SymbolMapper.getBase(symbol);
+    final categoryCap = _volCapForSymbol(symBase, defaultCap: 0.85);
+    final volPenalty = max(0.2, 1.0 - min(1.0, annVol / categoryCap));
+    final volumeBoost = min(1.2, max(0.8, relVolume));
+    return (maxProb * volPenalty * (volumeBoost / 1.2)).clamp(0.0, 1.0);
+  }
 
   Map<String, dynamic> toJson() => {
         'symbol': symbol,

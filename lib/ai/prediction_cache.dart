@@ -6,11 +6,12 @@ import 'ai_config.dart';
 class _CacheEntry {
   final Prediction prediction;
   final DateTime timestamp;
+  final Duration ttl;
 
-  _CacheEntry(this.prediction, this.timestamp);
+  _CacheEntry(this.prediction, this.timestamp, this.ttl);
 
   bool isExpired() {
-    return DateTime.now().difference(timestamp) > AiConfig.cacheTtl;
+    return DateTime.now().difference(timestamp) > ttl;
   }
 }
 
@@ -41,9 +42,10 @@ class PredictionCache {
   }
 
   /// Put prediction în cache
-  void put(String symbol, DateTime lastCandleTime, Prediction prediction) {
+  void put(String symbol, DateTime lastCandleTime, Prediction prediction, {String timeframe = '5m'}) {
     final key = _buildKey(symbol, lastCandleTime);
-    _cache[key] = _CacheEntry(prediction, DateTime.now());
+    final ttl = _ttlFor(timeframe);
+    _cache[key] = _CacheEntry(prediction, DateTime.now(), ttl);
 
     if (AiConfig.kDebugMode) {
       debugPrint('💾 Cache STORED for $symbol');
@@ -64,6 +66,23 @@ class PredictionCache {
   /// Build cache key
   String _buildKey(String symbol, DateTime lastCandleTime) {
     return '$symbol:${lastCandleTime.millisecondsSinceEpoch}';
+  }
+
+  Duration _ttlFor(String tf) {
+    switch (tf) {
+      case '5m':
+        return const Duration(seconds: 30);
+      case '15m':
+        return const Duration(minutes: 2);
+      case '1h':
+        return const Duration(minutes: 10);
+      case '4h':
+        return const Duration(minutes: 30);
+      case '1d':
+        return const Duration(hours: 2);
+      default:
+        return const Duration(seconds: 30);
+    }
   }
 
   /// Get cache stats (pentru debugging)

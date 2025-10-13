@@ -101,4 +101,19 @@ class RiskManager {
 
     return null; // allowed
   }
+
+  // Advanced position sizing: volatility- and confidence-adjusted
+  double calculatePositionSize({
+    required double portfolioValue,
+    required double volatility, // annVol fraction e.g. 0.15 = 15%
+    required double confidencePercent, // 0..100
+    double maxPositionFraction = 0.05, // 5% default cap
+  }) {
+    final maxPos = portfolioValue * maxPositionFraction;
+    // Normalize volatility to 15% target (avoid div by zero)
+    final volNorm = (volatility <= 0) ? 0.15 : volatility;
+    final volAdjusted = maxPos / (volNorm / 0.15);
+    final confAdjusted = volAdjusted * (confidencePercent / 100.0);
+    return confAdjusted > maxPos ? maxPos : (confAdjusted < 0 ? 0.0 : confAdjusted);
+  }
 }

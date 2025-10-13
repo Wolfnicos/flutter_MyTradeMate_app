@@ -4,6 +4,7 @@ import 'package:tflite_flutter/tflite_flutter.dart' as tfl;
 import '../ai_predictor.dart';
 import '../entities.dart';
 import '../norm_loader.dart';
+import '../ai_config.dart';
 
 /// Time-series predictor backed by TFLite models per SYMBOL/TF.
 /// Model path pattern: assets/models/patchtst_<SYMBOL>_<TF>_fp16.tflite
@@ -123,9 +124,7 @@ class TimeSeriesTflitePredictor implements AiPredictor {
       final outT = interp.getOutputTensors();
       if (outT.isNotEmpty) {
         final shape = outT.first.shape;
-        if (shape.isNotEmpty) {
-          nOut = shape.last;
-        }
+        if (shape.isNotEmpty) nOut = shape.last;
       }
     } catch (_) {}
 
@@ -148,51 +147,57 @@ class TimeSeriesTflitePredictor implements AiPredictor {
       );
     }
 
-    final o = outputs[0];
+    final o = outputs[0] as List;
     try {
       // ignore: avoid_print
-      print('[TS-OUT] head0 first6: ${(o as List).take(6).toList()}');
+      print('[TS-OUT] head0 first6: ${o.take(6).toList()}');
     } catch (_) {}
 
-    // Robust mapping of outputs (3 or 5 values)
-    double pBuy, pHold, pSell, expRet = 0.0, annVol = 0.0;
-    if (o.length >= 5) {
-      pBuy = _clamp01((o[0] as num).toDouble());
-      pHold = _clamp01((o[1] as num).toDouble());
-      pSell = _clamp01((o[2] as num).toDouble());
-      expRet = (o[3] as num).toDouble();
-      annVol = (o[4] as num).toDouble().abs();
-    } else if (o.length >= 3) {
-      pBuy = _clamp01((o[0] as num).toDouble());
-      pHold = _clamp01((o[1] as num).toDouble());
-      pSell = _clamp01((o[2] as num).toDouble());
-    } else {
-      return Prediction(
-        symbol: symbol.toUpperCase(),
-        asOf: window.last.time,
-        pBuy: 0.0,
-        pHold: 1.0,
-        pSell: 0.0,
-        expReturn: 0.0,
-        annVol: 0.0,
-        relVolume: 1.0,
-        reason: 'bad_output',
-      );
+    // Strict mapping [pBuy,pHold,pSell,(ret),(vol)]
+    double pBuy = _clamp01((o.isNotEmpty ? (o[0] as num?)?.toDouble() : 0.0) ?? 0.0);
+    double pHold = _clamp01((o.length > 1 ? (o[1] as num?)?.toDouble() : 0.0) ?? 0.0);
+    double pSell = _clamp01((o.length > 2 ? (o[2] as num?)?.toDouble() : 0.0) ?? 0.0);
+
+    // Softmax if not normalized
+    final sum0 = pBuy + pHold + pSell;
+    if (sum0 <= 0.0 || (sum0 - 1.0).abs() > 1e-3) {
+      final mx = [pBuy, pHold, pSell].reduce((a, b) => a > b ? a : b);
+      final exps = [math.exp(pBuy - mx), math.exp(pHold - mx), math.exp(pSell - mx)];
+      final s = exps[0] + exps[1] + exps[2];
+      pBuy = exps[0] / (s == 0 ? 1.0 : s);
+      pHold = exps[1] / (s == 0 ? 1.0 : s);
+      pSell = exps[2] / (s == 0 ? 1.0 : s);
+    }
+    // Ensure HOLD not zero if missing
+    if (pHold == 0.0) {
+      final rem = 1.0 - (pBuy + pSell);
+      pHold = rem.clamp(0.0, 1.0);
     }
 
-    // Optional softmax if not normalized
-    final sum = pBuy + pHold + pSell;
-    if (sum <= 0.0 || sum > 1.5) {
-      final mx = [pBuy, pHold, pSell].reduce((a, b) => a > b ? a : b);
-      final exps = [
-        math.exp(pBuy - mx),
-        math.exp(pHold - mx),
-        math.exp(pSell - mx),
-      ];
-      final s = exps[0] + exps[1] + exps[2];
-      pBuy = exps[0] / s;
-      pHold = exps[1] / s;
-      pSell = exps[2] / s;
+    double expRet = 0.0;
+    double annVol = 0.0;
+    if (o.length >= 5) {
+      expRet = (o[3] as num).toDouble();
+      annVol = (o[4] as num).toDouble().abs();
+    } else {
+      // Fallbacks: expRet via (pBuy - pSell), annVol via ret_1 std annualized
+      expRet = (pBuy - pSell) * AiConfig.retScaleFallback;
+      // compute std of last N ret_1 from aligned
+      final returns = <double>[];
+      for (int t = 1; t < aligned.length; t++) {
+        final prev = aligned[t - 1][featureOrder.indexOf('close')];
+        final curr = aligned[t][featureOrder.indexOf('close')];
+        final r = prev == 0 ? 0.0 : (curr / prev - 1.0);
+        returns.add(r);
+      }
+      double mean = returns.isEmpty ? 0.0 : returns.reduce((a, b) => a + b) / returns.length;
+      double variance = 0.0;
+      for (final r in returns) {
+        variance += (r - mean) * (r - mean);
+      }
+      variance = returns.isEmpty ? 0.0 : variance / returns.length;
+      final std = math.sqrt(variance);
+      annVol = (std * math.sqrt(365.0 * (1440.0 / 5.0))).clamp(0.0, 2.0); // rough annualization for 5m
     }
 
     // Placeholder proxies for UI metrics until heads are fully wired

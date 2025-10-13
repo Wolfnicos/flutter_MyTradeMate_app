@@ -24,6 +24,7 @@ class PredictionRepo {
   final PredictionCache _cache = PredictionCache();
   late final IntelligentCacheManager _smartCache;
   final Map<String, String> _hybridAction = {};
+  final Map<String, List<double>> _lastVisionProbs = {};
 
   PredictionRepo(this.ohlcvService) {
     _smartCache = IntelligentCacheManager(_cache);
@@ -96,20 +97,60 @@ class PredictionRepo {
         return smart;
       }
 
-      // Predict cu AI engine (direct access)
-      // If engine supports timeframe override, set before predict (PatchTstEngine)
-      try {
-        // ignore: avoid_dynamic_calls
-        (AILocator.I.engine as dynamic).setTimeframe?.call(AiConfig.kInterval);
-      } catch (_) {}
-      var prediction = await AILocator.I.engine.predict(feedSymbol, candles);
-
-      if (prediction == null) {
-        if (AiConfig.kDebugMode) {
-          debugPrint('⚠️ Prediction failed for $uiSymbol');
-        }
+      // Multi-timeframe TS predictions + weighted geometric mean across TFs
+      final Map<String, List<double>> tfProbs = {};
+      Prediction? primaryPred;
+      final Map<String, Prediction> tfPreds = {};
+      for (final tf in AiConfig.enabledTimeframes) {
+        try {
+          final tfCandles = tf == AiConfig.kInterval
+              ? candles
+              : await ohlcvService.fetchCandles(feedSymbol, interval: tf, limit: AiConfig.kWindow, forceQuote: true);
+          if (tfCandles.length < AiConfig.kWindow) continue;
+          try {
+            // ignore: avoid_dynamic_calls
+            (AILocator.I.engine as dynamic).setTimeframe?.call(tf);
+          } catch (_) {}
+          final p = await AILocator.I.engine.predict(feedSymbol, tfCandles);
+          if (p == null) continue;
+          if (tf == AiConfig.kInterval) primaryPred = p;
+          tfProbs[tf] = [p.pBuy, p.pHold, p.pSell];
+          tfPreds[tf] = p;
+        } catch (_) {}
+      }
+      if (tfProbs.isEmpty || primaryPred == null) {
+        if (AiConfig.kDebugMode) debugPrint('⚠️ TS predictions missing for $uiSymbol');
         return null;
       }
+      // Weighted geometric mean across TFs
+      List<double> tfVote(List<double> a, List<double> b, double wa, double wb) {
+        final r = <double>[];
+        for (int i = 0; i < a.length; i++) {
+          final v = math.pow(a[i].clamp(1e-6, 1.0), wa) * math.pow(b[i].clamp(1e-6, 1.0), wb);
+          r.add(v.toDouble());
+        }
+        final s = r.fold<double>(0.0, (p, c) => p + c);
+        return r.map((e) => e / (s == 0 ? 1.0 : s)).toList();
+      }
+      List<double>? agg;
+      // Sort TFs in a stable order based on weights (desc)
+      final entries = tfProbs.entries.toList()
+        ..sort((a, b) => (AiConfig.tfWeights[b.key] ?? 1.0).compareTo(AiConfig.tfWeights[a.key] ?? 1.0));
+      for (final e in entries) {
+        final w = AiConfig.tfWeights[e.key] ?? 1.0;
+        if (agg == null) {
+          // start with current tf raised to its weight
+          final base = e.value.map((x) => math.pow(x.clamp(1e-6, 1.0), w).toDouble()).toList();
+          final sum = base.fold<double>(0.0, (p, c) => p + c);
+          agg = base.map((v) => v / (sum == 0 ? 1.0 : sum)).toList();
+        } else {
+          agg = tfVote(agg!, e.value, 1.0, w);
+        }
+      }
+      if (AiConfig.kDebugMode) {
+        debugPrint('[TF-Vote] $feedSymbol probs per TF: ${tfProbs.map((k,v)=>MapEntry(k, v.map((e)=>e.toStringAsFixed(3)).toList()))}');
+      }
+      var finalProbs = agg!;
 
       // Optional: Vision vote (geometric mean) if enabled and prediction available
       if (AiConfig.useVisionVote) {
@@ -121,7 +162,28 @@ class PredictionRepo {
             width: cap.width,
             height: cap.height,
           );
-          final w = AiConfig.visionWeight.clamp(0.0, 1.0);
+          // Guard: ignore Vision if output has too little diversity
+          final maxP = vProbs.reduce((a,b)=> a>b? a:b);
+          final minP = vProbs.reduce((a,b)=> a<b? a:b);
+          final meanP = (vProbs[0]+vProbs[1]+vProbs[2]) / 3.0;
+          double variance = 0.0; for (final p in vProbs) { variance += (p-meanP)*(p-meanP); }
+          variance /= 3.0;
+          double localW = AiConfig.visionWeight.clamp(0.0, 1.0);
+          bool lowDiversityWithinVector = (variance < 1e-3) || ((maxP - minP) < 0.02);
+          // Temporal diversity guard: compare with last vProbs for this symbol
+          final last = _lastVisionProbs[feedSymbol];
+          bool lowChangeSinceLast = false;
+          if (last != null && last.length == vProbs.length) {
+            double diffSum = 0.0; for (int i = 0; i < vProbs.length; i++) { diffSum += (vProbs[i] - last[i]).abs(); }
+            lowChangeSinceLast = diffSum < 0.01; // ~1% total change across classes
+          }
+          if (lowDiversityWithinVector || lowChangeSinceLast) {
+            if (AiConfig.kDebugMode) {
+              debugPrint('[Vision-Guard] Ignoring Vision (var=${variance.toStringAsFixed(4)}, range=${(maxP-minP).toStringAsFixed(3)}, Δprev=${lowChangeSinceLast ? 'low' : 'ok'})');
+            }
+            localW = 0.0;
+          }
+          final w = localW;
           List<double> mix(List<double> a, List<double> b) {
             final r = <double>[];
             for (var i = 0; i < a.length; i++) {
@@ -132,30 +194,46 @@ class PredictionRepo {
             final s = r.fold<double>(0.0, (p, c) => p + c);
             return r.map((e) => e / (s == 0 ? 1.0 : s)).toList();
           }
-          final tProbs = [prediction!.pBuy, prediction.pHold, prediction.pSell];
-          final probs = mix(tProbs, vProbs);
+          final probs = mix(finalProbs, vProbs);
           // ignore: avoid_print
-          print('[Ensemble] probs: pBuy=${probs[0].toStringAsFixed(3)}, pHold=${probs[1].toStringAsFixed(3)}, pSell=${probs[2].toStringAsFixed(3)}  (visionWeight=${AiConfig.visionWeight})');
-          prediction = Prediction(
-            symbol: prediction.symbol,
-            asOf: prediction.asOf,
-            pBuy: probs[0],
-            pHold: probs[1],
-            pSell: probs[2],
-            expReturn: prediction.expReturn,
-            annVol: prediction.annVol,
-            relVolume: prediction.relVolume,
-          );
+          print('[Ensemble] probs: pBuy=${probs[0].toStringAsFixed(3)}, pHold=${probs[1].toStringAsFixed(3)}, pSell=${probs[2].toStringAsFixed(3)}  (visionWeight=$w)');
+          finalProbs = probs;
+          _lastVisionProbs[feedSymbol] = vProbs;
         } catch (_) {
           // best-effort only
         }
       }
 
+      // Build final prediction using primary TF expReturn/annVol and ensemble probs
+      // Weighted metrics across TFs (for confidence variability)
+      double wSum = 0.0, retSum = 0.0, volSum = 0.0;
+      tfPreds.forEach((tf, p) {
+        final w = AiConfig.tfWeights[tf] ?? 1.0;
+        wSum += w;
+        retSum += w * p.expReturn;
+        volSum += w * p.annVol;
+      });
+      final expRetW = wSum == 0 ? primaryPred!.expReturn : (retSum / wSum);
+      final annVolW = wSum == 0 ? primaryPred!.annVol : (volSum / wSum);
+
+      var prediction = Prediction(
+        symbol: primaryPred!.symbol,
+        asOf: primaryPred.asOf,
+        pBuy: finalProbs[0],
+        pHold: finalProbs[1],
+        pSell: finalProbs[2],
+        expReturn: expRetW,
+        annVol: annVolW,
+        relVolume: primaryPred.relVolume,
+        tsProbs: agg,
+        visionProbs: AiConfig.useVisionVote ? _lastVisionProbs[feedSymbol] : null,
+      );
+
       // Cache result + smart metadata (needs annVol + volumes)
       _smartCache.put(
         feedSymbol,
         lastCandleTime,
-        prediction!,
+        prediction,
         baseClose: latestClose,
         avgVolume: avgVolume,
         latestVolume: latestVolume,
@@ -225,7 +303,7 @@ class PredictionRepo {
 
       // Single consolidated log per symbol
       final action = AILocator.I.decide(prediction);
-      final conf = (prediction!.confidence() * 100).toStringAsFixed(1);
+      final conf = (prediction.confidence() * 100).toStringAsFixed(1);
       final ret = (prediction.expReturn * 100).toStringAsFixed(2);
       final vol = (prediction.annVol * 100).toStringAsFixed(1);
 

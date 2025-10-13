@@ -4,6 +4,7 @@ import '../services/ohlcv_service.dart';
 import '../ai/ai_locator.dart';
 import '../ai/entities.dart' as ai;
 import 'widgets/ai_status_card.dart';
+import 'ai_helper_screen.dart';
 import 'backtest_screen.dart';
 import 'strategy_settings_screen.dart';
 import 'ai_signal_detail_screen.dart';
@@ -146,43 +147,35 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Warning Banner
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.orange.shade900, Colors.red.shade900],
-                  ),
-                  border: Border.all(color: Colors.orange, width: 2),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning_amber,
-                        color: Colors.white, size: 32),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '⚠️ DEMO MODE - ANALYSIS ONLY',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'AI signals are for informational purposes. Current win rate: 30%. Do NOT use for automated trading.',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 13),
-                          ),
-                        ],
+              // Move AI Trading Assistant (LIVE) here
+              Center(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AIHelperScreen(),
                       ),
+                    );
+                  },
+                  icon: const Icon(Icons.psychology, color: Colors.white),
+                  label: const Text(
+                    'AI Trading Assistant (LIVE)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

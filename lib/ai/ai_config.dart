@@ -9,10 +9,7 @@ class AiConfig {
   static const double confThresh = 0.40; // 40% (more selective)
   static const double volCap =
       1.00; // 100% (relax cap to avoid over-filtering trades)
-  // Ensemble/decision thresholds (ensure these exist)
-  static const double probBuyThresh = 0.60;   // BUY if pBuy >= 0.60 (with gates)
-  static const double probSellThresh = 0.60;  // SELL if pSell >= 0.60 (with gates)
-  static const double minAbsRet = 0.0030;     // 0.30% minimum absolute expected return
+  
 
   /// Additional global filters (optional usage by strategies/backtester)
   static const double minExpReturn = 0.015; // +1.5% minimum expected return
@@ -37,13 +34,30 @@ class AiConfig {
   static const double maxFloatDrift = 1e-6; // FP16→F32 tolerance
 
   /// Model revision (for observability)
-  static const String modelRev = "r1";
+  static const String modelRev = 'r1';
 
-  /// Feature flags (runtime-togglable; single source of truth)
-  static bool usePatchTst = true;          // enable PatchTST time-series predictor
-  static bool useVisionVote = true;        // combine with vision predictor output if available
-  static double visionWeight = 0.35;       // vision contribution in geometric voter (0..1)
-  static bool useLegacyAiPanel = false;    // hide old confidence panel
+  /// Feature flags and ensemble params (single source of truth)
+  static const bool usePatchTst = true;         // time-series predictor enabled
+  static const bool useVisionVote = true;       // vision+TS ensemble
+  static const bool useLegacyAiPanel = false;   // hide old confidence card
+
+  static const double visionWeight = 0.15;      // 0..1 weight for Vision in geometric mean
+
+  // Decision thresholds
+  static const double probBuyThresh = 0.66;
+  static const double probSellThresh = 0.66;
+  static const double minAbsRet = 0.0060; // 0.60%
+
+  // Multi-timeframe voting
+  static const List<String> enabledTimeframes = ['5m','15m','1h','4h','1d'];
+  static const Map<String, double> tfWeights = {
+    '5m': 3.0,
+    '15m': 2.0,
+    '1h': 2.0,
+    '4h': 1.5,
+    '1d': 1.0,
+  };
+  static const double retScaleFallback = 0.006; // for TS with 3 outputs
 
   /// Force quote currency pentru Binance (USDT default)
   static const String kDefaultQuote = 'USDT';

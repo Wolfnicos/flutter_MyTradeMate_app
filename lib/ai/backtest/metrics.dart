@@ -139,3 +139,17 @@ Backtest Metrics:
     ''';
   }
 }
+
+class TradingMetrics {
+  double winRate;
+  double sharpeRatio;
+  double maxDrawdown;
+  double profitFactor;
+
+  TradingMetrics({
+    this.winRate = 0.0,
+    this.sharpeRatio = 0.0,
+    this.maxDrawdown = 0.0,
+    this.profitFactor = 0.0,
+  });
+}

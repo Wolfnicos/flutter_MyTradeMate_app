@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'order_history_screen.dart';
 import 'settings_screen.dart';
 // import 'market_details_screen.dart';
-import 'ai_helper_screen.dart';
+// import 'ai_helper_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mytrademate/services/dio_binance_client.dart' as api;
 import 'widgets/asset_tile.dart';
@@ -13,7 +13,7 @@ import '../services/price_stream_manager.dart';
 // import '../services/mtm_models.dart';
 import '../src/core/trading_prefs.dart';
 import '../ui/disclaimer_banner.dart';
-import '../l10n/strings.dart';
+// import '../l10n/strings.dart';
 import '../ai/entities.dart' as ai;
 import '../ai/ai_locator.dart';
 import '../ai/ai_config.dart';
@@ -228,6 +228,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ProSignalPanel(
                 action: AILocator.I.decide(_dashPred!),
                 confidence: _dashPred!.confidence(),
+                tsConfidence: _dashPred!.tsConfidence,
+                visionConfidence: _dashPred!.visionConfidence,
                 expReturn: _dashPred!.expReturn,
                 annVol: _dashPred!.annVol,
                 timeframe: AiConfig.kInterval,
@@ -237,39 +239,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             // Removed quick action buttons per request
 
-            // --- AI Trading Assistant (LIVE) ---
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const AIHelperScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.psychology, color: Colors.white),
-                label: Text(
-                  L10n.aiButtonLive,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 30),
+            const SizedBox(height: 16),
 
             // --- AI Performance Stats ---
             Card(
@@ -292,60 +262,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-
-                    // Win Rate
-                    _buildStatRow(
-                      'Historical Win Rate',
-                      '30.0%',
-                      Icons.percent,
-                      Colors.red,
-                    ),
-
-                    // Avg Confidence
-                    _buildStatRow(
-                      'Avg Signal Confidence',
-                      '42.3%',
-                      Icons.psychology,
-                      Colors.orange,
-                    ),
-
-                    // Model Status
-                    Row(
-                      children: [
-                        const Icon(Icons.info, color: Colors.blue, size: 20),
-                        const SizedBox(width: 12),
-                        const Text('Status'),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'ANALYSIS MODE',
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Text(
-                      'Model is in demo mode. Signals are for research and learning only. A new model is being trained.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
+                    // Live explanation of current confidence components
+                    if (_dashPred != null) ...[
+                      _buildStatRow(
+                        'TS Confidence (multi‑TF)',
+                        '${((_dashPred!.tsConfidence ?? 0) * 100).toStringAsFixed(1)}%',
+                        Icons.show_chart,
+                        Colors.cyan,
                       ),
-                    ),
+                      _buildStatRow(
+                        'Vision Confidence',
+                        _dashPred!.visionConfidence == null
+                            ? '—'
+                            : '${((_dashPred!.visionConfidence!) * 100).toStringAsFixed(1)}%',
+                        Icons.remove_red_eye,
+                        Colors.purpleAccent,
+                      ),
+                      _buildStatRow(
+                        'Ensemble Confidence',
+                        '${(_dashPred!.confidencePercent).toStringAsFixed(1)}%',
+                        Icons.psychology,
+                        Colors.amber,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Confidence is the top-class probability penalized by volatility and adjusted by relative volume. TS confidence comes from PatchTST multi‑timeframe voting; Vision confidence reflects chart pattern consensus. Ensemble combines them geometrically (weight=${AiConfig.visionWeight}).',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ]
                   ],
                 ),
               ),
