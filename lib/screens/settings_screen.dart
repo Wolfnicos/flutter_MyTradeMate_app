@@ -7,6 +7,7 @@ import '../core/diagnostics.dart';
 import '../l10n/strings.dart';
 import '../ui/keys.dart';
 import '../ui/debug/observability_chip.dart';
+import 'package:mytrademate/widgets/premium_widgets.dart';
 // Sort keys removed for broader Flutter version compatibility
 
 class SettingsScreen extends StatefulWidget {
@@ -117,46 +118,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!_ready) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final inputDecoration = (String label) => InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: kText2),
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.04),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.08))),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: kHold, width: 1.5)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        );
+
     return Scaffold(
-      appBar: AppBar(title: Text(S.settingsTitle)),
+      appBar: AppBar(title: Text(S.settingsTitle), backgroundColor: Colors.transparent),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _form,
           child: ListView(
             children: [
-              Text(S.settingsKeysHeader),
+              Text(S.settingsKeysHeader,
+                  style: const TextStyle(color: kText, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
-              ListTile(
-                key: const Key('settingsDisclaimerTile'),
-                leading: const Icon(Icons.policy_outlined),
-                title: Text(S.settingsDisclaimerTitle),
-                subtitle: Text(
-                  S.settingsDisclaimerShort,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () => showDialog<void>(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: Text(S.disclaimerTitle),
-                    content: Text(S.disclaimerBody),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(
-                            MaterialLocalizations.of(context).okButtonLabel),
-                      ),
-                    ],
+              ModernCard(
+                hasGlow: false,
+                child: ListTile(
+                  key: const Key('settingsDisclaimerTile'),
+                  leading: const Icon(Icons.policy_outlined, color: kHold),
+                  title: Text(S.settingsDisclaimerTitle,
+                      style: const TextStyle(color: kText)),
+                  subtitle: Text(
+                    S.settingsDisclaimerShort,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: kText2),
+                  ),
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: Text(S.disclaimerTitle),
+                      content: Text(S.disclaimerBody),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(
+                              MaterialLocalizations.of(context).okButtonLabel),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 initialValue: _apiKey,
-                decoration: InputDecoration(
-                  labelText: S.apiKeyLabel,
-                  border: const OutlineInputBorder(),
+                decoration: inputDecoration(S.apiKeyLabel).copyWith(
                   suffixIcon: Semantics(
                     label: S.a11yPasteKey,
                     button: true,
@@ -181,9 +201,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 initialValue: _secret,
-                decoration: InputDecoration(
-                  labelText: S.secretLabel,
-                  border: const OutlineInputBorder(),
+                decoration: inputDecoration(S.secretLabel).copyWith(
                   suffixIcon: Semantics(
                     label: S.a11yToggleSecret,
                     button: true,
@@ -205,68 +223,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               // Telemetry opt-in toggle (opt-in only)
-              SwitchListTile(
-                title: const Text('Share anonymous diagnostics'),
-                subtitle: const Text(
-                    'Optional. Helps improve stability. No PII or keys.'),
-                value: _telemetryOptIn,
-                onChanged: (v) async {
-                  setState(() => _telemetryOptIn = v);
-                  final prefs = await TradingPrefs.load();
-                  await prefs.setTelemetryOptIn(v);
-                },
+              ModernCard(
+                hasGlow: false,
+                child: SwitchListTile(
+                  title: const Text('Share anonymous diagnostics', style: TextStyle(color: kText)),
+                  subtitle: const Text('Optional. Helps improve stability. No PII or keys.', style: TextStyle(color: kText2)),
+                  value: _telemetryOptIn,
+                  onChanged: (v) async {
+                    setState(() => _telemetryOptIn = v);
+                    final prefs = await TradingPrefs.load();
+                    await prefs.setTelemetryOptIn(v);
+                  },
+                ),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  MergeSemantics(
-                    child: Row(children: [
+              ModernCard(
+                hasGlow: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
                       Text(S.environment,
-                          softWrap: true, overflow: TextOverflow.fade),
-                    ]),
-                  ),
-                  const SizedBox(width: 12),
-                  DropdownButton<bool>(
-                    value: _useTestnet,
-                    items: const [
-                      DropdownMenuItem(
-                          value: true, child: Text('Testnet (Paper)')),
-                      DropdownMenuItem(value: false, child: Text('Live')),
+                          softWrap: true, overflow: TextOverflow.fade, style: const TextStyle(color: kText)),
+                      const SizedBox(width: 12),
+                      DropdownButton<bool>(
+                        value: _useTestnet,
+                        items: const [
+                          DropdownMenuItem(value: true, child: Text('Testnet (Paper)')),
+                          DropdownMenuItem(value: false, child: Text('Live')),
+                        ],
+                        onChanged: (v) async {
+                          final newVal = v ?? true;
+                          setState(() => _useTestnet = newVal);
+                          final prefs = await TradingPrefs.load();
+                          await prefs.save(env: newVal ? TradeEnv.testnet : TradeEnv.live);
+                          if (!mounted) return;
+                          if (newVal) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Paper mode enabled – live balances hidden')),
+                            );
+                          } else if ((_apiKey.isEmpty || _secret.isEmpty)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Add API key to load balances')),
+                            );
+                          }
+                        },
+                        key: AppKeys.settingsEnvDropdown,
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          _useTestnet ? S.envHelpTestnet : S.envHelpLive,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: kText2),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
-                    onChanged: (v) async {
-                      final newVal = v ?? true;
-                      setState(() => _useTestnet = newVal);
-                      final prefs = await TradingPrefs.load();
-                      await prefs.save(
-                          env: newVal ? TradeEnv.testnet : TradeEnv.live);
-                      if (!mounted) return;
-                      if (newVal) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Paper mode enabled – live balances hidden')),
-                        );
-                      } else if ((_apiKey.isEmpty || _secret.isEmpty)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Add API key to load balances')),
-                        );
-                      }
-                    },
-                    key: AppKeys.settingsEnvDropdown,
                   ),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: Text(
-                      _useTestnet ? S.envHelpTestnet : S.envHelpLive,
-                      style: Theme.of(context).textTheme.bodySmall,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 16),
-              Text('${S.fixedQuote} ${_quote.round()}'),
+              Text('${S.fixedQuote} ${_quote.round()}', style: const TextStyle(color: kText2)),
               Slider(
                 min: 10,
                 max: 2000,
@@ -277,8 +294,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 key: AppKeys.settingsQuoteSlider,
               ),
               const SizedBox(height: 8),
-              const SizedBox(height: 16),
-              const SizedBox(height: 12),
               const ObservabilityChip(maxItems: 3),
               const SizedBox(height: 16),
               Wrap(
