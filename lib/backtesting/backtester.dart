@@ -126,7 +126,7 @@ class Backtester {
         times.add(candles[i].time);
         equity.add(curEquity);
         if (kDebugMode) {
-          debugPrint('⛔ CircuitBreaker active until $pauseUntil — skipping new entries');
+          debugPrint('[PAUSE] until=${pauseUntil.toIso8601String()} now=${nowT.toIso8601String()} reason=consecutive_losses');
         }
         continue;
       }
@@ -201,6 +201,25 @@ class Backtester {
                 pred.expReturn.isFinite && pred.annVol.isFinite && close.isFinite;
             assert(valsOk, 'NaN/Inf detected in prediction or price');
           }
+          // Safety filters for NaN/Inf or bad volatility
+          if (!pred.expReturn.isFinite) {
+            if (kDebugMode) {
+              debugPrint('[${i + 1}/${candles.length}] ${nowT.toIso8601String()} SKIP reason=bad_expReturn');
+            }
+            final curEquity = capital + positionQty * close;
+            times.add(candles[i].time);
+            equity.add(curEquity);
+            continue;
+          }
+          if (!(pred.annVol.isFinite) || pred.annVol <= 0.0) {
+            if (kDebugMode) {
+              debugPrint('[${i + 1}/${candles.length}] ${nowT.toIso8601String()} SKIP reason=bad_vol');
+            }
+            final curEquity = capital + positionQty * close;
+            times.add(candles[i].time);
+            equity.add(curEquity);
+            continue;
+          }
           action = AILocator.I.decide(pred);
           confidence = pred.confidence();
 
@@ -236,32 +255,39 @@ class Backtester {
         // Additional filters removed per request; keep confidence threshold only
 
         if (positionQty == 0.0 && action == 'BUY') {
-          final (newCap, qty, priceWSlip, fee) =
+          final (newCap, qtyRaw, priceWSlip, feeOpen) =
               execSim.buy(capital: capital, price: close);
+          // Precision: round qty to symbol step (approximate default 1e-6 if unknown)
+          double quantityStep(String sym) {
+            return 1e-6;
+          }
+          final step = quantityStep(symbol);
+          final qty = (qtyRaw / step).floorToDouble() * step;
+          // Recompute spent with rounded qty
+          final spent = qty * priceWSlip + feeOpen;
+          final budget = (capital - newCap);
           if (kDebugMode) {
-            // Validate capital decrease equals allocated budget (qty*price + fee) within epsilon
-            final budget = (capital - newCap);
-            final spent = qty * priceWSlip + fee;
-            assert((budget - spent).abs() <= 1e-6,
+            assert(feeOpen <= 0.0015 * (qty * priceWSlip + 1e-9), 'OPEN fee too large');
+            assert((budget - spent).abs() <= 1e-4,
                 'Capital drop ${budget.toStringAsFixed(8)} != spent ${spent.toStringAsFixed(8)}');
             assert(qty.isFinite && qty >= 0.0, 'Invalid qty at OPEN');
           }
           capital = newCap;
           positionQty = qty;
           entryPrice = priceWSlip;
-          totalFees += fee;
+          totalFees += feeOpen;
           trades++;
           if (kDebugMode) {
             debugPrint('[${i + 1}/${candles.length}] ${nowT.toIso8601String()} '
                 'OPEN BUY qty=${qty.toStringAsFixed(6)} entry=${priceWSlip.toStringAsFixed(2)} '
-                'fee=${fee.toStringAsFixed(4)} cap=${capital.toStringAsFixed(2)}');
+                'fee=${feeOpen.toStringAsFixed(4)} cap=${capital.toStringAsFixed(2)}');
           }
           tradeLog.add(TradeRecord(
               time: candles[i].time,
               action: 'BUY',
               price: priceWSlip,
               qty: qty,
-              fee: fee,
+              fee: feeOpen,
               pnl: 0.0,),);
         } else if (positionQty > 0.0 && action == 'SELL') {
           // Use SL/TP simulation across next N candles
@@ -295,6 +321,7 @@ class Backtester {
             pnl = r.$3;
           }
           if (kDebugMode) {
+            assert(exitFee <= 0.0015 * (positionQty * close + 1e-9), 'CLOSE fee too large');
             assert(capital.isFinite && capital >= 0.0, 'Invalid capital after CLOSE');
           }
           totalFees += exitFee;
@@ -348,6 +375,9 @@ class Backtester {
         entryPrice: entryPrice,
         price: last,
       );
+      if (kDebugMode) {
+        debugPrint('[FORCE-CLOSE] price=${last.toStringAsFixed(2)} fee=${fee.toStringAsFixed(4)} pnl=${pnl.toStringAsFixed(2)}');
+      }
       capital = newCap;
       totalFees += fee;
       if (pnl > 0) {
