@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:mytrademate/ai/entities.dart';
 import 'package:mytrademate/ai/vision_predictor.dart';
@@ -18,7 +17,7 @@ class VisionModelValidator {
       final expected = (testCase['expected'] as List).map((e) => (e as num).toDouble()).toList();
       final deviation = calculateDeviation(result, expected);
       // ignore: avoid_print
-      print('[Vision-Validate] ${testCase['symbol']} ${testCase['pattern']} → probs=${result.map((e)=>e.toStringAsFixed(3)).toList()} dev=${deviation.toStringAsFixed(3)}');
+      print('[Vision-Validate] ${(testCase['symbol'])} ${(testCase['pattern'])} → probs=${result.map((e)=>e.toStringAsFixed(3)).toList()} dev=${deviation.toStringAsFixed(3)}');
       if (deviation > 0.5) {
         // ignore: avoid_print
         print('[Model-Warning] High deviation for ${testCase['symbol']}: ${deviation.toStringAsFixed(3)}');
@@ -27,7 +26,7 @@ class VisionModelValidator {
   }
 
   Future<List<double>> predictForTestCase(Map<String, Object> testCase) async {
-    final symbol = testCase['symbol'] as String;
+    // Only 'pattern' is needed for synthetic generation
     final pattern = testCase['pattern'] as String;
     final candles = _generateSyntheticCandles(pattern: pattern);
     final frame = await ChartCaptureService.renderCandlesImage(candles: candles, width: 320, height: 200);

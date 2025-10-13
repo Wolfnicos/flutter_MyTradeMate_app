@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const _App());
+  runApp(_App());
 }
 
 class _App extends StatefulWidget {
-  const _App({super.key});
+  // ignore: unused_element
+  const _App();
   @override
   State<_App> createState() => _AppState();
 }

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:mytrademate/ai/entities.dart';
 import 'package:mytrademate/ai/signal_engine.dart';
-import 'package:mytrademate/ai/backtest/backtester.dart';
+import 'package:mytrademate/backtesting/backtester.dart' as bt;
 import 'package:mytrademate/ai/ai_locator.dart';
 import 'package:mytrademate/ai/prediction_repo.dart';
 import 'package:mytrademate/services/ohlcv_service.dart';
@@ -57,7 +57,10 @@ void main(List<String> args) async {
     ),
   );
 
-  final backtester = Backtester(engine: engine, ohlcv: await OHLCVService.createFromPrefs());
+  final backtester = bt.Backtester(
+    engine: engine,
+    ohlcv: await OHLCVService.createFromPrefs(),
+  );
 
   // Load or generate demo data
   print('📊 Loading historical data...');
@@ -85,7 +88,7 @@ void main(List<String> args) async {
   print('');
   print('📈 Results:');
   print('═' * 50);
-  print(result.metrics.toString());
+  print('trades=${result.numTrades} wins=${result.winningTrades} losses=${result.losingTrades}');
   print('');
   print('Final Capital: \$${result.finalCapital.toStringAsFixed(2)}');
   print('P&L: \$${(result.finalCapital - capital).toStringAsFixed(2)}');
