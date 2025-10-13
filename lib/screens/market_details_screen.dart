@@ -592,8 +592,8 @@ class CandlesPainter extends CustomPainter {
     final range = maxY - minY;
     double y(double v) => size.height - ((v - minY) / range) * size.height;
 
-    // Increase visual size of candles: scale factor > 1 for body width and wick thickness
-    const double bodyScale = 0.9; // 0..1, closer to 1 = fatter bodies
+    // Increase visual size of candles: body nearly fills slot
+    const double bodyScale = 0.96; // 0..1, closer to 1 = fatter bodies
     final candleW = size.width / n;
     final wickPaint = Paint()
       ..strokeWidth = candleW < 3 ? 0.8 : 1.1
@@ -630,10 +630,10 @@ class CandlesPainter extends CustomPainter {
       double top = y(bullish ? c : o);
       double bottom = y(bullish ? o : c);
       // min body height for visibility on tiny TFs
-      if ((bottom - top).abs() < 1.2) {
+      if ((bottom - top).abs() < 1.8) {
         final mid = (top + bottom) / 2;
-        top = mid - 0.6;
-        bottom = mid + 0.6;
+        top = mid - 0.9;
+        bottom = mid + 0.9;
       }
       final r = RRect.fromLTRBR(
           bodyLeft, top, bodyRight, bottom, const Radius.circular(2));
@@ -755,8 +755,27 @@ Future<List<List<num>>> _fetchKlinesInterval(
   final client = await DioBinanceClient.createFromPrefs();
   final sym = _toBinanceSymbol(symbol);
   try {
-    return await client.klines(sym, interval,
-        limit: interval == '5m' ? 240 : 120);
+    int limit;
+    switch (interval) {
+      case '5m':
+        limit = 120; // fewer candles → bodies appear wider
+        break;
+      case '15m':
+        limit = 120;
+        break;
+      case '1h':
+        limit = 80;
+        break;
+      case '4h':
+        limit = 60;
+        break;
+      case '1d':
+        limit = 60;
+        break;
+      default:
+        limit = 120;
+    }
+    return await client.klines(sym, interval, limit: limit);
   } catch (e) {
     // conservative fallback
     return _fetchKlines(symbol);
