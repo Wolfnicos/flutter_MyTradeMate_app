@@ -430,7 +430,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
               return Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: ElevatedButton(
                       onPressed: supported
                           ? () {
                               Navigator.push(
@@ -441,9 +441,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                                           isBuying: true)));
                             }
                           : null,
-                      icon:
-                          const Icon(Icons.shopping_cart, color: Colors.white),
-                      label: const Text('Buy',
+                      child: const Text('Buy',
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -457,7 +455,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: ElevatedButton.icon(
+                    child: ElevatedButton(
                       onPressed: supported
                           ? () {
                               Navigator.push(
@@ -468,8 +466,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                                           isBuying: false)));
                             }
                           : null,
-                      icon: const Icon(Icons.sell, color: Colors.white),
-                      label: const Text('Sell',
+                      child: const Text('Sell',
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
