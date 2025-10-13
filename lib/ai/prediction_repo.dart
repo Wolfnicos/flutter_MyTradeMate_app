@@ -193,20 +193,15 @@ class PredictionRepo {
             }
             localW = 0.0;
           }
-          final w = localW;
-          List<double> mix(List<double> a, List<double> b) {
-            final r = <double>[];
-            for (var i = 0; i < a.length; i++) {
-              final g = math.pow(a[i].clamp(1e-6, 1.0), (1.0 - w)) *
-                  math.pow(b[i].clamp(1e-6, 1.0), w);
-              r.add(g.toDouble());
-            }
-            final s = r.fold<double>(0.0, (p, c) => p + c);
-            return r.map((e) => e / (s == 0 ? 1.0 : s)).toList();
-          }
-          final probs = mix(finalProbs, vProbs);
-          // ignore: avoid_print
-          print('[Ensemble] probs: pBuy=${probs[0].toStringAsFixed(3)}, pHold=${probs[1].toStringAsFixed(3)}, pSell=${probs[2].toStringAsFixed(3)}  (visionWeight=$w)');
+          final w = localW.clamp(0.0, 1.0);
+          double g(double t, double v) =>
+              math.pow(t.clamp(1e-9, 1.0), 1.0 - w) * math.pow(v.clamp(1e-9, 1.0), w);
+          final a = g(finalProbs[0], vProbs[0]);
+          final b = g(finalProbs[1], vProbs[1]);
+          final c = g(finalProbs[2], vProbs[2]);
+          final sum = (a + b + c).clamp(1e-9, 1e9);
+          final probs = [a / sum, b / sum, c / sum];
+          debugPrint('[Ensemble] TS=${_fmt(finalProbs)} VIS=${_fmt(vProbs)} w=$w => COMB=${_fmt(probs)}');
           finalProbs = probs;
           _lastVisionProbs[feedSymbol] = vProbs;
         } catch (_) {

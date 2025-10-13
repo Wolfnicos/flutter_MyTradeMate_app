@@ -153,10 +153,10 @@ class TimeSeriesTflitePredictor implements AiPredictor {
       print('[TS-OUT] head0 first6: ${o.take(6).toList()}');
     } catch (_) {}
 
-    // Strict mapping [pBuy,pHold,pSell,(ret),(vol)]
-    double pBuy = _clamp01((o.isNotEmpty ? (o[0] as num?)?.toDouble() : 0.0) ?? 0.0);
-    double pHold = _clamp01((o.length > 1 ? (o[1] as num?)?.toDouble() : 0.0) ?? 0.0);
-    double pSell = _clamp01((o.length > 2 ? (o[2] as num?)?.toDouble() : 0.0) ?? 0.0);
+    // Strict mapping assume canonical [buy,hold,sell] heads; else softmax and map
+    double pBuy = _numToDouble(o, 0);
+    double pHold = _numToDouble(o, 1);
+    double pSell = _numToDouble(o, 2);
 
     // Softmax if not normalized
     final sum0 = pBuy + pHold + pSell;
@@ -174,36 +174,39 @@ class TimeSeriesTflitePredictor implements AiPredictor {
       pHold = rem.clamp(0.0, 1.0);
     }
 
-    double expRet = 0.0;
-    double annVol = 0.0;
-    if (o.length >= 5) {
-      expRet = (o[3] as num).toDouble();
-      annVol = (o[4] as num).toDouble().abs();
-    } else {
-      // Fallbacks: expRet via (pBuy - pSell), annVol via ret_1 std annualized
-      expRet = (pBuy - pSell) * AiConfig.retScaleFallback;
-      // compute std of last N ret_1 from aligned
-      final returns = <double>[];
-      for (int t = 1; t < aligned.length; t++) {
-        final prev = aligned[t - 1][featureOrder.indexOf('close')];
-        final curr = aligned[t][featureOrder.indexOf('close')];
-        final r = prev == 0 ? 0.0 : (curr / prev - 1.0);
-        returns.add(r);
-      }
-      double mean = returns.isEmpty ? 0.0 : returns.reduce((a, b) => a + b) / returns.length;
-      double variance = 0.0;
-      for (final r in returns) {
-        variance += (r - mean) * (r - mean);
-      }
-      variance = returns.isEmpty ? 0.0 : variance / returns.length;
-      final std = math.sqrt(variance);
-      annVol = (std * math.sqrt(365.0 * (1440.0 / 5.0))).clamp(0.0, 2.0); // rough annualization for 5m
+    // Compute realistic expReturn and annVol from recent window
+    final returns = <double>[];
+    final closeIdx = featureOrder.indexOf('close');
+    for (int t = 1; t < aligned.length; t++) {
+      final prev = aligned[t - 1][closeIdx];
+      final curr = aligned[t][closeIdx];
+      final r = prev == 0 ? 0.0 : (curr / prev - 1.0);
+      returns.add(r);
     }
+    double mean = 0.0;
+    for (final r in returns) { mean += r; }
+    mean = returns.isEmpty ? 0.0 : mean / returns.length;
+    double variance = 0.0;
+    for (final r in returns) { variance += (r - mean) * (r - mean); }
+    variance = returns.isEmpty ? 0.0 : variance / returns.length;
+    final std = math.sqrt(variance);
+    final k = std * 0.75;
+    final expRet = (pBuy - pSell) * k; // buy minus sell
 
-    // Placeholder proxies for UI metrics until heads are fully wired
-    final pr = (pBuy - pSell).clamp(-1.0, 1.0);
-    final expRetProxy = (pr * 0.35).clamp(-0.35, 0.35);
-    final volProxy = annVol > 0 ? annVol : (0.15).clamp(0.0, 2.0);
+    int minutesForTf(String tf) {
+      switch (tf) {
+        case '5m': return 5;
+        case '15m': return 15;
+        case '1h': return 60;
+        case '4h': return 240;
+        case '1d': return 1440;
+        default: return 5;
+      }
+    }
+    final annScale = math.sqrt((365*24*60) / minutesForTf(timeframe));
+    final annVol = std * annScale;
+    // ignore: avoid_print
+    print('[TS-Metrics][$symbol@$timeframe] mean=${mean.toStringAsFixed(4)} std=${std.toStringAsFixed(4)} expRet=${(expRet*100).toStringAsFixed(2)}% annVol=${(annVol*100).toStringAsFixed(2)}%');
 
     return Prediction(
       symbol: symbol,
@@ -211,8 +214,8 @@ class TimeSeriesTflitePredictor implements AiPredictor {
       pBuy: pBuy,
       pHold: pHold,
       pSell: pSell,
-      expReturn: expRetProxy,
-      annVol: volProxy,
+      expReturn: expRet,
+      annVol: annVol,
       relVolume: 1.0,
     );
   }
@@ -244,6 +247,11 @@ class TimeSeriesTflitePredictor implements AiPredictor {
   String _key(String symbol, String tf) => '${symbol.toUpperCase()}@$tf';
 
   double _clamp01(double v) => v.isNaN || !v.isFinite ? 0.0 : v.clamp(0.0, 1.0);
+
+  double _numToDouble(List o, int idx) {
+    final v = (o.length > idx ? (o[idx] as num?)?.toDouble() : 0.0) ?? 0.0;
+    return _clamp01(v);
+  }
 
   List<List<double>> _buildAndNormalize(
     List<Candle> window,

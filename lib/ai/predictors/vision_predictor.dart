@@ -56,7 +56,23 @@ class VisionPredictor {
 
     final output = [List.filled(3, 0.0)];
     _interp!.run(input, output);
-    return (output[0] as List).cast<double>();
+    // Raw model outputs (logits or probs) in model order: [sell, hold, buy]
+    final raw = (output[0] as List).map((e) => (e as num).toDouble()).toList();
+    // Softmax in case outputs are logits
+    final mx = raw.reduce((a,b)=> a>b? a:b);
+    final exps = raw.map((x)=> math.exp(x - mx)).toList();
+    final s = exps.fold<double>(0.0, (p,c)=> p+c);
+    final probs = exps.map((e)=> e / (s == 0 ? 1.0 : s)).toList();
+    final double sell = probs[0];
+    final double hold = probs[1];
+    final double buy  = probs[2];
+    final canonical = [buy, hold, sell];
+    const eps = 1e-9;
+    final sum = (canonical[0]+canonical[1]+canonical[2]).clamp(eps, 1e9);
+    final out = canonical.map((p) => (p + eps) / sum).toList(growable: false);
+    // ignore: avoid_print
+    print('[V-OUT] map [sell,hold,buy] -> [buy,hold,sell] => $out');
+    return out;
   }
 
   void close() {
