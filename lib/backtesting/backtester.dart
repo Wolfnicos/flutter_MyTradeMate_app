@@ -25,6 +25,40 @@ class Backtester {
     this.strategyName,
   });
 
+  void _assertAlignedTF(List<Candle> candles, String interval) {
+    if (candles.length < 3) return;
+    int secondsForTf(String tf) {
+      switch (tf) {
+        case '5m':
+          return 300;
+        case '15m':
+          return 900;
+        case '1h':
+          return 3600;
+        case '4h':
+          return 14400;
+        case '1d':
+          return 86400;
+        default:
+          return 300;
+      }
+    }
+    final a = candles[0].time.millisecondsSinceEpoch;
+    final b = candles[1].time.millisecondsSinceEpoch;
+    final c = candles[2].time.millisecondsSinceEpoch;
+    final d1 = ((b - a).abs() / 1000).round();
+    final d2 = ((c - b).abs() / 1000).round();
+    final median = ((d1 + d2) / 2).round();
+    final expected = secondsForTf(interval);
+    final tol = (expected * 0.01).round();
+    final ok = (median - expected).abs() <= tol;
+    if (!ok) {
+      final msg = '[TF-MISMATCH] preloaded≈${median}s, expected=${expected}s (±1%)';
+      debugPrint(msg);
+      throw StateError(msg);
+    }
+  }
+
   /// Runs a backtest using the engine and OHLCV service.
   /// The OHLCV service is currently limited to recent candles; for a custom
   /// date range, callers should preload candles and pass via [preloaded].
@@ -44,6 +78,11 @@ class Backtester {
         '📊 Window=$window, Horizon=$horizon, Ensemble=${ensemble != null}',);
 
     // Load a fixed amount of history unless preloaded is provided
+    // Validate preloaded TF alignment if provided
+    if (preloaded != null) {
+      _assertAlignedTF(preloaded, interval);
+    }
+
     final candles = preloaded ??
         await ohlcv.fetchCandles(
           symbol,
@@ -80,6 +119,7 @@ class Backtester {
       final median = ((d1 + d2) / 2).round();
       assert(median == exp,
           'Interval mismatch: data≈${median}m vs requested $interval');
+      debugPrint('[TF-OK] interval=$interval, N=${candles.length}, start=${candles.first.time.toIso8601String()}, end=${candles.last.time.toIso8601String()}');
     }
 
     // If positionSize is provided, override simulator's risk per trade
