@@ -41,7 +41,7 @@ class Backtester {
     // Startup logs and fixed load size for deterministic behavior
     debugPrint('🚀 Starting backtest for $symbol @ $interval');
     debugPrint(
-        '📊 Window=$window, Horizon=$horizon, Ensemble=${ensemble != null}');
+        '📊 Window=$window, Horizon=$horizon, Ensemble=${ensemble != null}',);
 
     // Load a fixed amount of history unless preloaded is provided
     final candles = preloaded ??
@@ -53,7 +53,7 @@ class Backtester {
     debugPrint('📊 Loaded ${candles.length} candles for backtest');
     if (candles.length < window + horizon) {
       throw Exception(
-          'Not enough candles: ${candles.length} < ${window + horizon}');
+          'Not enough candles: ${candles.length} < ${window + horizon}',);
     }
 
     // If positionSize is provided, override simulator's risk per trade
@@ -95,7 +95,7 @@ class Backtester {
       final nowT = candles[i].time;
 
       // Circuit breaker: pause opening new positions while active
-      if (pauseUntil != null && nowT.isBefore(pauseUntil!) && positionQty == 0.0) {
+      if (pauseUntil != null && nowT.isBefore(pauseUntil) && positionQty == 0.0) {
         final curEquity = capital + positionQty * close;
         times.add(candles[i].time);
         equity.add(curEquity);
@@ -142,7 +142,7 @@ class Backtester {
 
           if (i % 100 == 0) {
             debugPrint(
-                '[$i/${candles.length - horizon}] ${strategyName ?? 'Hybrid'}: $action @ ${(confidence * 100).toStringAsFixed(1)}%');
+                '[$i/${candles.length - horizon}] ${strategyName ?? 'Hybrid'}: $action @ ${(confidence * 100).toStringAsFixed(1)}%',);
           }
         } else if (ensemble != null) {
           final er = await ensemble.predict(look);
@@ -191,6 +191,10 @@ class Backtester {
         // Confidence threshold (temporary override)
         const double confThreshold = 0.20;
         if (confidence < confThreshold) {
+          if (kDebugMode) {
+            debugPrint('[${i + 1}/${candles.length}] ${nowT.toIso8601String()} '
+                'SKIP lowConf=${(confidence * 100).toStringAsFixed(1)}% posQty=$positionQty');
+          }
           final curEquity = capital + positionQty * close;
           times.add(candles[i].time);
           equity.add(curEquity);
@@ -207,13 +211,18 @@ class Backtester {
           entryPrice = priceWSlip;
           totalFees += fee;
           trades++;
+          if (kDebugMode) {
+            debugPrint('[${i + 1}/${candles.length}] ${nowT.toIso8601String()} '
+                'OPEN BUY qty=${qty.toStringAsFixed(6)} entry=${priceWSlip.toStringAsFixed(2)} '
+                'fee=${fee.toStringAsFixed(4)} cap=${capital.toStringAsFixed(2)}');
+          }
           tradeLog.add(TradeRecord(
               time: candles[i].time,
               action: 'BUY',
               price: priceWSlip,
               qty: qty,
               fee: fee,
-              pnl: 0.0));
+              pnl: 0.0,),);
         } else if (positionQty > 0.0 && action == 'SELL') {
           // Use SL/TP simulation across next N candles
           final start = i + 1;
@@ -231,9 +240,9 @@ class Backtester {
               futureCandles: futureCandles,
               positionValue: positionValue,
             );
-            exitFee = positionValue *
-                execSim.feeRate; // approximate exit fee used in simulateTrade
-            capital += pnl;
+            exitFee = positionValue * execSim.feeRate; // exit fee accounted in pnl
+            // Return principal + pnl to capital
+            capital += positionValue + pnl;
           } else {
             final r = execSim.sell(
               capital: capital,
@@ -246,6 +255,11 @@ class Backtester {
             pnl = r.$3;
           }
           totalFees += exitFee;
+          if (kDebugMode) {
+            debugPrint('[${i + 1}/${candles.length}] ${nowT.toIso8601String()} '
+                'CLOSE SELL price=${close.toStringAsFixed(2)} pnl=${pnl.toStringAsFixed(2)} '
+                'exitFee=${exitFee.toStringAsFixed(4)} cap=${capital.toStringAsFixed(2)}');
+          }
           if (pnl > 0) {
             wins++;
             totalWin += pnl;
@@ -269,7 +283,7 @@ class Backtester {
               price: close,
               qty: 0.0,
               fee: exitFee,
-              pnl: pnl));
+              pnl: pnl,),);
           entryPrice = 0.0;
         }
       } catch (e) {
@@ -306,7 +320,7 @@ class Backtester {
           price: last,
           qty: 0.0,
           fee: fee,
-          pnl: pnl));
+          pnl: pnl,),);
       final curEquity = capital;
       times.add(candles.last.time);
       equity.add(curEquity);

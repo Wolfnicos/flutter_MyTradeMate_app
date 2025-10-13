@@ -4,7 +4,6 @@ import 'package:tflite_flutter/tflite_flutter.dart' as tfl;
 import '../ai_predictor.dart';
 import '../entities.dart';
 import '../norm_loader.dart';
-import '../ai_config.dart';
 
 /// Time-series predictor backed by TFLite models per SYMBOL/TF.
 /// Model path pattern: assets/models/patchtst_<SYMBOL>_<TF>_fp16.tflite
@@ -15,7 +14,7 @@ class TimeSeriesTflitePredictor implements AiPredictor {
   /// Resolve per-symbol, per-timeframe PatchTST model asset path.
   /// timeframe is one of: 5m, 15m, 1h, 4h, 1d
   String resolveTsModelPath(
-      {required String symbol, required String timeframe}) {
+      {required String symbol, required String timeframe,}) {
     final tf = timeframe;
     final sym = symbol.toUpperCase();
     final path = 'assets/models/patchtst_${sym}_${tf}_fp16.tflite';
@@ -88,10 +87,11 @@ class TimeSeriesTflitePredictor implements AiPredictor {
     } else {
       // left-pad with first row
       final pad = List<List<double>>.filled(
-          S - normalized.length,
-          normalized.isNotEmpty
-              ? normalized.first
-              : List<double>.filled(F, 0.0));
+        S - normalized.length,
+        normalized.isNotEmpty
+            ? normalized.first
+            : List<double>.filled(F, 0.0),
+      );
       aligned = pad + normalized;
     }
 
@@ -115,7 +115,9 @@ class TimeSeriesTflitePredictor implements AiPredictor {
     // Build input [1, F, S]
     final input = [
       List.generate(
-          featCount, (f) => List.generate(seqLen, (t) => buf[f * seqLen + t]))
+        featCount,
+        (f) => List.generate(seqLen, (t) => buf[f * seqLen + t]),
+      ),
     ];
 
     // Determine output length from tensor shape
@@ -174,26 +176,28 @@ class TimeSeriesTflitePredictor implements AiPredictor {
       pHold = rem.clamp(0.0, 1.0);
     }
 
-    // Compute realistic expReturn and annVol from recent window
-    final returns = <double>[];
-    final closeIdx = featureOrder.indexOf('close');
-    for (int t = 1; t < aligned.length; t++) {
-      final prev = aligned[t - 1][closeIdx];
-      final curr = aligned[t][closeIdx];
-      final r = prev == 0 ? 0.0 : (curr / prev - 1.0);
-      returns.add(r);
-    }
-    double mean = 0.0;
-    for (final r in returns) { mean += r; }
-    mean = returns.isEmpty ? 0.0 : mean / returns.length;
-    double variance = 0.0;
-    for (final r in returns) { variance += (r - mean) * (r - mean); }
-    variance = returns.isEmpty ? 0.0 : variance / returns.length;
-    final std = math.sqrt(variance);
-    final k = std * 0.75;
-    final expRet = (pBuy - pSell) * k; // buy minus sell
+    // Compute metrics from denormalized ret_1 using feature-major buffer
+    final featMajor = List.generate(
+      featCount,
+      (f) => List.generate(seqLen, (t) => buf[f * seqLen + t]),
+    );
+    final returns = _extractReturnsDenorm(
+      featureOrder: featureOrder,
+      windowFeatureMajor: featMajor, // [F][S] normalizat
+      meanByFeat: spec.mean,
+      stdByFeat: spec.std,
+    );
 
-    int minutesForTf(String tf) {
+    double mean = 0.0, variance = 0.0, std = 0.0;
+    if (returns.isNotEmpty) {
+      for (final r in returns) { mean += r; }
+      mean /= returns.length;
+      for (final r in returns) { variance += (r - mean) * (r - mean); }
+      variance = returns.length <= 1 ? 0.0 : variance / (returns.length - 1);
+      std = math.sqrt(variance);
+    }
+
+    double minutesPerBar(String tf) {
       switch (tf) {
         case '5m': return 5;
         case '15m': return 15;
@@ -203,10 +207,12 @@ class TimeSeriesTflitePredictor implements AiPredictor {
         default: return 5;
       }
     }
-    final annScale = math.sqrt((365*24*60) / minutesForTf(timeframe));
-    final annVol = std * annScale;
-    // ignore: avoid_print
-    print('[TS-Metrics][$symbol@$timeframe] mean=${mean.toStringAsFixed(4)} std=${std.toStringAsFixed(4)} expRet=${(expRet*100).toStringAsFixed(2)}% annVol=${(annVol*100).toStringAsFixed(2)}%');
+
+    final annVol = std * math.sqrt((365.0 * 24.0 * 60.0) / minutesPerBar(timeframe));
+    final expReturn = (pBuy - pSell) * (std * 0.75);
+    _log('[TS-Metrics][$symbol@$timeframe] mean=${mean.toStringAsFixed(4)} '
+         'std=${std.toStringAsFixed(4)} expRet=${(expReturn*100).toStringAsFixed(2)}% '
+         'annVol=${(annVol*100).toStringAsFixed(2)}%');
 
     return Prediction(
       symbol: symbol,
@@ -214,14 +220,14 @@ class TimeSeriesTflitePredictor implements AiPredictor {
       pBuy: pBuy,
       pHold: pHold,
       pSell: pSell,
-      expReturn: expRet,
+      expReturn: expReturn,
       annVol: annVol,
       relVolume: 1.0,
     );
   }
 
   Future<tfl.Interpreter?> _getOrLoad(
-      String key, String symbol, String tf) async {
+      String key, String symbol, String tf,) async {
     final existing = _cache[key];
     if (existing != null) return existing;
     final path = resolveTsModelPath(symbol: symbol, timeframe: tf);
@@ -248,9 +254,30 @@ class TimeSeriesTflitePredictor implements AiPredictor {
 
   double _clamp01(double v) => v.isNaN || !v.isFinite ? 0.0 : v.clamp(0.0, 1.0);
 
+  void _log(String s) {
+    // ignore: avoid_print
+    print(s);
+  }
+
   double _numToDouble(List o, int idx) {
     final v = (o.length > idx ? (o[idx] as num?)?.toDouble() : 0.0) ?? 0.0;
     return _clamp01(v);
+  }
+
+  // ignore: unused_element
+  List<double> _extractReturnsDenorm({
+    required List<String> featureOrder,
+    required List<List<double>> windowFeatureMajor, // [F][S] NORMALIZAT
+    required Map<String, double> meanByFeat,
+    required Map<String, double> stdByFeat,
+  }) {
+    final idx = featureOrder.indexOf('ret_1');
+    if (idx < 0) return const [];
+    final norm = windowFeatureMajor[idx]; // lungime = S
+    final m = meanByFeat['ret_1'] ?? 0.0;
+    final s = stdByFeat['ret_1'] ?? 1.0;
+    // denormalizează: x = norm*s + m
+    return norm.map((v) => v * s + m).toList(growable: false);
   }
 
   List<List<double>> _buildAndNormalize(
@@ -292,7 +319,7 @@ class TimeSeriesTflitePredictor implements AiPredictor {
         final tr = [
           high - low,
           (high - prevClose).abs(),
-          (low - prevClose).abs()
+          (low - prevClose).abs(),
         ].reduce((a, b) => a > b ? a : b);
         sum += tr;
         n += 1;
