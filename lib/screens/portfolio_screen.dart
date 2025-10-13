@@ -6,6 +6,7 @@ import 'package:mytrademate/services/price_cache.dart';
 import 'package:mytrademate/models/portfolio_models.dart';
 import 'dart:convert';
 import '../widgets/premium_widgets.dart';
+import 'widgets/asset_tile.dart';
 import 'package:mytrademate/ui/kit/ui_market_skeleton.dart';
 import 'package:mytrademate/ui/kit/ui_market_error.dart';
 
@@ -194,7 +195,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Portfolio')),
+      appBar:
+          AppBar(title: const Text('Portfolio'), backgroundColor: Colors.transparent),
       body: _future == null
           ? const UiMarketSkeleton(count: 8)
           : FutureBuilder<PortfolioSnapshot>(
@@ -257,44 +259,80 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                         itemCount: snap.holdings.length,
                         itemBuilder: (_, i) {
                           final h = snap.holdings[i];
-                          final value = h.qty * h.priceUsdt;
-                          final approx = h.priceUsdt == 0.0 ? '~ ' : '';
                           final isUsdt = h.asset.toUpperCase() == 'USDT';
+                          if (isUsdt) {
+                            final value = h.qty * h.priceUsdt;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: ModernCard(
+                                hasGlow: false,
+                                child: Row(
+                                  children: [
+                                    const CircleAvatar(
+                                      backgroundColor: Colors.white10,
+                                      child: Text('U',
+                                          style:
+                                              TextStyle(color: Colors.white)),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text('USDT',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold)),
+                                          SizedBox(height: 4),
+                                          Text('1.0000 USDT',
+                                              style: TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 12)),
+                                        ],
+                                      ),
+                                    ),
+                                    Text('${value.toStringAsFixed(2)} USDT',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          // Non-USDT assets: use AssetTile to match Market styling
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: ModernCard(
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor: Colors.white10,
-                                    child: Text(h.asset[0],
-                                        style: const TextStyle(
-                                            color: Colors.white)),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(h.asset,
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                            '${h.qty} @ ${h.priceUsdt.toStringAsFixed(4)} USDT',
-                                            style: const TextStyle(
-                                                color: Colors.white70,
-                                                fontSize: 12)),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                      '$approx${value.toStringAsFixed(2)} USDT',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w600)),
-                                ],
-                              ),
+                            child: FutureBuilder<Map<String, dynamic>>(
+                              future: _client?.ticker24h('${h.asset}USDT'),
+                              builder: (context, s2) {
+                                double price = h.priceUsdt;
+                                double ch = 0.0;
+                                if (s2.hasData) {
+                                  final t = s2.data!;
+                                  final lp = double.tryParse(
+                                          (t['lastPrice'] ?? t['price'])
+                                              .toString()) ??
+                                      price;
+                                  price = lp;
+                                  final raw = t['priceChangePercent'];
+                                  ch = raw is num
+                                      ? raw.toDouble()
+                                      : double.tryParse('$raw') ??
+                                          0.0;
+                                }
+                                final changeStr =
+                                    '${ch >= 0 ? '+' : ''}${ch.toStringAsFixed(3)}%';
+                                return AssetTile(
+                                  symbol: '${h.asset}USDT',
+                                  name: h.asset,
+                                  price: price.toStringAsFixed(2),
+                                  change: changeStr,
+                                  isUp: ch >= 0,
+                                  onTap: null,
+                                );
+                              },
                             ),
                           );
                         },
