@@ -180,8 +180,6 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
     // Format symbol consistently (e.g. "BTC/USDT" not "BTCUSDT")
     final displaySymbol = _formatSymbolForDisplay(symbol);
     final colors = Theme.of(context).colorScheme;
-    final screenH = MediaQuery.of(context).size.height;
-    final double chartH = (screenH * 0.5).clamp(320.0, 640.0);
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -358,7 +356,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
 
           // Chart card (TradingView-like)
           SizedBox(
-            height: chartH,
+            height: 260,
             child: Card(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -594,6 +592,8 @@ class CandlesPainter extends CustomPainter {
     final range = maxY - minY;
     double y(double v) => size.height - ((v - minY) / range) * size.height;
 
+    // Increase visual size of candles: scale factor > 1 for body width and wick thickness
+    const double bodyScale = 0.9; // 0..1, closer to 1 = fatter bodies
     final candleW = size.width / n;
     final wickPaint = Paint()
       ..strokeWidth = candleW < 3 ? 0.8 : 1.1
@@ -622,8 +622,8 @@ class CandlesPainter extends CustomPainter {
       final cx = (i + 0.5) * candleW;
       // wicks
       canvas.drawLine(Offset(cx, y(l)), Offset(cx, y(h)), wickPaint);
-      // body
-      final half = (candleW * 0.45).clamp(0.9, 3.2);
+      // body (wider like TradingView)
+      final half = (candleW * bodyScale * 0.5).clamp(2.0, 8.0);
       final center = i * candleW + candleW * 0.5;
       final bodyLeft = center - half;
       final bodyRight = center + half;
@@ -641,14 +641,14 @@ class CandlesPainter extends CustomPainter {
       final bodyPaint = Paint()
         ..color = bullish ? color.withOpacity(0.9) : Colors.transparent
         ..style = bullish ? PaintingStyle.fill : PaintingStyle.stroke
-        ..strokeWidth = 1.2
+        ..strokeWidth = (candleW * 0.18).clamp(1.4, 2.2)
         ..isAntiAlias = true;
       canvas.drawRRect(r, bodyPaint);
       if (!bullish) {
         final stroke = Paint()
           ..color = color.withOpacity(0.9)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2;
+          ..strokeWidth = (candleW * 0.18).clamp(1.4, 2.2);
         canvas.drawRRect(r, stroke);
       }
     }
