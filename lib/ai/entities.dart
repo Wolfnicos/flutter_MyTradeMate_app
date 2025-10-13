@@ -75,6 +75,9 @@ class Prediction {
   // Optional per-model probabilities for UI/diagnostics
   final List<double>? tsProbs; // [pBuy, pHold, pSell] after TF voting
   final List<double>? visionProbs; // [pBuy, pHold, pSell] from Vision
+  final Map<String, List<double>>? perTfProbs; // tf -> [pBuy,pHold,pSell]
+  final Map<String, double>? perTfExpRet; // tf -> expReturn
+  final Map<String, double>? perTfAnnVol; // tf -> annVol
 
   const Prediction({
     required this.symbol,
@@ -88,6 +91,9 @@ class Prediction {
     this.reason,
     this.tsProbs,
     this.visionProbs,
+    this.perTfProbs,
+    this.perTfExpRet,
+    this.perTfAnnVol,
   });
 
   /// Action determinat din probabilități (multiclass softmax)
@@ -127,6 +133,15 @@ class Prediction {
 
   double? get tsConfidence => _confidenceFrom(tsProbs);
   double? get visionConfidence => _confidenceFrom(visionProbs);
+  Map<String, double>? get tfConfidenceMap {
+    if (perTfProbs == null) return null;
+    final Map<String, double> out = {};
+    perTfProbs!.forEach((tf, probs) {
+      final c = _confidenceFrom(probs);
+      if (c != null) out[tf] = c;
+    });
+    return out;
+  }
 
   double? _confidenceFrom(List<double>? probs) {
     if (probs == null || probs.length != 3) return null;
@@ -149,6 +164,9 @@ class Prediction {
         'relVolume': relVolume,
         'action': action,
         'confidence': confidence(),
+        if (perTfProbs != null) 'perTfProbs': perTfProbs,
+        if (perTfExpRet != null) 'perTfExpRet': perTfExpRet,
+        if (perTfAnnVol != null) 'perTfAnnVol': perTfAnnVol,
         if (reason != null) 'reason': reason,
       };
 }

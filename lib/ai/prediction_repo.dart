@@ -99,13 +99,21 @@ class PredictionRepo {
 
       // Multi-timeframe TS predictions + weighted geometric mean across TFs
       final Map<String, List<double>> tfProbs = {};
+      final Map<String, double> tfExp = {};
+      final Map<String, double> tfVol = {};
       Prediction? primaryPred;
       final Map<String, Prediction> tfPreds = {};
       for (final tf in AiConfig.enabledTimeframes) {
         try {
+          // Per-timeframe fetch with a generous limit to avoid identical inputs
           final tfCandles = tf == AiConfig.kInterval
               ? candles
-              : await ohlcvService.fetchCandles(feedSymbol, interval: tf, limit: AiConfig.kWindow, forceQuote: true);
+              : await ohlcvService.fetchCandles(
+                  feedSymbol,
+                  interval: tf,
+                  limit: 2000,
+                  forceQuote: true,
+                );
           if (tfCandles.length < AiConfig.kWindow) continue;
           try {
             // ignore: avoid_dynamic_calls
@@ -116,6 +124,8 @@ class PredictionRepo {
           if (tf == AiConfig.kInterval) primaryPred = p;
           tfProbs[tf] = [p.pBuy, p.pHold, p.pSell];
           tfPreds[tf] = p;
+          tfExp[tf] = p.expReturn;
+          tfVol[tf] = p.annVol;
         } catch (_) {}
       }
       if (tfProbs.isEmpty || primaryPred == null) {
@@ -227,6 +237,9 @@ class PredictionRepo {
         relVolume: primaryPred.relVolume,
         tsProbs: agg,
         visionProbs: AiConfig.useVisionVote ? _lastVisionProbs[feedSymbol] : null,
+        perTfProbs: tfProbs,
+        perTfExpRet: tfExp,
+        perTfAnnVol: tfVol,
       );
 
       // Cache result + smart metadata (needs annVol + volumes)

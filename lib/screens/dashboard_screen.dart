@@ -44,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _showDisclaimer = false;
   String _selectedSymbol = 'BTCUSDT';
   ai.Prediction? _dashPred;
+  String? _selectedTf; // user-selected TF from panel chips
 
   @override
   void initState() {
@@ -230,6 +231,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 confidence: _dashPred!.confidence(),
                 tsConfidence: _dashPred!.tsConfidence,
                 visionConfidence: _dashPred!.visionConfidence,
+                tfConfidence: _dashPred!.tfConfidenceMap,
+                symbol: _dashPred!.symbol,
+                tfProbs: _dashPred!.perTfProbs,
+                tfExp: _dashPred!.perTfExpRet,
+                tfVol: _dashPred!.perTfAnnVol,
+                selectedTf: _selectedTf,
+                onSelectTf: (tf) {
+                  setState(() => _selectedTf = tf);
+                },
                 expReturn: _dashPred!.expReturn,
                 annVol: _dashPred!.annVol,
                 timeframe: AiConfig.kInterval,

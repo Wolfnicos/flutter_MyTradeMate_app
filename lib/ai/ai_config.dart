@@ -37,11 +37,11 @@ class AiConfig {
   static const String modelRev = 'r1';
 
   /// Feature flags and ensemble params (single source of truth)
-  static const bool usePatchTst = true;         // time-series predictor enabled
-  static const bool useVisionVote = true;       // vision+TS ensemble
-  static const bool useLegacyAiPanel = false;   // hide old confidence card
+  static bool usePatchTst = true;         // time-series predictor enabled
+  static bool useVisionVote = true;       // vision+TS ensemble (runtime-togglable)
+  static bool useLegacyAiPanel = false;   // hide old confidence card
 
-  static const double visionWeight = 0.15;      // 0..1 weight for Vision in geometric mean
+  static double visionWeight = 0.15;      // 0..1 weight for Vision in geometric mean (runtime-togglable)
 
   // Decision thresholds
   static const double probBuyThresh = 0.66;

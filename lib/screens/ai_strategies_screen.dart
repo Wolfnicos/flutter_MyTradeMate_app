@@ -93,20 +93,25 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
     final Map<String, ai.Prediction?> next = {};
     String? lastErr;
 
-    for (final sym in _symbols) {
+    // Fetch all symbols in parallel for faster UI load
+    final List<Future<MapEntry<String, ai.Prediction?>>> futures = _symbols
+        .map((sym) async {
       try {
-        // 🤖 Use PredictionRepo pentru cache și consistency!
-        final pred = await AILocator.I.repo.getFor(sym);
-
-        next[sym] = pred; // Store (poate fi null)
-
-        // Logs sunt în PredictionRepo - nu mai duplicăm!
+        // Faster: ask repo with lighter limit through getOrFetch path to warm cache
+        final pred = await AILocator.I.repo.getOrFetch(symbol: sym, interval: AiConfig.kInterval, limit: 300);
+        // Fallback to cached fast path if needed
+        final result = pred ?? await AILocator.I.repo.getFor(sym);
+        return MapEntry(sym, result);
       } catch (e) {
-        // Keep going; remember only the last error
-        lastErr = e.toString();
-        next[sym] = null;
         debugPrint('❌ Unexpected error for $sym: $e');
+        lastErr = e.toString();
+        return MapEntry(sym, null);
       }
+    }).toList();
+
+    final results = await Future.wait(futures);
+    for (final r in results) {
+      next[r.key] = r.value;
     }
 
     if (!mounted) return;
@@ -179,10 +184,6 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Your AI Module Status',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              const AIStatusCard(),
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 _buildAIAlert(
@@ -209,6 +210,13 @@ class _AIStrategiesScreenState extends State<AIStrategiesScreen> {
                       expReturn: p.expReturn,
                       annVol: p.annVol,
                       timeframe: AiConfig.kInterval,
+                      tsConfidence: p.tsConfidence,
+                      visionConfidence: p.visionConfidence,
+                      tfConfidence: p.tfConfidenceMap,
+                      tfProbs: p.perTfProbs,
+                      tfExp: p.perTfExpRet,
+                      tfVol: p.perTfAnnVol,
+                      symbol: p.symbol,
                       subtitle: p.reason == 'model_missing'
                           ? 'Model missing for ${p.symbol}/${AiConfig.kInterval}'
                           : null,

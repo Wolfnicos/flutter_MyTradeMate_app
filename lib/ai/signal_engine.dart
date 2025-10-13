@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'entities.dart';
+import 'ai_config.dart';
 import 'engine_interface.dart';
 import 'models/direction_model.dart';
 import 'models/return_model.dart';
@@ -167,12 +168,12 @@ class SignalEngine implements ISignalEngine {
     const double dirMargin = 0.10; // 10% prob margin to override
 
     // If ER strongly positive, favor BUY unless SELL dominance is strong
-    if (er >= settings.upThresh) {
+    if (er >= settings.upThresh && er >= AiConfig.minAbsRet) {
       if (probBuy >= settings.confThresh) return 'BUY';
       if (probSell > probBuy && (probSell - probBuy) < dirMargin) return 'HOLD';
     }
     // If ER strongly negative, favor SELL unless BUY dominance is strong
-    if (er <= settings.downThresh) {
+    if (er <= settings.downThresh && (-er) >= AiConfig.minAbsRet) {
       if (probSell >= settings.confThresh) return 'SELL';
       if (probBuy > probSell && (probBuy - probSell) < dirMargin) return 'HOLD';
     }

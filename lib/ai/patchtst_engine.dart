@@ -52,15 +52,19 @@ class PatchTstEngine implements ISignalEngine {
     // Global gating
     if (p.annVol > AiConfig.volCap) return 'HOLD';
 
-    // Threshold rules (use existing config fields)
-    if (probBuy >= AiConfig.confThresh && er >= AiConfig.minExpReturn)
-      return 'BUY';
-    if (probSell >= AiConfig.confThresh && er <= -AiConfig.minExpReturn)
-      return 'SELL';
+    // Enforce sign-consistency with expected return
+    if (er >= AiConfig.minExpReturn) {
+      // Only BUY allowed if confidence is sufficient; otherwise HOLD
+      return probBuy >= AiConfig.confThresh ? 'BUY' : 'HOLD';
+    }
+    if (-er >= AiConfig.minExpReturn) {
+      // Only SELL allowed if confidence is sufficient; otherwise HOLD
+      return probSell >= AiConfig.confThresh ? 'SELL' : 'HOLD';
+    }
 
-    // Fallback to higher of probs if confidence strong
+    // Neutral ER → directional fallback if confidence strong
     final dirConf = probBuy > probSell ? probBuy : probSell;
-    if (dirConf >= (AiConfig.confThresh)) {
+    if (dirConf >= AiConfig.confThresh) {
       return probBuy >= probSell ? 'BUY' : 'SELL';
     }
     return 'HOLD';
