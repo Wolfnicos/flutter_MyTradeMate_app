@@ -56,6 +56,32 @@ class Backtester {
           'Not enough candles: ${candles.length} < ${window + horizon}',);
     }
 
+    // Debug integrity: ensure candle TF matches requested interval (approximate)
+    if (kDebugMode && candles.length >= 3) {
+      int minutesForTf(String tf) {
+        switch (tf) {
+          case '5m':
+            return 5;
+          case '15m':
+            return 15;
+          case '1h':
+            return 60;
+          case '4h':
+            return 240;
+          case '1d':
+            return 1440;
+          default:
+            return 5;
+        }
+      }
+      final exp = minutesForTf(interval);
+      final d1 = candles[1].time.difference(candles[0].time).inMinutes.abs();
+      final d2 = candles[2].time.difference(candles[1].time).inMinutes.abs();
+      final median = ((d1 + d2) / 2).round();
+      assert(median == exp,
+          'Interval mismatch: data≈${median}m vs requested $interval');
+    }
+
     // If positionSize is provided, override simulator's risk per trade
     final execSim = positionSize != null
         ? TradeSimulator(
@@ -169,6 +195,12 @@ class Backtester {
         } else {
           final pred = await engine.predict(symbol, look);
           if (pred == null) continue;
+          // Debug integrity: check prediction values
+          if (kDebugMode) {
+            final valsOk = pred.pBuy.isFinite && pred.pHold.isFinite && pred.pSell.isFinite &&
+                pred.expReturn.isFinite && pred.annVol.isFinite && close.isFinite;
+            assert(valsOk, 'NaN/Inf detected in prediction or price');
+          }
           action = AILocator.I.decide(pred);
           confidence = pred.confidence();
 
@@ -206,6 +238,14 @@ class Backtester {
         if (positionQty == 0.0 && action == 'BUY') {
           final (newCap, qty, priceWSlip, fee) =
               execSim.buy(capital: capital, price: close);
+          if (kDebugMode) {
+            // Validate capital decrease equals allocated budget (qty*price + fee) within epsilon
+            final budget = (capital - newCap);
+            final spent = qty * priceWSlip + fee;
+            assert((budget - spent).abs() <= 1e-6,
+                'Capital drop ${budget.toStringAsFixed(8)} != spent ${spent.toStringAsFixed(8)}');
+            assert(qty.isFinite && qty >= 0.0, 'Invalid qty at OPEN');
+          }
           capital = newCap;
           positionQty = qty;
           entryPrice = priceWSlip;
@@ -253,6 +293,9 @@ class Backtester {
             capital = r.$1;
             exitFee = r.$2;
             pnl = r.$3;
+          }
+          if (kDebugMode) {
+            assert(capital.isFinite && capital >= 0.0, 'Invalid capital after CLOSE');
           }
           totalFees += exitFee;
           if (kDebugMode) {
