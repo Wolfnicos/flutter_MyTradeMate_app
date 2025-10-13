@@ -180,6 +180,8 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
     // Format symbol consistently (e.g. "BTC/USDT" not "BTCUSDT")
     final displaySymbol = _formatSymbolForDisplay(symbol);
     final colors = Theme.of(context).colorScheme;
+    final screenH = MediaQuery.of(context).size.height;
+    final double chartH = (screenH * 0.5).clamp(320.0, 640.0);
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -356,7 +358,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
 
           // Chart card (TradingView-like)
           SizedBox(
-            height: 260,
+            height: chartH,
             child: Card(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
