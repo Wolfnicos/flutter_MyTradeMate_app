@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:fl_chart/fl_chart.dart';
 import 'trading_modal.dart';
-import 'widgets/ai_prediction_card.dart';
 import '../services/dio_binance_client.dart';
 import '../services/market_data_service.dart';
 import '../services/paper_broker.dart';
@@ -33,7 +31,7 @@ class MarketDetailsScreen extends StatefulWidget {
     this.forTest = false,
     this.loadDataFn,
     this.reloadFn,
-    this.showAICard = true,
+    this.showAICard = false,
     this.broker,
   });
 
@@ -55,7 +53,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
   String _interval = '1h'; // default timeframe
   double? _crossX; // crosshair x position
   List<List<num>>? _cachedKlines; // keep last chart during reloads
-  bool _showVol = false;
+  bool _showVol = true;
   bool _showEma = false;
 
   @override
@@ -356,7 +354,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Chart card
+          // Chart card (TradingView-like)
           SizedBox(
             height: 260,
             child: Card(
@@ -384,8 +382,8 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                       child: CustomPaint(
                         painter: CandlesPainter(
                           data,
-                          up: cs.tertiary,
-                          down: cs.error,
+                          up: const Color(0xFF10B981), // green
+                          down: const Color(0xFFEF4444), // red
                           crossX: null, // crosshair disabled while zoom enabled
                           theme: cs,
                           showVolume: _showVol,
@@ -401,10 +399,7 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
           ),
 
           const SizedBox(height: 12),
-          if (widget.showAICard)
-            AIPredictionCard(symbol: symbol)
-          else
-            const SizedBox.shrink(),
+          // AI card removed here per performance request
           const SizedBox(height: 16),
 
           FutureBuilder<bool>(
@@ -437,23 +432,6 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12))),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      key: AppKeys.tradePlace,
-                      onPressed: supported ? _onTapPlace : null,
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12))),
-                      child: const Text('Place',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -657,10 +635,20 @@ class CandlesPainter extends CustomPainter {
       }
       final r = RRect.fromLTRBR(
           bodyLeft, top, bodyRight, bottom, const Radius.circular(2));
+      // TradingView-like: filled for bullish, hollow for bearish
       final bodyPaint = Paint()
-        ..color = color.withOpacity(0.9)
+        ..color = bullish ? color.withOpacity(0.9) : Colors.transparent
+        ..style = bullish ? PaintingStyle.fill : PaintingStyle.stroke
+        ..strokeWidth = 1.2
         ..isAntiAlias = true;
       canvas.drawRRect(r, bodyPaint);
+      if (!bullish) {
+        final stroke = Paint()
+          ..color = color.withOpacity(0.9)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2;
+        canvas.drawRRect(r, stroke);
+      }
     }
 
     // crosshair (vertical)

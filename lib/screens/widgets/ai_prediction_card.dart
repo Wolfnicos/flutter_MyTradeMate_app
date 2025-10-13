@@ -10,7 +10,8 @@ import 'package:mytrademate/ui/kit/ui_error_banner.dart';
 
 class AIPredictionCard extends StatefulWidget {
   final String symbol;
-  const AIPredictionCard({super.key, required this.symbol});
+  final String? interval; // optional timeframe override
+  const AIPredictionCard({super.key, required this.symbol, this.interval});
 
   @override
   State<AIPredictionCard> createState() => _AIPredictionCardState();
@@ -69,7 +70,7 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<ai.Prediction?>(
-      future: AILocator.I.getPrediction(widget.symbol),
+      future: _loadPrediction(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -451,6 +452,20 @@ class _AIPredictionCardState extends State<AIPredictionCard> {
         );
       },
     );
+  }
+
+  Future<ai.Prediction?> _loadPrediction() async {
+    // If a specific interval is provided, ask repo with that interval for proper TF refresh
+    final tf = widget.interval;
+    if (tf != null && tf.isNotEmpty) {
+      try {
+        final res = await AILocator.I.repo
+            .getOrFetch(symbol: widget.symbol, interval: tf, limit: 300);
+        if (res != null) return res;
+      } catch (_) {}
+    }
+    // Fallback to default repo behavior
+    return AILocator.I.getPrediction(widget.symbol);
   }
 }
 
