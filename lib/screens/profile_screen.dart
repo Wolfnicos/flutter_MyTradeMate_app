@@ -4,6 +4,8 @@ import 'widgets/settings_tile.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'change_password_screen.dart';
 import 'settings_screen.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 // local_auth temporarily disabled to fix iOS build
 
 class ProfileScreen extends StatefulWidget {
@@ -22,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       false; // persisted preference only (theme applied on next app init)
   String? _name;
   String? _email;
+  String? _avatarPath;
 
   @override
   void initState() {
@@ -42,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _lang = lang == 'ro' ? 'Română' : 'English';
       _name = sp.getString('profile.name') ?? 'Trader';
       _email = sp.getString('profile.email') ?? 'you@mytrademate.app';
+      _avatarPath = sp.getString('profile.avatar');
     });
   }
 
@@ -60,6 +64,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : 'Live trading mode selected ⚠️')),
       );
     }
+  }
+
+  Future<void> _editProfile() async {
+    final nameCtrl = TextEditingController(text: _name ?? '');
+    final emailCtrl = TextEditingController(text: _email ?? '');
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Edit Profile',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: nameCtrl,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: emailCtrl,
+            decoration: const InputDecoration(labelText: 'Email'),
+          ),
+          const SizedBox(height: 12),
+          Row(children: [
+            ElevatedButton(
+              onPressed: () async {
+                final picker = ImagePicker();
+                final res = await picker.pickImage(source: ImageSource.gallery);
+                if (res != null) {
+                  final sp = await SharedPreferences.getInstance();
+                  await sp.setString('profile.avatar', res.path);
+                  if (mounted) setState(() => _avatarPath = res.path);
+                }
+              },
+              child: const Text('Change Photo'),
+            ),
+            const Spacer(),
+            FilledButton(
+              onPressed: () async {
+                final sp = await SharedPreferences.getInstance();
+                await sp.setString('profile.name', nameCtrl.text.trim());
+                await sp.setString('profile.email', emailCtrl.text.trim());
+                if (!mounted) return;
+                setState(() {
+                  _name = nameCtrl.text.trim();
+                  _email = emailCtrl.text.trim();
+                });
+                Navigator.pop(ctx);
+              },
+              child: const Text('Save'),
+            ),
+          ])
+        ]),
+      ),
+    );
   }
 
   @override
@@ -176,13 +244,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader(BuildContext context) {
+    final avatar = _avatarPath != null && _avatarPath!.isNotEmpty
+        ? CircleAvatar(radius: 40, backgroundImage: FileImage(File(_avatarPath!)))
+        : const CircleAvatar(
+            radius: 40,
+            backgroundColor: Colors.indigoAccent,
+            child: Icon(Icons.person, size: 40, color: Colors.white),
+          );
     return Column(
       children: [
-        const CircleAvatar(
-          radius: 40,
-          backgroundColor: Colors.indigoAccent,
-          child: Icon(Icons.person, size: 40, color: Colors.white),
-        ),
+        Stack(children: [
+          avatar,
+          Positioned(
+            right: -4,
+            bottom: -4,
+            child: IconButton(
+              tooltip: 'Edit',
+              style: IconButton.styleFrom(backgroundColor: Colors.black54),
+              icon: const Icon(Icons.edit, size: 18, color: Colors.white),
+              onPressed: _editProfile,
+            ),
+          )
+        ]),
         const SizedBox(height: 10),
         Text(_name ?? 'Trader',
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),

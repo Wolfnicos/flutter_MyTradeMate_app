@@ -24,6 +24,7 @@ dependencies:
   archive: ^3.6.1
   path_provider: ^2.1.4
   image: ^4.3.0
+  image_picker: ^1.0.7
 
 dev_dependencies:
   flutter_test:
