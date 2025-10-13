@@ -55,6 +55,8 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
   List<List<num>>? _cachedKlines; // keep last chart during reloads
   bool _showVol = true;
   bool _showEma = false;
+  double _zoom = 0.5; // 0..1 (0 = far, 1 = near)
+  int? _candlesLimit; // computed from zoom+interval
 
   @override
   void initState() {
@@ -119,8 +121,10 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
           _supportFuture = Future.value(true);
           _tickerFuture = Future.value(<String, dynamic>{});
         } else {
-          _klinesFuture =
-              _fetchKlinesInterval(widget.symbol, _interval).then((d) {
+          _candlesLimit = _limitFor(_interval, _zoom);
+          _klinesFuture = _fetchKlinesInterval(
+                  widget.symbol, _interval, _candlesLimit)
+              .then((d) {
             _cachedKlines = d;
             return d;
           });
@@ -333,6 +337,23 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
               setState(() => _interval = v);
               _loadData();
             },
+          ),
+          const SizedBox(height: 4),
+          // Zoom slider (changes candle density; no pan)
+          Row(
+            children: [
+              const Text('Zoom', style: TextStyle(fontSize: 12)),
+              Expanded(
+                child: Slider(
+                  value: _zoom,
+                  onChanged: (v) {
+                    setState(() => _zoom = v);
+                  },
+                  onChangeEnd: (_) => _loadData(),
+                  divisions: 8,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
 
@@ -750,31 +771,44 @@ Future<List<List<num>>> _fetchKlines(String symbol) async {
   }
 }
 
+int _limitFor(String interval, double zoom) {
+  // Map zoom (0..1) to candle counts per interval (more zoom => fewer candles)
+  int maxC, minC;
+  switch (interval) {
+    case '5m':
+      maxC = 240;
+      minC = 30;
+      break;
+    case '15m':
+      maxC = 180;
+      minC = 24;
+      break;
+    case '1h':
+      maxC = 160;
+      minC = 20;
+      break;
+    case '4h':
+      maxC = 120;
+      minC = 18;
+      break;
+    case '1d':
+      maxC = 90;
+      minC = 14;
+      break;
+    default:
+      maxC = 180;
+      minC = 24;
+  }
+  final v = (maxC - zoom * (maxC - minC)).round();
+  return v.clamp(minC, maxC);
+}
+
 Future<List<List<num>>> _fetchKlinesInterval(
-    String symbol, String interval) async {
+    String symbol, String interval, int? limitOverride) async {
   final client = await DioBinanceClient.createFromPrefs();
   final sym = _toBinanceSymbol(symbol);
   try {
-    int limit;
-    switch (interval) {
-      case '5m':
-        limit = 120; // fewer candles → bodies appear wider
-        break;
-      case '15m':
-        limit = 120;
-        break;
-      case '1h':
-        limit = 80;
-        break;
-      case '4h':
-        limit = 60;
-        break;
-      case '1d':
-        limit = 60;
-        break;
-      default:
-        limit = 120;
-    }
+    final limit = limitOverride ?? _limitFor(interval, 0.5);
     return await client.klines(sym, interval, limit: limit);
   } catch (e) {
     // conservative fallback
