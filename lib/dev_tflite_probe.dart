@@ -1,6 +1,6 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'ai/predictor_tflite.dart';
+// Legacy dev probe not used in builds; keep minimal to avoid analyzer errors.
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,12 +24,9 @@ class _AppState extends State<_App> {
 
   Future<void> _run() async {
     try {
-      final pred = TFLitePredictor();
-      final window = List.generate(64, (_) => List.filled(9, 0.01));
-      final out = await pred.predict('BTCUSDT', window, timeframe: '15m');
-      setState(() => _status = out == null
-          ? 'Interpreter a rulat, dar nu a dat output așteptat (OK pentru dummy)'
-          : 'OK: pBuy=${out.pBuy.toStringAsFixed(3)} pHold=${out.pHold.toStringAsFixed(3)} pSell=${out.pSell.toStringAsFixed(3)}');
+      // No-op run: avoids importing deprecated predictors in normal builds.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      setState(() => _status = 'Dev probe idle');
       log(_status);
     } catch (e, st) {
       setState(() => _status = 'Eroare: $e');

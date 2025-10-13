@@ -11,7 +11,6 @@ import 'package:mytrademate/src/core/trading_prefs.dart';
 import 'dart:math' as math;
 import '../vision/chart_capture_service.dart';
 import 'vision_predictor.dart';
-import 'ensemble/ensemble_voter.dart';
 
 /// PredictionRepo - Repository pattern pentru predicții AI
 /// - Centralizează accesul la predicții
@@ -195,7 +194,8 @@ class PredictionRepo {
           }
           final w = localW.clamp(0.0, 1.0);
           double g(double t, double v) =>
-              math.pow(t.clamp(1e-9, 1.0), 1.0 - w) * math.pow(v.clamp(1e-9, 1.0), w);
+              math.pow(t.clamp(1e-9, 1.0), 1.0 - w).toDouble() *
+              math.pow(v.clamp(1e-9, 1.0), w).toDouble();
           final a = g(finalProbs[0], vProbs[0]);
           final b = g(finalProbs[1], vProbs[1]);
           final c = g(finalProbs[2], vProbs[2]);
@@ -328,6 +328,9 @@ class PredictionRepo {
       return null;
     }
   }
+
+  String _fmt(List<double> p) =>
+      '[${(p[0] * 100).toStringAsFixed(1)}%, ${(p[1] * 100).toStringAsFixed(1)}%, ${(p[2] * 100).toStringAsFixed(1)}%]';
 
   String _hyKey(String symbol, DateTime asOf) =>
       '${symbol.toUpperCase()}@${asOf.millisecondsSinceEpoch}';

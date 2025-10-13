@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -59,10 +60,11 @@ class VisionPredictor {
     // Raw model outputs (logits or probs) in model order: [sell, hold, buy]
     final raw = (output[0] as List).map((e) => (e as num).toDouble()).toList();
     // Softmax in case outputs are logits
-    final mx = raw.reduce((a,b)=> a>b? a:b);
-    final exps = raw.map((x)=> math.exp(x - mx)).toList();
-    final s = exps.fold<double>(0.0, (p,c)=> p+c);
-    final probs = exps.map((e)=> e / (s == 0 ? 1.0 : s)).toList();
+    final double mx = raw.reduce((a, b) => a > b ? a : b);
+    final List<double> exps = raw.map<double>((x) => math.exp(x - mx)).toList();
+    final double s = exps.fold<double>(0.0, (p, c) => p + c);
+    final List<double> probs =
+        exps.map<double>((e) => e / (s == 0 ? 1.0 : s)).toList();
     final double sell = probs[0];
     final double hold = probs[1];
     final double buy  = probs[2];

@@ -6,7 +6,6 @@ import 'change_password_screen.dart';
 import 'settings_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:math' as math;
 // local_auth temporarily disabled to fix iOS build
 
 class ProfileScreen extends StatefulWidget {

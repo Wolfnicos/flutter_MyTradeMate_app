@@ -45,12 +45,16 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
   Future<Map<String, dynamic>>? _tickerFuture;
   @visibleForTesting
   final chartLoadingKey = const Key('market.chart.loading');
+  // not used; kept for potential future UX
+  // ignore: unused_field
   bool _reloading = false;
   StreamSubscription<double>? _priceSub;
   double? _lastPrice;
   late final PaperBroker _broker;
   UserError? _wsError;
   String _interval = '1h'; // default timeframe
+  // crosshair disabled
+  // ignore: unused_field
   double? _crossX; // crosshair x position
   List<List<num>>? _cachedKlines; // keep last chart during reloads
   bool _showVol = true;
