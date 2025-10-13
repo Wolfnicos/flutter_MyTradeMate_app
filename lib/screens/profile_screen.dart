@@ -6,6 +6,7 @@ import 'change_password_screen.dart';
 import 'settings_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:math' as math;
 // local_auth temporarily disabled to fix iOS build
 
 class ProfileScreen extends StatefulWidget {
@@ -80,7 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           left: 16,
           right: 16,
           top: 16,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          bottom: (MediaQuery.of(ctx).viewInsets.bottom).clamp(0.0, 2000.0) + 16,
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('Edit Profile',
@@ -256,8 +257,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Stack(children: [
           avatar,
           Positioned(
-            right: -4,
-            bottom: -4,
+            right: 0,
+            bottom: 0,
             child: IconButton(
               tooltip: 'Edit',
               style: IconButton.styleFrom(backgroundColor: Colors.black54),

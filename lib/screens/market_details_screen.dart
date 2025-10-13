@@ -396,22 +396,17 @@ class _MarketDetailsScreenState extends State<MarketDetailsScreen> {
                       return const SizedBox();
                     }
                     final cs = Theme.of(context).colorScheme;
-                    return InteractiveViewer(
-                      minScale: 1,
-                      maxScale: 10,
-                      boundaryMargin: const EdgeInsets.all(80),
-                      child: CustomPaint(
-                        painter: CandlesPainter(
-                          data,
-                          up: const Color(0xFF10B981), // green
-                          down: const Color(0xFFEF4444), // red
-                          crossX: null, // crosshair disabled while zoom enabled
-                          theme: cs,
-                          showVolume: _showVol,
-                          showEma: _showEma,
-                        ),
-                        size: const Size(double.infinity, double.infinity),
+                    return CustomPaint(
+                      painter: CandlesPainter(
+                        data,
+                        up: const Color(0xFF10B981), // green
+                        down: const Color(0xFFEF4444), // red
+                        crossX: null,
+                        theme: cs,
+                        showVolume: _showVol,
+                        showEma: _showEma,
                       ),
+                      size: const Size(double.infinity, double.infinity),
                     );
                   },
                 ),
